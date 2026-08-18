@@ -17,9 +17,9 @@ jobs:
         env:
           PATCH_URL: ${{ vars.PATCHES_TGZ_URL }}
         run: |
-          curl -L -o patches.tar.gz "$PATCH_URL"
-          mkdir -p patches
           if [ -f "patches.tar.gz" ]; then
+            curl -L -o patches.tar.gz "$PATCH_URL"
+            mkdir -p patches
             tar -xzvf patches.tar.gz -C patches
             echo "has_patches=true" >> $GITHUB_OUTPUT
             echo "Архив успешно распакован."
