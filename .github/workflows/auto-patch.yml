@@ -19,7 +19,18 @@ jobs:
         run: |
           curl -L -o patches.tar.gz "$PATCH_URL"
           mkdir -p patches
-          tar -xzf patches.tar.gz -C patches
+          if [ -f "patches.tar.gz" ]; then
+            tar -xzvf patches.tar.gz -C patches
+            echo "has_patches=true" >> $GITHUB_OUTPUT
+            echo "Архив успешно распакован."
+          else
+            echo "has_patches=false" >> $GITHUB_OUTPUT
+            echo "Архив patches.tar.gz не найден. Выходим с успехом."
+            exit 0
+          fi
+
+
+
 
       # 2. Применяем ВСЕ патчи по заголовкам (Base + Target commit)
       - name: Apply all patches automatically
