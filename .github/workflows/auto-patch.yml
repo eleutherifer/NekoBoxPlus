@@ -42,7 +42,7 @@ jobs:
             elif [ "$dir" = "sing-vmess" ]; then
               dir="sing-vmess"
             elif [ "$dir" = "MasterDnsVPN" ]; then
-              dir="MasterDnsVPN-plus"
+              dir="MasterDnsVPN"
             elif [ "$dir" = "amneziawg-go" ]; then
               dir="amneziawg-go"
             elif [ "$dir" = "net" ] || echo "$patch" | grep -q "x-net"; then
