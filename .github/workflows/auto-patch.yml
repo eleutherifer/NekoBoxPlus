@@ -17,6 +17,10 @@ jobs:
         env:
           PATCH_URL: ${{ vars.PATCHES_TGZ_URL }}
         run: |
+          # Если PATCH_URL задан, пробуем скачать (флаг --fail не даст скачать 14-байтную ошибку 404)
+          if [ -n "$PATCH_URL" ]; then
+            curl -L --fail -o patches.tar.gz "$PATCH_URL" || (echo "Файл по ссылке не найден." && echo "has_patches=false" >> $GITHUB_OUTPUT)
+          fi
           if [ -f "patches.tar.gz" ]; then
             mkdir -p patches
             tar -xzvf patches.tar.gz -C patches
@@ -27,10 +31,6 @@ jobs:
             echo "Архив patches.tar.gz не найден. Выходим с успехом."
             exit 0
           fi
-
-
-
-
       # 2. Применяем ВСЕ патчи по заголовкам (Base + Target commit)
       - name: Apply all patches automatically
         run: |
