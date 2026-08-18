@@ -1,0 +1,94 @@
+name: Auto Patch + Build NekoBox+
+
+on:
+  push:
+    paths:
+      - 'patches.tar.gz'
+  workflow_dispatch:
+
+jobs:
+  patch-and-build:
+    name: Apply Patches + Build
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Скачиваем архив патчей
+      - name: Download patches.tar.gz
+        env:
+          PATCH_URL: ${{ vars.PATCHES_TGZ_URL }}
+        run: |
+          curl -L -o patches.tar.gz "$PATCH_URL"
+          mkdir -p patches
+          tar -xzf patches.tar.gz -C patches
+
+      # 2. Применяем ВСЕ патчи по заголовкам (Base + Target commit)
+      - name: Apply all patches automatically
+        run: |
+          cd patches
+          for patch in *.patch; do
+            header=$(head -10 "$patch")
+            base=$(echo "$header" | grep -oP 'Base:\s*\K.*' || echo "https://github.com/starifly/NekoBoxForAndroid")
+            target=$(echo "$header" | grep -oP 'Target patch commit:\s*\K.*' || echo "main")
+            
+            dir=$(echo "$patch" | sed 's/\.patch$//')
+            
+            if [ "$dir" = "NekoBoxForAndroid" ]; then
+              dir="NekoBoxForAndroid"
+            elif [ "$dir" = "sing-box" ]; then
+              dir="sing-box"
+            elif [ "$dir" = "libneko" ]; then
+              dir="libneko"
+            elif [ "$dir" = "sing-vmess" ]; then
+              dir="sing-vmess"
+            elif [ "$dir" = "MasterDnsVPN" ]; then
+              dir="MasterDnsVPN-plus"
+            elif [ "$dir" = "amneziawg-go" ]; then
+              dir="amneziawg-go"
+            elif [ "$dir" = "net" ] || echo "$patch" | grep -q "x-net"; then
+              dir="net"
+            else
+              continue
+            fi
+            
+            mkdir -p upstream/$dir
+            git clone --depth 1 --branch "$target" "$base" "upstream/$dir" || git clone --depth 1 "$base" "upstream/$dir"
+            cp -r "upstream/$dir" "$dir"
+            
+            cd "$dir"
+            git apply "../../patches/$patch" || echo "⚠️ $patch не применился (уже применён)"
+            cd ..
+          done
+
+      # 3. Собираем libcore.aar (главный шаг после патчей)
+      - name: Native Build (LibCore)
+        run: |
+          echo "sdk.dir=${ANDROID_HOME}" > local.properties
+          echo "ndk.dir=${ANDROID_HOME}/ndk/25.0.8775105" >> local.properties
+          
+          ./run lib core
+
+      # 4. Инициализируем Gradle
+      - name: Init Gradle
+        run: |
+          export LOCAL_PROPERTIES="${{ secrets.LOCAL_PROPERTIES }}"
+          ./run init action gradle
+
+      # 5. Финальная сборка APK
+      - name: Assemble Release
+        run: |
+          KEYSTORE_PASS="${{ secrets.KEYSTORE_PASS }}" \
+          ALIAS_NAME="${{ secrets.ALIAS_NAME }}" \
+          ALIAS_PASS="${{ secrets.ALIAS_PASS}}" \
+          ./gradlew app:assembleOssRelease
+          
+          APK=$(find app/build/outputs/apk -name '*arm64-v8a*.apk')
+          APK=$(dirname $APK)
+          echo "APK=$APK" >> $GITHUB_ENV
+
+      # 6. Загружаем артефакт
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: NekoBoxPlus
+          path: ${{ env.APK }}
+          
