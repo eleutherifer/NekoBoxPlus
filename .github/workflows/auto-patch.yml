@@ -29,6 +29,8 @@ jobs:
           else
             echo "has_patches=false" >> $GITHUB_OUTPUT
             echo "Архив patches.tar.gz не найден. Выходим с успехом."
+            # Заставляем GitHub Actions мягко остановить выполнение всех оставшихся шагов
+            gh run cancel ${{ github.run_id }}
             exit 0
           fi
       # 2. Применяем ВСЕ патчи по заголовкам (Base + Target commit)
