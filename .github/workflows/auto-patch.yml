@@ -40,6 +40,8 @@ jobs:
         # Добавляем строгую проверку условия из предыдущего шага
         if: steps.patch_step.outputs.patches_found == 'true'
         run: |
+          # Запоминаем корень нашей рабочей зоны (абсолютный путь)
+          ROOT_DIR="$GITHUB_WORKSPACE"
           cd "$ROOT_DIR/patches"
           for patch in *.patch; do
             header=$(head -10 "$patch")
