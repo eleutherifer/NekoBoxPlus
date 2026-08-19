@@ -18,26 +18,30 @@ jobs:
           PATCH_URL: ${{ vars.PATCHES_TGZ_URL }}
           GH_TOKEN: ${{ github.token }} # Этот токен дает утилите gh права на отмену
         run: |
+          # Запоминаем корень нашей рабочей зоны (абсолютный путь)
+          ROOT_DIR="$GITHUB_WORKSPACE"
           # Если PATCH_URL задан, пробуем скачать (флаг --fail не даст скачать 14-байтную ошибку 404)
           if [ -n "$PATCH_URL" ]; then
             curl -L --fail -o patches.tar.gz "$PATCH_URL" || (echo "Файл по ссылке не найден." && echo "has_patches=false" >> $GITHUB_OUTPUT)
           fi
           if [ -f "patches.tar.gz" ]; then
-            mkdir -p patches
-            tar -xzvf patches.tar.gz -C patches
+            mkdir -p "$ROOT_DIR/patches"
+            tar -xzvf patches.tar.gz -C "$ROOT_DIR/patches"
             echo "has_patches=true" >> $GITHUB_OUTPUT
             echo "Архив успешно распакован."
           else
             echo "has_patches=false" >> $GITHUB_OUTPUT
             echo "Архив patches.tar.gz не найден. Выходим с успехом."
-            # Заставляем GitHub Actions мягко остановить выполнение всех оставшихся шагов
-            gh run cancel ${{ github.run_id }} || true
+            # Записываем в специальную переменную GitHub, что патчей нет
+            echo "patches_found=false" >> $GITHUB_OUTPUT
             exit 0
           fi
       # 2. Применяем ВСЕ патчи по заголовкам (Base + Target commit)
       - name: Apply all patches automatically
+        # Добавляем строгую проверку условия из предыдущего шага
+        if: steps.patch_step.outputs.patches_found == 'true'
         run: |
-          cd patches
+          cd "$ROOT_DIR/patches"
           for patch in *.patch; do
             header=$(head -10 "$patch")
             base_not_clean=$(echo "$header" | grep -oP 'Base:\s*\K.*')
@@ -64,23 +68,23 @@ jobs:
               continue
             fi
             
-            mkdir -p upstream/$dir
+            mkdir -p "$ROOT_DIR/upstream/$dir"
 
             # Правильный способ клонирования и перехода на конкретный коммит SHA
-            git clone "$base" "upstream/$dir"
+            git clone "$base" "$ROOT_DIR/upstream/$dir"
             
             # Переходим в скачанный репозиторий, подгружаем точный коммит и переключаемся на него
-            cd "upstream/$dir"
+            cd "$ROOT_DIR/upstream/$dir"
             git fetch origin "$target"
             git checkout -q FETCH_HEAD
-            cd ../..
+            cd "$ROOT_DIR"
             
             # Копируем чистый код из upstream в рабочую папку
-            cp -r "upstream/$dir" "$dir"
+            cp -r "$ROOT_DIR/upstream/$dir" "$ROOT_DIR/$dir"
 
-            cd "$dir"
-            git apply "../../patches/$patch" || echo "⚠️ $patch не применился (уже применён)"
-            cd ..
+            cd "$ROOT_DIR/$dir"
+            git apply "$ROOT_DIR/patches/$patch" || echo "⚠️ $patch не применился (уже применён)"
+            cd "$ROOT_DIR"
           done
 
       # 3. Собираем libcore.aar (главный шаг после патчей)
