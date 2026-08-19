@@ -40,8 +40,8 @@ jobs:
           cd patches
           for patch in *.patch; do
             header=$(head -10 "$patch")
-            base_not_clean=$(echo "$header" | grep -oP 'Base:\s*\K.*' || echo "https://github.com/starifly/NekoBoxForAndroid")
-            base = re.match(r"^(https://github\.com/[^/]+/[^/]+)", base_not_clean)
+            base_not_clean=$(echo "$header" | grep -oP 'Base:\s*\K.*')
+            base=$(echo "$base_not_clean" | grep -oP '^https://github\.com/[^/]+/[^/]+' | sed 's|/commits/.*||' | sed 's|\.git||' | tr -d ' \r')
             target=$(echo "$header" | grep -oP 'Target patch commit:\s*\K.*' || echo "main")
             
             dir=$(echo "$patch" | sed 's/\.patch$//')
@@ -65,9 +65,19 @@ jobs:
             fi
             
             mkdir -p upstream/$dir
-            git clone --depth 1 --branch "$target" "$base" "upstream/$dir" || git clone --depth 1 "$base" "upstream/$dir"
-            cp -r "upstream/$dir" "$dir"
+
+            # Правильный способ клонирования и перехода на конкретный коммит SHA
+            git clone "$base" "upstream/$dir"
             
+            # Переходим в скачанный репозиторий, подгружаем точный коммит и переключаемся на него
+            cd "upstream/$dir"
+            git fetch origin "$target"
+            git checkout -q FETCH_HEAD
+            cd ../..
+            
+            # Копируем чистый код из upstream в рабочую папку
+            cp -r "upstream/$dir" "$dir"
+
             cd "$dir"
             git apply "../../patches/$patch" || echo "⚠️ $patch не применился (уже применён)"
             cd ..
