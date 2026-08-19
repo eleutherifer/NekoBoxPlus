@@ -23,20 +23,17 @@ jobs:
           ROOT_DIR="$GITHUB_WORKSPACE"
           # Если PATCH_URL задан, пробуем скачать (флаг --fail не даст скачать 14-байтную ошибку 404)
           if [ -n "$PATCH_URL" ]; then
-            curl -L --fail -o patches.tar.gz "$PATCH_URL" || (echo "Файл по ссылке не найден." && echo "has_patches=false" >> $GITHUB_OUTPUT)
+            curl -L --fail -o patches.tar.gz "$PATCH_URL" || (echo "Файл по ссылке не найден.")
           fi
           if [ -f "patches.tar.gz" ]; then
             mkdir -p "$ROOT_DIR/patches"
             tar -xzvf patches.tar.gz -C "$ROOT_DIR/patches"
-            echo "has_patches=true" >> $GITHUB_OUTPUT
             echo "Архив успешно распакован."
             echo "patches_found=true" >> $GITHUB_OUTPUT
           else
-            echo "has_patches=false" >> $GITHUB_OUTPUT
             echo "Архив patches.tar.gz не найден. Выходим с успехом."
             # Записываем в специальную переменную GitHub, что патчей нет
             echo "patches_found=false" >> $GITHUB_OUTPUT
-            exit 0
           fi
       # 2. Применяем ВСЕ патчи по заголовкам (Base + Target commit)
       - name: Apply all patches automatically
@@ -49,9 +46,9 @@ jobs:
             base_not_clean=$(echo "$header" | grep -oP 'Base:\s*\K.*')
             base=$(echo "$base_not_clean" | grep -oP '^https://github\.com/[^/]+/[^/]+' | sed 's|/commits/.*||' | sed 's|\.git||' | tr -d ' \r')
             target=$(echo "$header" | grep -oP 'Target patch commit:\s*\K.*' || echo "main")
-            
+
             dir=$(echo "$patch" | sed 's/\.patch$//')
-            
+
             if [ "$dir" = "NekoBoxForAndroid" ]; then
               dir="NekoBoxForAndroid"
             elif [ "$dir" = "sing-box" ]; then
@@ -69,7 +66,7 @@ jobs:
             else
               continue
             fi
-            
+
             mkdir -p "$ROOT_DIR/upstream/$dir"
 
             # Правильный способ клонирования и перехода на конкретный коммит SHA
