@@ -29,6 +29,7 @@ jobs:
             tar -xzvf patches.tar.gz -C "$ROOT_DIR/patches"
             echo "has_patches=true" >> $GITHUB_OUTPUT
             echo "Архив успешно распакован."
+            echo "patches_found=false" >> $GITHUB_OUTPUT
           else
             echo "has_patches=false" >> $GITHUB_OUTPUT
             echo "Архив patches.tar.gz не найден. Выходим с успехом."
