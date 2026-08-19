@@ -14,6 +14,7 @@ jobs:
     steps:
       # 1. Скачиваем архив патчей
       - name: Download patches.tar.gz
+        id: patch_step
         env:
           PATCH_URL: ${{ vars.PATCHES_TGZ_URL }}
           GH_TOKEN: ${{ github.token }} # Этот токен дает утилите gh права на отмену
