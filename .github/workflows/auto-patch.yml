@@ -40,7 +40,7 @@ jobs:
           for patch in *.patch; do
             header=$(head -10 "$patch")
             base_not_clean=$(echo "$header" | grep -oP 'Base:\s*\K.*' || echo "https://github.com/starifly/NekoBoxForAndroid")
-            base=$(echo "$base_not_clean" | sed -E 's|/commits/.*||' | sed 's|\.git||')
+            base = re.match(r"^(https://github\.com/[^/]+/[^/]+)", base_not_clean)
             target=$(echo "$header" | grep -oP 'Target patch commit:\s*\K.*' || echo "main")
             
             dir=$(echo "$patch" | sed 's/\.patch$//')
