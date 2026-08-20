@@ -39,7 +39,9 @@ jobs:
       - name: Apply all patches automatically
         if: steps.patch_step.outputs.patches_found == 'true'
         run: |
-          cd patches
+          # Запоминаем корень нашей рабочей зоны (абсолютный путь)
+          ROOT_DIR="$GITHUB_WORKSPACE"
+          cd "$GITHUB_WORKSPACE/patches“
           for patch in *.patch; do
             header=$(head -10 "$patch")
             base_not_clean=$(echo "$header" | grep -oP 'Base:\s*\K.*')
@@ -68,12 +70,12 @@ jobs:
 
             # Надёжный способ
             mkdir -p upstream/$dir
-            git clone --depth 1 --branch "$target" "$base" "upstream/$dir" || git clone --depth 1 "$base" "upstream/$dir"
-            cp -r "upstream/$dir" "$dir"
+            git clone --depth 1 --branch "$target" "$base" "upstream/$dir"
+            cp -r "upstream/$dir" "$GITHUB_WORKSPACE/$dir"
             
-            cd "$dir"
-            git apply "../../patches/$patch" || echo "⚠️ $patch не применился (уже применён)"
-            cd ..
+            cd "$GITHUB_WORKSPACE/$dir"
+            git apply "$GITHUB_WORKSPACE/patches/$patch" || echo "⚠️ $patch не применился (уже применён)"
+            cd $GITHUB_WORKSPACE
           done
       # 3. Собираем libcore.aar (главный шаг после патчей)
       - name: Native Build (LibCore)
