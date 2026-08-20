@@ -48,7 +48,7 @@ jobs:
             base=$(echo "$base_not_clean" | grep -oP '^https://github\.com/[^/]+/[^/]+' | sed 's|/commits/.*||' | sed 's|\.git||' | tr -d ' \r')
             target=$(echo "$header" | grep -oP 'Target patch commit:\s*\K.*' || echo "main")
             
-            dir=$(echo "\( patch" | sed 's/\.patch \)//')
+            dir=$(basename "$patch" .patch)
             
             if [ "$dir" = "NekoBoxForAndroid" ]; then
               dir="NekoBoxForAndroid"
