@@ -68,11 +68,13 @@ jobs:
               continue
             fi
 
-            # Надёжный способ
             mkdir -p upstream/$dir
-            git clone --depth 1 --branch "$target" "$base" "upstream/$dir"
+            git clone --depth 1 "$base" "upstream/$dir"
+            cd "upstream/$dir"
+            git fetch --depth 1 origin "$target"
+            git checkout "$target"
+            cd ../..
             cp -r "upstream/$dir" "$GITHUB_WORKSPACE/$dir"
-            
             cd "$GITHUB_WORKSPACE/$dir"
             git apply "$GITHUB_WORKSPACE/patches/$patch" || echo "⚠️ $patch не применился (уже применён)"
             cd $GITHUB_WORKSPACE
