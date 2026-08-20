@@ -37,20 +37,17 @@ jobs:
           fi
       # 2. Применяем ВСЕ патчи по заголовкам (Base + Target commit)
       - name: Apply all patches automatically
-        # Добавляем строгую проверку условия из предыдущего шага
         if: steps.patch_step.outputs.patches_found == 'true'
         run: |
-          # Запоминаем корень нашей рабочей зоны (абсолютный путь)
-          ROOT_DIR="$GITHUB_WORKSPACE"
-          cd "$ROOT_DIR/patches"
+          cd patches
           for patch in *.patch; do
             header=$(head -10 "$patch")
             base_not_clean=$(echo "$header" | grep -oP 'Base:\s*\K.*')
             base=$(echo "$base_not_clean" | grep -oP '^https://github\.com/[^/]+/[^/]+' | sed 's|/commits/.*||' | sed 's|\.git||' | tr -d ' \r')
             target=$(echo "$header" | grep -oP 'Target patch commit:\s*\K.*' || echo "main")
-
-            dir=$(echo "$patch" | sed 's/\.patch$//')
-
+            
+            dir=$(echo "\( patch" | sed 's/\.patch \)//')
+            
             if [ "$dir" = "NekoBoxForAndroid" ]; then
               dir="NekoBoxForAndroid"
             elif [ "$dir" = "sing-box" ]; then
@@ -63,31 +60,21 @@ jobs:
               dir="MasterDnsVPN"
             elif [ "$dir" = "amneziawg-go" ]; then
               dir="amneziawg-go"
-            elif [ "$dir" = "net" ] || echo "$patch" | grep -q "x-net"; then
+            elif [ "$dir" = "net" ]; then
               dir="net"
             else
               continue
             fi
 
-            mkdir -p "$ROOT_DIR/upstream/$dir"
-
-            # Правильный способ клонирования и перехода на конкретный коммит SHA
-            git clone "$base" "$ROOT_DIR/upstream/$dir"
+            # Надёжный способ
+            mkdir -p upstream/$dir
+            git clone --depth 1 --branch "$target" "$base" "upstream/$dir" || git clone --depth 1 "$base" "upstream/$dir"
+            cp -r "upstream/$dir" "$dir"
             
-            # Переходим в скачанный репозиторий, подгружаем точный коммит и переключаемся на него
-            cd "$ROOT_DIR/upstream/$dir"
-            git fetch origin "$target"
-            git checkout -q FETCH_HEAD
-            cd "$ROOT_DIR"
-            
-            # Копируем чистый код из upstream в рабочую папку
-            cp -r "$ROOT_DIR/upstream/$dir" "$ROOT_DIR/$dir"
-
-            cd "$ROOT_DIR/$dir"
-            git apply "$ROOT_DIR/patches/$patch" || echo "⚠️ $patch не применился (уже применён)"
-            cd "$ROOT_DIR"
+            cd "$dir"
+            git apply "../../patches/$patch" || echo "⚠️ $patch не применился (уже применён)"
+            cd ..
           done
-
       # 3. Собираем libcore.aar (главный шаг после патчей)
       - name: Native Build (LibCore)
         if: steps.patch_step.outputs.patches_found == 'true'
