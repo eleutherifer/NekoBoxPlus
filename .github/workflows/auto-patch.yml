@@ -41,7 +41,7 @@ jobs:
         run: |
           # Запоминаем корень нашей рабочей зоны (абсолютный путь)
           ROOT_DIR="$GITHUB_WORKSPACE"
-          cd "$GITHUB_WORKSPACE/patches“
+          cd "$GITHUB_WORKSPACE/patches"
           for patch in *.patch; do
             header=$(head -10 "$patch")
             base_not_clean=$(echo "$header" | grep -oP 'Base:\s*\K.*')
