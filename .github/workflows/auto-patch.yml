@@ -77,7 +77,7 @@ jobs:
             cp -r "upstream/$dir" "$GITHUB_WORKSPACE/$dir"
             cd "$GITHUB_WORKSPACE/$dir"
             git apply "$GITHUB_WORKSPACE/patches/$patch" || echo "⚠️ $patch не применился (уже применён)"
-            cd $GITHUB_WORKSPACE
+            cd "$GITHUB_WORKSPACE/patches"
           done
       # 3. Собираем libcore.aar (главный шаг после патчей)
       - name: Native Build (LibCore)
