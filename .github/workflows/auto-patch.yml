@@ -81,7 +81,7 @@ jobs:
           done
       # 3. Собираем libcore.aar (главный шаг после патчей)
       - name: Native Build (LibCore)
-        if: steps.patch_step.outputs.patches_found == 'true'
+        if: steps.patch_step.outputs.patches_found == 'true' && 'false'
         run: |
           echo "sdk.dir=${ANDROID_HOME}" > local.properties
           echo "ndk.dir=${ANDROID_HOME}/ndk/25.0.8775105" >> local.properties
@@ -90,14 +90,14 @@ jobs:
 
       # 4. Инициализируем Gradle
       - name: Init Gradle
-        if: steps.patch_step.outputs.patches_found == 'true'
+        if: steps.patch_step.outputs.patches_found == 'true' && 'false'
         run: |
           export LOCAL_PROPERTIES="${{ secrets.LOCAL_PROPERTIES }}"
           ./run init action gradle
 
       # 5. Финальная сборка APK
       - name: Assemble Release
-        if: steps.patch_step.outputs.patches_found == 'true'
+        if: steps.patch_step.outputs.patches_found == 'true' && 'false'
         run: |
           KEYSTORE_PASS="${{ secrets.KEYSTORE_PASS }}" \
           ALIAS_NAME="${{ secrets.ALIAS_NAME }}" \
@@ -110,7 +110,7 @@ jobs:
 
       # 6. Загружаем артефакт
       - name: Upload Artifacts
-        if: steps.patch_step.outputs.patches_found == 'true'
+        if: steps.patch_step.outputs.patches_found == 'true' && 'false'
         uses: actions/upload-artifact@v5
         with:
           name: NekoBoxPlus
