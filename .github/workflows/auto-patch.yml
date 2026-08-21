@@ -86,8 +86,8 @@ jobs:
         if: steps.patch_step.outputs.patches_found == 'true'
         run: |
           pwd
-          ls -F -A -1
-          tar -czvf NekoBoxPlus.tar.gz NekoBoxForAndroid sing-box libneko sing-vmess MasterDnsVPN-plus amneziawg-go net
+          ls -F -1
+          tar -czvf NekoBoxPlus.tar.gz NekoBoxForAndroid sing-box libneko sing-vmess MasterDnsVPN-plus
           echo "Patched archive created: NekoBoxPlus.tar.gz"
       
       # 4.Загружаем архив как артефакт (доступен в GitHub UI)
