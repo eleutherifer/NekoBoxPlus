@@ -85,8 +85,10 @@ jobs:
       - name: Create patched repositories archive
         if: steps.patch_step.outputs.patches_found == 'true'
         run: |
-          tar -czf NekoBoxPlus.tar.gz NekoBoxForAndroid sing-box libneko sing-vmess MasterDnsVPN-plus amneziawg-go net
+          cd patches
+          tar -czf ../NekoBoxPlus.tar.gz NekoBoxForAndroid sing-box libneko sing-vmess MasterDnsVPN-plus amneziawg-go net
           echo "Patched archive created: NekoBoxPlus.tar.gz"
+          cd ..
       
       # 4.Загружаем архив как артефакт (доступен в GitHub UI)
       - name: Upload artifact
