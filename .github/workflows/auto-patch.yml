@@ -83,6 +83,7 @@ jobs:
 
       # 3. Создаём архив с патченными репозиториями
       - name: Create patched repositories archive
+        if: steps.patch_step.outputs.patches_found == 'true' && 'true' == 'false'
         run: |
           tar -czf NekoBoxPlus.tar.gz NekoBoxForAndroid sing-box libneko sing-vmess MasterDnsVPN-plus amneziawg-go net
           echo "Patched archive created: NekoBoxPlus.tar.gz"
