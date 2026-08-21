@@ -59,7 +59,7 @@ jobs:
             elif [ "$dir" = "sing-vmess" ]; then
               dir="sing-vmess"
             elif [ "$dir" = "MasterDnsVPN" ]; then
-              dir="MasterDnsVPN"
+              dir="MasterDnsVPN-plus"
             elif [ "$dir" = "amneziawg-go" ]; then
               dir="amneziawg-go"
             elif [ "$dir" = "net" ]; then
@@ -80,7 +80,21 @@ jobs:
             cd "$GITHUB_WORKSPACE/patches"
           done
           # echo "patches_found=false" >> $GITHUB_OUTPUT
-      # 3. Собираем libcore.aar (главный шаг после патчей)
+
+      # 3. Создаём архив с патченными репозиториями
+      - name: Create patched repositories archive
+        run: |
+          tar -czf NekoBoxPlus.tar.gz NekoBoxForAndroid sing-box libneko sing-vmess MasterDnsVPN-plus amneziawg-go net
+          echo "Patched archive created: NekoBoxPlus.tar.gz"
+      
+      # 4.Загружаем архив как артефакт (доступен в GitHub UI)
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NekoBoxPlus
+          path: NekoBoxPlus.tar.gz
+      
+      # 5. Собираем libcore.aar (главный шаг после патчей)
       - name: Native Build (LibCore)
         if: steps.patch_step.outputs.patches_found == 'true' && 'true' == 'false'
         run: |
@@ -89,14 +103,14 @@ jobs:
           
           ./run lib core
 
-      # 4. Инициализируем Gradle
+      # 6. Инициализируем Gradle
       - name: Init Gradle
         if: steps.patch_step.outputs.patches_found == 'true' && 'true' == 'false'
         run: |
           export LOCAL_PROPERTIES="${{ secrets.LOCAL_PROPERTIES }}"
           ./run init action gradle
 
-      # 5. Финальная сборка APK
+      # 7. Финальная сборка APK
       - name: Assemble Release
         if: steps.patch_step.outputs.patches_found == 'true' && 'true' == 'false'
         run: |
@@ -109,7 +123,7 @@ jobs:
           APK=$(dirname $APK)
           echo "APK=$APK" >> $GITHUB_ENV
 
-      # 6. Загружаем артефакт
+      # 8. Загружаем артефакт
       - name: Upload Artifacts
         if: steps.patch_step.outputs.patches_found == 'true' && 'true' == 'false'
         uses: actions/upload-artifact@v5
