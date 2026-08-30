@@ -141,13 +141,23 @@ jobs:
             echo "Папка патчей x-slash-net отсутствует, пропускаем шаг для библиотеки net."
           fi
 
+          # Переходим в папку Android-проекта
           cd NekoBoxForAndroid
 
           export ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
           export JAVA_HOME=/opt/android-studio/jbr
 
+          # Скачиваем стандартные базы geoip/geosite для NekoBox
           bash buildScript/lib/assets.sh
+
+          # Генерируем ресурсы для AdBlock внутри папки sing-box!
+          # Скрипт assets.sh в некоторых форках не умеет заглядывать в соседний sing-box.
+          # Поэтому принудительно создаем нужный файл-заглушку, чтобы Go не ругался при сборке:
+          mkdir -p ../sing-box/common/adblock/adblockrust/resources/files
+          touch ../sing-box/common/adblock/adblockrust/resources/files/placeholder.txt
+
+          # Вот теперь запускаем сборку ядра в Docker — ошибок с флагами embed больше не будет
           bash buildScript/lib/core.docker.sh
 
           cd ..
