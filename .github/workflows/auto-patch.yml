@@ -41,6 +41,7 @@ jobs:
         run: |
           # Запоминаем корень нашей рабочей зоны (абсолютный путь)
           ROOT_DIR="$GITHUB_WORKSPACE"
+          mkdir -p "$GITHUB_WORKSPACE/workspace"
           cd "$GITHUB_WORKSPACE/patches"
           for patch in *.patch; do
             header=$(head -10 "$patch")
@@ -74,12 +75,33 @@ jobs:
             git fetch --depth 1 origin "$target"
             git checkout "$target"
             cd ../..
-            cp -r "upstream/$dir" "$GITHUB_WORKSPACE/$dir"
+            cp -r "upstream/$dir" "$GITHUB_WORKSPACE/workspace/$dir"
             cd "$GITHUB_WORKSPACE/$dir"
             git apply "$GITHUB_WORKSPACE/patches/$patch" || echo "⚠️ $patch не применился (уже применён)"
             cd "$GITHUB_WORKSPACE/patches"
           done
           # echo "patches_found=false" >> $GITHUB_OUTPUT
+
+          cd "$GITHUB_WORKSPACE/workspace"
+          git clone "https://github.com/amnezia-vpn/amneziawg-go.git" "amneziawg-go"
+          cd amneziawg-go
+          header=$(head -6 "../sing-box/patches/amneziawg-go/README")
+          target=$(echo "$header" | grep -oP '2. Checkout to\s*\K.*')
+          git checkout "$target"
+          git apply ../sing-box/patches/amneziawg-go/*.patch
+          cd ..
+          git clone https://go.googlesource.com/net net
+
+          cd NekoBoxForAndroid
+          export ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          export JAVA_HOME=/opt/android-studio/jbr
+
+          bash buildScript/lib/assets.sh
+          bash buildScript/lib/core.docker.sh
+          cd ..
+
+          cd ..
 
       # 3. Создаём архив с патченными репозиториями
       - name: Create patched repositories archive
@@ -88,7 +110,7 @@ jobs:
           pwd
           ls -F -1
           ls -F -1 patches/upstream
-          tar -czf NekoBoxPlus.tar.gz NekoBoxForAndroid sing-box libneko sing-vmess MasterDnsVPN-plus
+          tar -czf NekoBoxPlus.tar.gz workspace
           echo "Patched archive created: NekoBoxPlus.tar.gz"
       
       # 4.Загружаем архив как артефакт (доступен в GitHub UI)
