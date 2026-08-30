@@ -76,13 +76,14 @@ jobs:
             git checkout "$target"
             cd ../..
             cp -r "upstream/$dir" "$GITHUB_WORKSPACE/workspace/$dir"
-            cd "$GITHUB_WORKSPACE/$dir"
+            cd "$GITHUB_WORKSPACE/workspace/$dir"
             git apply "$GITHUB_WORKSPACE/patches/$patch" || echo "⚠️ $patch не применился (уже применён)"
             cd "$GITHUB_WORKSPACE/patches"
           done
           # echo "patches_found=false" >> $GITHUB_OUTPUT
 
           cd "$GITHUB_WORKSPACE/workspace"
+          
           git clone "https://github.com/amnezia-vpn/amneziawg-go.git" "amneziawg-go"
           cd amneziawg-go
           header=$(head -6 "../sing-box/patches/amneziawg-go/README")
@@ -93,12 +94,14 @@ jobs:
           git clone https://go.googlesource.com/net net
 
           cd NekoBoxForAndroid
+
           export ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
           export JAVA_HOME=/opt/android-studio/jbr
 
           bash buildScript/lib/assets.sh
           bash buildScript/lib/core.docker.sh
+
           cd ..
 
           cd ..
@@ -110,7 +113,7 @@ jobs:
           pwd
           ls -F -1
           ls -F -1 patches/upstream
-          tar -czf NekoBoxPlus.tar.gz workspace
+          tar -czf NekoBoxPlus.tar.gz patches workspace
           echo "Patched archive created: NekoBoxPlus.tar.gz"
       
       # 4.Загружаем архив как артефакт (доступен в GitHub UI)
