@@ -1,0 +1,86 @@
+name: Build NekoBox+
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: false
+      publish_release:
+        type: boolean
+        default: true
+    outputs:
+      version_name:
+        value: ${{ jobs.build.outputs.version_name }}
+  workflow_dispatch:
+    inputs:
+      publish_release:
+        description: "Create a GitHub Release for this build"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+env:
+  # Bump here if a future patch set needs a different NDK.
+  NDK_VERSION: "27.2.12479018"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version_name: ${{ steps.build.outputs.version_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      # Android SDK/NDK + Docker image + several source checkouts add up
+      # fast on a standard runner; reclaim space preinstalled tooling
+      # (.NET, Haskell, etc.) isn't using.
+      - name: Free up runner disk space
+        uses: jlumbroso/free-disk-space@main # consider pinning to a release tag
+        with:
+          tool-cache: false
+          docker-images: false
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK ${{ env.NDK_VERSION }}
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager --install "ndk;${{ env.NDK_VERSION }}"
+
+      - name: Prepare patched workspace
+        run: bash scripts/prepare-workspace.sh
+
+      - name: Build core + APKs
+        id: build
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
+          ALIAS_NAME: ${{ secrets.ALIAS_NAME }}
+          ALIAS_PASS: ${{ secrets.ALIAS_PASS }}
+        run: bash scripts/build-and-package.sh
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NekoBoxPlus-${{ steps.build.outputs.version_name }}
+          path: dist/*.apk
+
+      - name: Publish GitHub Release
+        if: inputs.publish_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.build.outputs.version_name }}
+          name: NekoBox+ ${{ steps.build.outputs.version_name }}
+          files: dist/*.apk
