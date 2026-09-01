@@ -15,21 +15,33 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       new_sha: ${{ steps.commit.outputs.sha }}
+      extracted: ${{ steps.extract.outputs.extracted }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Extract patches.tar.gz into ./patches
+        id: extract
         run: |
-          test -f patches.tar.gz || { echo "no patches.tar.gz in repo root"; exit 1; }
+          # The push trigger fires on removal too -- both if you delete
+          # patches.tar.gz by hand, and from the commit step below, which
+          # removes it as part of the same push that adds patches/. Either
+          # way, no file here just means "nothing to ingest", not a failure.
+          if [ ! -f patches.tar.gz ]; then
+            echo "no patches.tar.gz in repo root -- nothing to do"
+            echo "extracted=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           rm -rf patches
           mkdir patches
           tar -xzf patches.tar.gz -C patches
           rm -f patches.tar.gz
+          echo "extracted=true" >> "$GITHUB_OUTPUT"
           echo "Extracted:"
           find patches -maxdepth 1 -type f -printf '  %f\n'
 
       - name: Commit extracted patches
         id: commit
+        if: steps.extract.outputs.extracted == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -37,13 +49,16 @@ jobs:
           if git diff --cached --quiet; then
             echo "nothing to commit"
           else
-            git commit -m "Extract patches.tar.gz -> patches/"
+            # [skip ci] stops this same push from re-triggering this
+            # workflow a second time just to notice patches.tar.gz is gone.
+            git commit -m "Extract patches.tar.gz -> patches/ [skip ci]"
             git push
           fi
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
   build:
     needs: ingest
+    if: needs.ingest.outputs.extracted == 'true'
     uses: ./.github/workflows/build.yml
     with:
       ref: ${{ needs.ingest.outputs.new_sha }}
