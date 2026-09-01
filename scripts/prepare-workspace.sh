@@ -16,9 +16,11 @@
 # *.patch files. We scan for these dynamically after every top-level
 # patch is applied and materialise whatever we find as a workspace
 # sibling too. A nested README with no parseable Clone/Checkout-to line
-# (like byedpi's, which only documents a target commit) is deliberately
-# left alone -- NekoBoxForAndroid's own get_source.sh / core.docker.sh
-# knows how to fetch that one; patches.tar.gz just doesn't carry its URL.
+# (byedpi's only documents a target commit) falls back to parsing
+# NekoBoxForAndroid's own buildScript/lib/core/get_source.sh +
+# get_source_env.sh, which is where that one is actually hardcoded --
+# relying on that script to fetch it itself inside the Docker build
+# isn't happening reliably in practice.
 #
 # One naming exception is known so far: MasterDnsVPN.patch must land in
 # workspace/MasterDnsVPN-plus (that's the directory name the app code and
@@ -72,11 +74,32 @@ apply_patches_in() {
   [ "$any" = 1 ] || echo "  (no .patch files in $patch_src_dir)"
 }
 
+# Fallback for a nested README with no Clone/Checkout-to line (byedpi's
+# only states a target commit). NekoBoxForAndroid's own get_source.sh
+# hardcodes "git clone --no-checkout <url> <dep>" directly for a few
+# deps, with the ref in get_source_env.sh as COMMIT_<DEP>; recover both
+# from there instead of leaving it to that script to fetch on its own.
+get_source_fallback() {
+  local dep_name="$1"
+  local gs="$WORKSPACE_DIR/NekoBoxForAndroid/buildScript/lib/core/get_source.sh"
+  local gse="$WORKSPACE_DIR/NekoBoxForAndroid/buildScript/lib/core/get_source_env.sh"
+  [ -f "$gs" ] && [ -f "$gse" ] || return 1
+
+  local url var ref
+  url="$(grep "git clone --no-checkout" "$gs" | grep -E "[[:space:]]${dep_name}\$" | grep -oP 'https?://\S+' | head -1 || true)"
+  var="COMMIT_$(echo "$dep_name" | tr '[:lower:]-' '[:upper:]_')"
+  ref="$(grep -oP "^export ${var}=\"\K[^\"]+" "$gse" | head -1 || true)"
+
+  [ -n "$url" ] && [ -n "$ref" ] || return 1
+  echo "$url $ref"
+}
+
 # Handle one nested <dep>/README(.md) discovered under an already-applied
-# component, if it has a parseable Clone + Checkout-to line.
+# component: a parseable Clone + Checkout-to line, or the get_source.sh
+# fallback above.
 process_nested_readme() {
   local readme="$1"
-  local dep_patch_dir dep_name clone_url ref dest
+  local dep_patch_dir dep_name clone_url ref dest fallback
   dep_patch_dir="$(dirname "$readme")"
   dep_name="$(basename "$dep_patch_dir")"
 
@@ -84,8 +107,15 @@ process_nested_readme() {
   ref="$(grep -ioP '\bCheckout\s+to\s+\K\S+' "$readme" | head -1 || true)"
 
   if [ -z "$clone_url" ] || [ -z "$ref" ]; then
-    echo "  $dep_name: no Clone/Checkout-to line in $(basename "$readme") -- leaving it to NekoBoxForAndroid's own tooling"
-    return
+    fallback="$(get_source_fallback "$dep_name" || true)"
+    if [ -n "$fallback" ]; then
+      clone_url="${fallback% *}"
+      ref="${fallback#* }"
+      echo "  $dep_name: no Clone/Checkout-to line in $(basename "$readme"), recovered from get_source.sh instead"
+    else
+      echo "  $dep_name: no Clone/Checkout-to line in $(basename "$readme") and nothing recoverable from get_source.sh -- leaving it to NekoBoxForAndroid's own tooling"
+      return
+    fi
   fi
 
   dest="$WORKSPACE_DIR/${DIR_OVERRIDES[$dep_name]:-$dep_name}"
@@ -129,15 +159,15 @@ for patch_file in "${patch_files[@]}"; do
 done
 
 # NekoBoxForAndroid's buildScript/lib/core/get_source.sh re-checks-out
-# sing-box/libneko to whatever get_source_env.sh names -- after patching
-# that's normally an upstream maintainer's own fork commit, meaningless
-# against the plain-upstream checkouts we just made ourselves. Point
-# those two vars at the commits we actually used so that step is a no-op.
-# COMMIT_BYEDPI is deliberately left as-is: we have no source URL for
-# byedpi from patches.tar.gz, so its own fetch logic still runs for it.
+# sing-box/libneko/sing-vmess to whatever get_source_env.sh names -- after
+# patching that's normally an upstream maintainer's own fork commit,
+# meaningless against the plain-upstream checkouts we just made
+# ourselves. Point those vars at the commits we actually used so that
+# step is a no-op. byedpi is handled above instead (its source has no
+# public placeholder to reconcile against).
 GET_SOURCE_ENV="$WORKSPACE_DIR/NekoBoxForAndroid/buildScript/lib/core/get_source_env.sh"
 if [ -f "$GET_SOURCE_ENV" ]; then
-  for pair in COMMIT_SING_BOX:sing-box COMMIT_LIBNEKO:libneko; do
+  for pair in COMMIT_SING_BOX:sing-box COMMIT_LIBNEKO:libneko COMMIT_SING_VMESS:sing-vmess; do
     var="${pair%%:*}"; dir="${pair##*:}"
     if [ -d "$WORKSPACE_DIR/$dir" ] && grep -q "^export $var=" "$GET_SOURCE_ENV"; then
       actual="$(git -C "$WORKSPACE_DIR/$dir" rev-parse HEAD)"
