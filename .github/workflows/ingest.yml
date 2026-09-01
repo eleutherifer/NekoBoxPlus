@@ -1,0 +1,52 @@
+name: Ingest patches.tar.gz
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "patches.tar.gz"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    outputs:
+      new_sha: ${{ steps.commit.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract patches.tar.gz into ./patches
+        run: |
+          test -f patches.tar.gz || { echo "no patches.tar.gz in repo root"; exit 1; }
+          rm -rf patches
+          mkdir patches
+          tar -xzf patches.tar.gz -C patches
+          rm -f patches.tar.gz
+          echo "Extracted:"
+          find patches -maxdepth 1 -type f -printf '  %f\n'
+
+      - name: Commit extracted patches
+        id: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A patches patches.tar.gz
+          if git diff --cached --quiet; then
+            echo "nothing to commit"
+          else
+            git commit -m "Extract patches.tar.gz -> patches/"
+            git push
+          fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: ingest
+    uses: ./.github/workflows/build.yml
+    with:
+      ref: ${{ needs.ingest.outputs.new_sha }}
+    secrets: inherit
+    permissions:
+      contents: write
