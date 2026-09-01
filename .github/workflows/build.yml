@@ -48,6 +48,8 @@ jobs:
         with:
           tool-cache: false
           docker-images: false
+          android: false # defaults to true and deletes /usr/local/lib/android,
+                          # which setup-android then can't recreate (EACCES)
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -91,4 +93,4 @@ jobs:
           tag_name: v${{ steps.build.outputs.version_name }}
           name: NekoBox+ ${{ steps.build.outputs.version_name }}
           files: dist/*.apk
-
+          
