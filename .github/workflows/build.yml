@@ -93,4 +93,3 @@ jobs:
           tag_name: v${{ steps.build.outputs.version_name }}
           name: NekoBox+ ${{ steps.build.outputs.version_name }}
           files: dist/*.apk
-          
