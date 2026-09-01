@@ -33,6 +33,17 @@ fi
 
 # --- native core (Docker; required -- see comment above) --------------
 bash buildScript/lib/assets.sh
+
+# sing-box's adblock-rust bridge (common/adblock/adblockrust/resources/embed.go)
+# go:embeds resources/files/placeholder.txt. Without adblock-resources/uBlock
+# wired in as siblings for sing-box's own `make -f Makefile.plus
+# adblock-resources-generate` (we don't clone those -- no source URL for them
+# anywhere in patches.tar.gz), that file never gets created and the Go build
+# fails outright. Touching it here keeps the build going with an empty
+# ad-block ruleset; ask if you want the real uBlock filter lists wired in too.
+mkdir -p "$ROOT/workspace/sing-box/common/adblock/adblockrust/resources/files"
+touch "$ROOT/workspace/sing-box/common/adblock/adblockrust/resources/files/placeholder.txt"
+
 bash buildScript/lib/core.docker.sh
 
 [ -f app/libs/libcore.aar ] || { echo "app/libs/libcore.aar missing after core.docker.sh" >&2; exit 1; }
