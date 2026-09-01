@@ -1,0 +1,405 @@
+
+[PATCH] Allow runtime log toggling
+
+Base: https://github.com/starifly/libneko
+Target patch commit: 6a85c185d62435a5293ef70ac3b638ae3ee1efa7
+---
+diff --git a/go.mod b/go.mod
+index ede267146876024ce1a9c28a4f826b0cd5d06504..1d34ef1a24569c1b92a35e1b4a8498f62798d040 100644
+--- a/go.mod
++++ b/go.mod
+@@ -1,3 +1,3 @@
+ module github.com/matsuridayo/libneko
+ 
+-go 1.19
++go 1.25.0
+diff --git a/neko_log/log.go b/neko_log/log.go
+index 81d89615d4694c6d41f13625a3361ec7bad3081b..d2d9592b1a42d63281166bd5d16b00cfea205505 100644
+--- a/neko_log/log.go
++++ b/neko_log/log.go
+@@ -6,16 +6,21 @@ import (
+ 	"log"
+ 	"os"
+ 	"runtime"
++	"sync/atomic"
+ 
+ 	"github.com/matsuridayo/libneko/neko_common"
+ 	"github.com/matsuridayo/libneko/syscallw"
+ )
+ 
+ var LogWriter *logWriter
+-var LogWriterDisable = false
++var logWriterDisabled atomic.Bool
+ var TruncateOnStart = true
+ var NB4AGuiLogWriter io.Writer
+ 
++func SetLogEnabled(enabled bool) {
++	logWriterDisabled.Store(!enabled)
++}
++
+ func SetupLog(maxSize int, path string) (err error) {
+ 	if LogWriter != nil {
+ 		return
+@@ -80,7 +85,7 @@ type logWriter struct {
+ }
+ 
+ func (w *logWriter) Write(p []byte) (int, error) {
+-	if LogWriterDisable {
++	if logWriterDisabled.Load() {
+ 		return len(p), nil
+ 	}
+ 
+diff --git a/neko_log/log_test.go b/neko_log/log_test.go
+new file mode 100644
+index 0000000000000000000000000000000000000000..65464cb92324eb9fb890b7006347e84e126f3b74
+--- /dev/null
++++ b/neko_log/log_test.go
+@@ -0,0 +1,29 @@
++package neko_log
++
++import (
++	"bytes"
++	"io"
++	"testing"
++)
++
++func TestSetLogEnabled(t *testing.T) {
++	var output bytes.Buffer
++	writer := &logWriter{writers: []io.Writer{&output}}
++
++	SetLogEnabled(false)
++	if _, err := writer.Write([]byte("disabled")); err != nil {
++		t.Fatal(err)
++	}
++	if output.Len() != 0 {
++		t.Fatalf("disabled writer produced %q", output.String())
++	}
++
++	SetLogEnabled(true)
++	t.Cleanup(func() { SetLogEnabled(true) })
++	if _, err := writer.Write([]byte("enabled")); err != nil {
++		t.Fatal(err)
++	}
++	if output.String() != "enabled" {
++		t.Fatalf("enabled writer produced %q", output.String())
++	}
++}
+diff --git a/speedtest/speedtest.go b/speedtest/speedtest.go
+index b24d08f5d6d32100007e39b910d74e5c2eef16e0..fb3df00092bfbec70a554ebd4010699c53d614bc 100644
+--- a/speedtest/speedtest.go
++++ b/speedtest/speedtest.go
+@@ -2,7 +2,6 @@ package speedtest
+ 
+ import (
+ 	"context"
+-	"crypto/tls"
+ 	"errors"
+ 	"fmt"
+ 	"net"
+@@ -13,90 +12,131 @@ import (
+ 
+ const UrlTestStandard_RTT = 0
+ const UrlTestStandard_Handshake = 1
+-const UrlTestStandard_FisrtHandshake = 2
++const UrlTestStandard_FirstHandshake = 2
+ 
+-var errNoRedir = errors.New("no redir")
++// UrlTestStandard_FisrtHandshake is kept for source compatibility.
++const UrlTestStandard_FisrtHandshake = UrlTestStandard_FirstHandshake
+ 
+-func UrlTest(client *http.Client, link string, timeout int32, standard int) (int32, error) {
+-	if client == nil {
+-		return 0, fmt.Errorf("no client")
++func URLTest(ctx context.Context, client *http.Client, link string) (int32, error) {
++	probeClient, err := prepareURLTestClient(client, false)
++	if err != nil {
++		return 0, err
+ 	}
+-	defer client.CloseIdleConnections()
++	defer probeClient.CloseIdleConnections()
+ 
+-	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+-		return errNoRedir
++	start := time.Now()
++	wroteHeaders, firstByte, err := performURLTestRequest(ctx, probeClient, link)
++	if err != nil {
++		return 0, err
+ 	}
++	return durationMilliseconds(responseRTT(time.Since(start), wroteHeaders, firstByte)), nil
++}
+ 
+-	var time_start time.Time
+-	var hsk_end time.Time
+-	var time_end time.Time
+-	var times int
++func UrlTest(ctx context.Context, client *http.Client, link string, standard int) (int32, error) {
++	disableKeepAlives := standard == UrlTestStandard_Handshake
++	probeClient, err := prepareURLTestClient(client, disableKeepAlives)
++	if err != nil {
++		return 0, err
++	}
++	defer probeClient.CloseIdleConnections()
+ 
++	attempts := 2
+ 	switch standard {
+-	case UrlTestStandard_FisrtHandshake:
+-		times = 1
++	case UrlTestStandard_FirstHandshake:
++		attempts = 1
+ 	case UrlTestStandard_Handshake:
+-		times = 2
+-		rt := client.Transport.(*http.Transport)
+-		rt.DisableKeepAlives = true
+ 	case UrlTestStandard_RTT:
+-		times = 2
+ 	default:
+ 		return 0, errors.New("unknown urltest standard")
+ 	}
+-	baseCtx := context.WithValue(context.Background(), "nb4a_no_concurrent_dial", true)
+-	ctx, cancel := context.WithTimeout(baseCtx, time.Duration(timeout)*time.Millisecond)
+-	defer cancel()
+ 
+-	req, err := http.NewRequestWithContext(ctx, "GET", link, nil)
+-	if err != nil {
+-		return 0, err
++	var elapsed time.Duration
++	for range attempts {
++		start := time.Now()
++		wroteHeaders, firstByte, requestErr := performURLTestRequest(ctx, probeClient, link)
++		if requestErr != nil {
++			return 0, requestErr
++		}
++		elapsed = time.Since(start)
++		if standard == UrlTestStandard_RTT {
++			elapsed = responseRTT(elapsed, wroteHeaders, firstByte)
++		}
+ 	}
+ 
+-	trace := &httptrace.ClientTrace{
+-		TLSHandshakeDone: func(cs tls.ConnectionState, err error) {
+-			hsk_end = time.Now()
++	return durationMilliseconds(elapsed), nil
++}
++
++func prepareURLTestClient(client *http.Client, disableKeepAlives bool) (*http.Client, error) {
++	if client == nil {
++		return nil, errors.New("no client")
++	}
++	probeClient := *client
++	probeClient.CheckRedirect = func(*http.Request, []*http.Request) error {
++		return http.ErrUseLastResponse
++	}
++	if transport, ok := client.Transport.(*http.Transport); ok {
++		probeTransport := transport.Clone()
++		probeTransport.DisableKeepAlives = disableKeepAlives
++		probeClient.Transport = probeTransport
++	} else if disableKeepAlives {
++		return nil, fmt.Errorf("URLTest handshake mode requires *http.Transport, got %T", client.Transport)
++	}
++	return &probeClient, nil
++}
++
++func performURLTestRequest(ctx context.Context, client *http.Client, link string) (time.Time, time.Time, error) {
++	var wroteHeaders time.Time
++	var firstByte time.Time
++	req, err := http.NewRequestWithContext(ctx, http.MethodHead, link, nil)
++	if err != nil {
++		return wroteHeaders, firstByte, err
++	}
++	req = req.WithContext(httptrace.WithClientTrace(req.Context(), &httptrace.ClientTrace{
++		WroteHeaders: func() {
++			wroteHeaders = time.Now()
+ 		},
+ 		GotFirstResponseByte: func() {
+-			time_end = time.Now()
+-		},
+-		WroteHeaders: func() {
+-			hsk_end = time.Now()
++			firstByte = time.Now()
+ 		},
++	}))
++	resp, err := client.Do(req)
++	if err != nil {
++		return wroteHeaders, firstByte, err
+ 	}
+-	req = req.WithContext(httptrace.WithClientTrace(req.Context(), trace))
+-
+-	for i := 0; i < times; i++ {
+-		time_start = time.Now()
+-		resp, err := client.Do(req)
+-		if err != nil {
+-			if errors.Is(err, errNoRedir) {
+-				err = nil
+-			} else {
+-				return 0, err
+-			}
+-		}
+-		resp.Body.Close()
++	if resp.Body != nil {
++		err = resp.Body.Close()
+ 	}
++	return wroteHeaders, firstByte, err
++}
+ 
+-	if time_end.IsZero() {
+-		time_end = time.Now()
++func responseRTT(fallback time.Duration, wroteHeaders, firstByte time.Time) time.Duration {
++	if wroteHeaders.IsZero() || firstByte.IsZero() || firstByte.Before(wroteHeaders) {
++		return fallback
+ 	}
++	return firstByte.Sub(wroteHeaders)
++}
+ 
+-	if standard == UrlTestStandard_RTT {
+-		time_start = hsk_end
++func TCPPing(
++	ctx context.Context,
++	dialContext func(context.Context, string, string) (net.Conn, error),
++	address string,
++) (int32, error) {
++	if dialContext == nil {
++		return 0, errors.New("no dialer")
+ 	}
+-
+-	return int32(time_end.Sub(time_start).Milliseconds()), nil
++	start := time.Now()
++	conn, err := dialContext(ctx, "tcp", address)
++	if err != nil {
++		return 0, err
++	}
++	elapsed := time.Since(start)
++	if closeErr := conn.Close(); closeErr != nil {
++		return 0, closeErr
++	}
++	return durationMilliseconds(elapsed), nil
+ }
+ 
+-func TcpPing(address string, timeout int32) (ms int32, err error) {
+-	startTime := time.Now()
+-	c, err := net.DialTimeout("tcp", address, time.Duration(timeout)*time.Millisecond)
+-	endTime := time.Now()
+-	if err == nil {
+-		ms = int32(endTime.Sub(startTime).Milliseconds())
+-		c.Close()
+-	}
+-	return
++func durationMilliseconds(duration time.Duration) int32 {
++	milliseconds := max(duration.Milliseconds(), 0)
++	return int32(min(milliseconds, int64(^uint32(0)>>1)))
+ }
+diff --git a/speedtest/speedtest_test.go b/speedtest/speedtest_test.go
+new file mode 100644
+index 0000000000000000000000000000000000000000..dba46c14c1a30f7ed18294b68cd6f56ab0fd055d
+--- /dev/null
++++ b/speedtest/speedtest_test.go
+@@ -0,0 +1,110 @@
++package speedtest
++
++import (
++	"context"
++	"errors"
++	"net"
++	"net/http"
++	"net/http/httptest"
++	"sync/atomic"
++	"testing"
++	"time"
++)
++
++func TestURLTestUsesSingleHEADWithoutFollowingRedirects(t *testing.T) {
++	var requests atomic.Int32
++	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		requests.Add(1)
++		if r.Method != http.MethodHead {
++			t.Errorf("method = %s", r.Method)
++		}
++		http.Redirect(w, r, "/redirected", http.StatusFound)
++	}))
++	defer server.Close()
++
++	if _, err := URLTest(t.Context(), server.Client(), server.URL); err != nil {
++		t.Fatal(err)
++	}
++	if got := requests.Load(); got != 1 {
++		t.Fatalf("requests = %d", got)
++	}
++}
++
++func TestURLTestHonorsContext(t *testing.T) {
++	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
++		time.Sleep(200 * time.Millisecond)
++	}))
++	defer server.Close()
++	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
++	defer cancel()
++
++	_, err := URLTest(ctx, server.Client(), server.URL)
++	if !errors.Is(err, context.DeadlineExceeded) {
++		t.Fatalf("error = %v", err)
++	}
++}
++
++func TestResponseRTTExcludesConnectionSetup(t *testing.T) {
++	wroteHeaders := time.Unix(0, 0)
++	firstByte := wroteHeaders.Add(57 * time.Millisecond)
++	if got := responseRTT(403*time.Millisecond, wroteHeaders, firstByte); got != 57*time.Millisecond {
++		t.Fatalf("response RTT = %s", got)
++	}
++}
++
++func TestResponseRTTFallsBackWithoutCompleteTrace(t *testing.T) {
++	const fallback = 403 * time.Millisecond
++	if got := responseRTT(fallback, time.Time{}, time.Time{}); got != fallback {
++		t.Fatalf("fallback RTT = %s", got)
++	}
++}
++
++func TestLegacyURLTestRequestCounts(t *testing.T) {
++	for _, test := range []struct {
++		name     string
++		standard int
++		requests int32
++	}{
++		{"first", UrlTestStandard_FirstHandshake, 1},
++		{"handshake", UrlTestStandard_Handshake, 2},
++		{"rtt", UrlTestStandard_RTT, 2},
++	} {
++		t.Run(test.name, func(t *testing.T) {
++			var requests atomic.Int32
++			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++				requests.Add(1)
++				w.WriteHeader(http.StatusNoContent)
++			}))
++			defer server.Close()
++			if _, err := UrlTest(t.Context(), server.Client(), server.URL, test.standard); err != nil {
++				t.Fatal(err)
++			}
++			if got := requests.Load(); got != test.requests {
++				t.Fatalf("requests = %d", got)
++			}
++		})
++	}
++}
++
++func TestTCPPingClosesConnection(t *testing.T) {
++	client, server := net.Pipe()
++	serverClosed := make(chan struct{})
++	go func() {
++		defer close(serverClosed)
++		buffer := make([]byte, 1)
++		_, _ = server.Read(buffer)
++		_ = server.Close()
++	}()
++
++	_, err := TCPPing(t.Context(), func(context.Context, string, string) (net.Conn, error) {
++		return client, nil
++	}, "example.test:443")
++	if err != nil {
++		t.Fatal(err)
++	}
++	select {
++	case <-serverClosed:
++	case <-time.After(time.Second):
++		t.Fatal("connection was not closed")
++	}
++}
