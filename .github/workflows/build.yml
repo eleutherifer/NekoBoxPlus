@@ -26,7 +26,7 @@ env:
   # Bump these if a future patch set changes compileSdk/buildToolsVersion/NDK
   # (buildSrc/Helpers.kt's setupCommon() -- current archive wants API 37 /
   # build-tools 36.0.0) in NekoBoxForAndroid.patch, or the NDK version.
-  ANDROID_PLATFORM: "android-37"
+  ANDROID_PLATFORM: "android-37.0"
   BUILD_TOOLS_VERSION: "36.0.0"
   NDK_VERSION: "27.2.12479018"
 
