@@ -23,7 +23,11 @@ permissions:
   contents: write
 
 env:
-  # Bump here if a future patch set needs a different NDK.
+  # Bump these if a future patch set changes compileSdk/buildToolsVersion/NDK
+  # (buildSrc/Helpers.kt's setupCommon() -- current archive wants API 37 /
+  # build-tools 36.0.0) in NekoBoxForAndroid.patch, or the NDK version.
+  ANDROID_PLATFORM: "android-37"
+  BUILD_TOOLS_VERSION: "36.0.0"
   NDK_VERSION: "27.2.12479018"
 
 jobs:
@@ -54,10 +58,13 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android NDK ${{ env.NDK_VERSION }}
+      - name: Install Android SDK/NDK components
         run: |
           yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager --install "ndk;${{ env.NDK_VERSION }}"
+          sdkmanager --install \
+            "platforms;${{ env.ANDROID_PLATFORM }}" \
+            "build-tools;${{ env.BUILD_TOOLS_VERSION }}" \
+            "ndk;${{ env.NDK_VERSION }}"
 
       - name: Prepare patched workspace
         run: bash scripts/prepare-workspace.sh
@@ -84,3 +91,4 @@ jobs:
           tag_name: v${{ steps.build.outputs.version_name }}
           name: NekoBox+ ${{ steps.build.outputs.version_name }}
           files: dist/*.apk
+
