@@ -15,17 +15,16 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       new_sha: ${{ steps.commit.outputs.sha }}
-      extracted: ${{ steps.extract.outputs.extracted }}
+      prepared: ${{ steps.commit.outputs.prepared }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Extract patches.tar.gz into ./patches
         id: extract
         run: |
-          # The push trigger fires on removal too -- both if you delete
-          # patches.tar.gz by hand, and from the commit step below, which
-          # removes it as part of the same push that adds patches/. Either
-          # way, no file here just means "nothing to ingest", not a failure.
+          # The push trigger fires on removal too (this job's own cleanup
+          # commit deletes patches.tar.gz) -- no file here just means
+          # "nothing to ingest", not a failure.
           if [ ! -f patches.tar.gz ]; then
             echo "no patches.tar.gz in repo root -- nothing to do"
             echo "extracted=false" >> "$GITHUB_OUTPUT"
@@ -34,31 +33,35 @@ jobs:
           rm -rf patches
           mkdir patches
           tar -xzf patches.tar.gz -C patches
-          rm -f patches.tar.gz
           echo "extracted=true" >> "$GITHUB_OUTPUT"
-          echo "Extracted:"
-          find patches -maxdepth 1 -type f -printf '  %f\n'
 
-      - name: Commit extracted patches
+      - name: Build workspace/, then discard patches/ and the archive
         id: commit
         if: steps.extract.outputs.extracted == 'true'
         run: |
+          bash scripts/prepare-workspace.sh
+          # Neither is committed: workspace/ is the only thing that
+          # persists -- patches/ was never added to git, and this removes
+          # patches.tar.gz too, so nothing but the prepared sources is
+          # left in the repo once this run is done.
+          rm -rf patches patches.tar.gz
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A patches patches.tar.gz
+          git add -A .
           if git diff --cached --quiet; then
             echo "nothing to commit"
+            echo "prepared=false" >> "$GITHUB_OUTPUT"
           else
-            # [skip ci] stops this same push from re-triggering this
-            # workflow a second time just to notice patches.tar.gz is gone.
-            git commit -m "Extract patches.tar.gz -> patches/ [skip ci]"
+            git commit -m "Apply patches.tar.gz -> workspace/ [skip ci]"
             git push
+            echo "prepared=true" >> "$GITHUB_OUTPUT"
           fi
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
   build:
     needs: ingest
-    if: needs.ingest.outputs.extracted == 'true'
+    if: needs.ingest.outputs.prepared == 'true'
     uses: ./.github/workflows/build.yml
     with:
       ref: ${{ needs.ingest.outputs.new_sha }}

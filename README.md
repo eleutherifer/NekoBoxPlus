@@ -4,9 +4,10 @@ NekoBox+
 
 https://4pda.to/forum/index.php?showtopic=1121122
 
-.github/workflows/ingest.yml — триггер на push patches.tar.gz, распаковывает в patches/, коммитит, удаляет tar.gz, зовёт build.yml через workflow_call на свежем коммите. Архив patches.tar.gz нужно брать из темы на 4pda.to по ссылке выше.
+.github/workflows/ingest.yml — триггер на push patches.tar.gz, распаковывает архив в patches/, гоняет prepare-workspace.sh, затем удаляет и patches/ и patches.tar.gz с диска, архив коммитится при загрузке, а этим же прогоном его удаление уходит в тот же коммит, что добавляет workspace/. В репозитории остаётся только workspace/.
+Архив patches.tar.gz нужно брать из темы на 4pda.to по ссылке выше.
 
-.github/workflows/build.yml — вызывается и автоматически, и вручную. Ставит JDK17 + Android SDK/NDK, гоняет два скрипта ниже, публикует Release.
+.github/workflows/build.yml — чекаут → тулчейн → build-and-package.sh → релиз
 
 scripts/prepare-workspace.sh — универсальный движок: читает Base:/Target patch commit: в каждом patches/*.patch, клонирует репозиторий на этот коммит (без полного клона — GitHub отдаёт произвольный SHA напрямую), кладёт в workspace/<name>, применяет патч. После sing-box.patch/NekoBoxForAndroid.patch дополнительно сканирует появившиеся */patches/*/README(.md) (сейчас там amneziawg-go, utls, byedpi) и так же тянет+патчит их. Версия нигде не хардкожена.
 

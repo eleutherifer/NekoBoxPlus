@@ -78,9 +78,6 @@ jobs:
           link-to-sdk: true
       - run: echo "ANDROID_NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}" >> "$GITHUB_ENV"
 
-      - name: Prepare patched workspace
-        run: bash scripts/prepare-workspace.sh
-
       - name: Build core + APKs
         id: build
         env:
