@@ -23,12 +23,11 @@ permissions:
   contents: write
 
 env:
-  # Bump these if a future patch set changes compileSdk/buildToolsVersion/NDK
+  # Bump these if a future patch set changes compileSdk/buildToolsVersion
   # (buildSrc/Helpers.kt's setupCommon() -- current archive wants API 37 /
-  # build-tools 36.0.0) in NekoBoxForAndroid.patch, or the NDK version.
+  # build-tools 36.0.0) in NekoBoxForAndroid.patch.
   ANDROID_PLATFORM: "android-37.0"
   BUILD_TOOLS_VERSION: "36.0.0"
-  NDK_VERSION: "27.2.12479018"
 
 jobs:
   build:
@@ -60,13 +59,19 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK/NDK components
+      - name: Install Android SDK/build-tools + latest NDK
         run: |
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager --install \
             "platforms;${{ env.ANDROID_PLATFORM }}" \
-            "build-tools;${{ env.BUILD_TOOLS_VERSION }}" \
-            "ndk;${{ env.NDK_VERSION }}"
+            "build-tools;${{ env.BUILD_TOOLS_VERSION }}"
+          # Install whatever NDK is newest rather than a pinned version --
+          # prebuilt deps like cronet-go ship binaries built with a very
+          # recent toolchain, and an older NDK's ld.lld can fail with
+          # "unknown relocation" against them (needs roughly NDK r28+).
+          NEWEST_NDK="$(sdkmanager --list 2>/dev/null | grep -oP 'ndk;\K[0-9]+\.[0-9]+\.[0-9]+' | sort -V | tail -1)"
+          echo "installing ndk;$NEWEST_NDK"
+          sdkmanager --install "ndk;$NEWEST_NDK"
 
       - name: Prepare patched workspace
         run: bash scripts/prepare-workspace.sh
