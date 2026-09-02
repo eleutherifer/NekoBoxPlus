@@ -59,19 +59,24 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK/build-tools + latest NDK
+      - name: Install Android platform + build-tools
         run: |
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager --install \
             "platforms;${{ env.ANDROID_PLATFORM }}" \
             "build-tools;${{ env.BUILD_TOOLS_VERSION }}"
-          # Install whatever NDK is newest rather than a pinned version --
-          # prebuilt deps like cronet-go ship binaries built with a very
-          # recent toolchain, and an older NDK's ld.lld can fail with
-          # "unknown relocation" against them (needs roughly NDK r28+).
-          NEWEST_NDK="$(sdkmanager --list 2>/dev/null | grep -oP 'ndk;\K[0-9]+\.[0-9]+\.[0-9]+' | sort -V | tail -1)"
-          echo "installing ndk;$NEWEST_NDK"
-          sdkmanager --install "ndk;$NEWEST_NDK"
+
+      # Plain NDK-r27/28-via-sdkmanager can't link prebuilt deps like
+      # cronet-go's libcronet.a ("unknown relocation") -- cronet-go's own
+      # CI links against NDK r28 fetched this way (not via sdkmanager,
+      # whose package index can lag behind the NDK's own release channel).
+      - name: Set up Android NDK r28
+        id: setup-ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r28
+          link-to-sdk: true
+      - run: echo "ANDROID_NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}" >> "$GITHUB_ENV"
 
       - name: Prepare patched workspace
         run: bash scripts/prepare-workspace.sh

@@ -49,7 +49,7 @@ bash buildScript/lib/core.docker.sh
 [ -f app/libs/libcore.aar ] || { echo "app/libs/libcore.aar missing after core.docker.sh" >&2; exit 1; }
 
 # --- gradle -------------------------------------------------------------
-NDK_DIR="$(find "$ANDROID_HOME/ndk" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n1)"
+NDK_DIR="${ANDROID_NDK_HOME:-$(find "$ANDROID_HOME/ndk" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n1)}"
 {
   echo "sdk.dir=${ANDROID_HOME}"
   echo "ndk.dir=${NDK_DIR}"
