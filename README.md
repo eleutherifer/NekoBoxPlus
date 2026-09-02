@@ -1,9 +1,10 @@
 NekoBox+
 
+Разработчик: MrEternal
+
 https://4pda.to/forum/index.php?showtopic=1121122
 
-
-.github/workflows/ingest.yml — триггер на push patches.tar.gz, распаковывает в patches/, коммитит, удаляет tar.gz, зовёт build.yml через workflow_call на свежем коммите.
+.github/workflows/ingest.yml — триггер на push patches.tar.gz, распаковывает в patches/, коммитит, удаляет tar.gz, зовёт build.yml через workflow_call на свежем коммите. Архив patches.tar.gz берётся из темы на 4pda.to по ссылке выше.
 
 .github/workflows/build.yml — вызывается и автоматически, и вручную. Ставит JDK17 + Android SDK/NDK, гоняет два скрипта ниже, публикует Release.
 
