@@ -1,4 +1,0 @@
-Based on https://github.com/ccding/go-stun v0.1.6 (Apache-2.0).
-
-NB4A carries this package locally to support opt-in tolerant response-address
-validation for the diagnostic STUN tester.
