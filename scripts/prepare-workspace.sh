@@ -242,27 +242,20 @@ resolve_singbox_version() {
   local dir="$1"
   [ -d "$dir" ] || return 0
 
-  # First get just enough ancestry for --abbrev=0 (nearest tag) to work.
+  # ReadTag() (sing-box/cmd/internal/read_tag_plus) only skips the
+  # merge-base step when its OWN checkout is exactly at a tag -- which
+  # for the author means his own fork's post-patch commit, not the raw
+  # base commit we check out. Our HEAD is that raw base commit, so it's
+  # very often exactly at a tag itself even when the author's isn't --
+  # but merge-base(HEAD, upstream/testing) still equals HEAD whenever
+  # HEAD is a real ancestor of testing (a commit is its own merge-base
+  # with anything that contains it), which reproduces the author's
+  # "<tag>-<hash>" format exactly instead of us short-circuiting to a
+  # bare "<tag>". So: always go through merge-base, never skip it.
   deepen_until "$dir" "git -C '$dir' describe --tags --abbrev=0" || return 1
-
-  # --exact-match is a direct, depth-independent check (a tag's SHA
-  # either equals HEAD's SHA or it doesn't -- no ancestry walk needed),
-  # unlike comparing `describe --tags` against `--abbrev=0`: on a shallow
-  # clone, those two can spuriously match right near the fetch boundary
-  # even when a full clone would show real commits in between.
-  local exact
-  exact="$(git -C "$dir" describe --tags --exact-match 2>/dev/null)"
-  if [ -n "$exact" ]; then
-    echo "${exact#v}"
-    return 0
-  fi
-
   local current_tag_rev
   current_tag_rev="$(git -C "$dir" describe --tags --abbrev=0 2>/dev/null)"
 
-  # Not exactly at a tag: ReadTag() instead reports <tag>-<short hash of
-  # the merge-base with upstream/testing>, which can need real history on
-  # both sides. Keep deepening both until it resolves or we give up.
   git -C "$dir" remote add upstream "$(git -C "$dir" remote get-url origin)" 2>/dev/null || true
   local depth=200
   while [ "$depth" -le 6400 ]; do
@@ -271,7 +264,7 @@ resolve_singbox_version() {
     if git -C "$dir" merge-base HEAD upstream/testing >/dev/null 2>&1; then
       local common_commit short_commit
       common_commit="$(git -C "$dir" merge-base HEAD upstream/testing 2>/dev/null)"
-      short_commit="$(git -C "$dir" rev-parse --short "$common_commit" 2>/dev/null)"
+      short_commit="$(git -C "$dir" rev-parse --short=9 "$common_commit" 2>/dev/null)"
       echo "${current_tag_rev#v}-${short_commit}"
       return 0
     fi
