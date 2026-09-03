@@ -100,3 +100,36 @@ jobs:
           tag_name: v${{ steps.build.outputs.version_name }}
           name: NekoBox+ ${{ steps.build.outputs.version_name }}
           files: dist/*.apk
+
+      - name: Scan APK with VirusTotal
+        if: always()
+        continue-on-error: true
+        env:
+          VT_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
+        run: |
+          APK_PATH=$(find dist -name '*.apk' 2>/dev/null | head -1 || true)
+          if [ -z "$VT_API_KEY" ]; then
+            echo "VIRUSTOTAL_API_KEY не задан — пропускаю проверку."
+            exit 0
+          fi
+          if [ -z "$APK_PATH" ] || [ ! -f "$APK_PATH" ]; then
+            echo "APK-файл не найден в dist/ — пропускаю проверку."
+            exit 0
+          fi
+          echo "Отправляю $APK_PATH на VirusTotal..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" "https://www.virustotal.com/api/v3/files/upload_url" -H "x-apikey: $VT_API_KEY")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "VirusTotal вернул ошибку (HTTP $HTTP_CODE):"
+            echo "$BODY"
+            exit 0
+          fi
+          UPLOAD_URL=$(echo "$BODY" | jq -r '.data // empty')
+          if [ -z "$UPLOAD_URL" ]; then
+            echo "Не удалось получить upload_url из ответа VirusTotal:"
+            echo "$BODY"
+            exit 0
+          fi
+          curl -s -X POST "$UPLOAD_URL" -H "x-apikey: $VT_API_KEY" -F "file=@$APK_PATH" > vt-result.json
+          cat vt-result.json
