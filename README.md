@@ -2,9 +2,9 @@
 
 Разработчик: MrEternal
 
-[](https://4pda.to/forum/index.php?showtopic=1121122)
+[Теа на 4pda.to](https://4pda.to/forum/index.php?showtopic=1121122)
 
-![](https://4pda.to/s/Zy0hQiz0uez16wFVR8mVRz13wFaLl2Ls0oiPLV.webp)
+![иконка](https://4pda.to/s/Zy0hQiz0uez16wFVR8mVRz13wFaLl2Ls0oiPLV.webp)
 
 ## Краткое описание:
 Форк клиента NekoBox by Starifly с дополнительными функциями и возможностями
