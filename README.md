@@ -2,7 +2,7 @@
 
 Разработчик: MrEternal
 
-[Теа на 4pda.to](https://4pda.to/forum/index.php?showtopic=1121122)
+[Тема на 4pda.to](https://4pda.to/forum/index.php?showtopic=1121122)
 
 ![иконка](https://4pda.to/s/Zy0hQiz0uez16wFVR8mVRz13wFaLl2Ls0oiPLV.webp)
 
