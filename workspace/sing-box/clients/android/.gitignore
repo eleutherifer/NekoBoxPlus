@@ -1,0 +1,15 @@
+*.iml
+.gradle
+.kotlin/
+/local.properties
+/.idea/
+.DS_Store
+build/
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+/app/libs/
+/service-account-credentials.json
+/CLAUDE.md
+/.claude/

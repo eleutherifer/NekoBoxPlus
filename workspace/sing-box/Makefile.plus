@@ -1,0 +1,327 @@
+include Makefile
+
+ADBLOCK_RUST_REPO ?= https://github.com/brave/adblock-rust
+ADBLOCK_RUST_COMMIT ?= v0.13.2
+ADBLOCK_RUST_DIR ?= ../adblock-rust
+ADBLOCK_BRIDGE_DIR ?= common/adblock/bridge
+ADBLOCK_TAGS ?= $(TAGS),with_adblock
+ADBLOCK_CRONET_TAGS ?= $(ADBLOCK_TAGS),with_adblock_cronet,with_quic,with_purego,with_naive_outbound,with_awg
+TEST_DOCKER_TAGS ?= $(ADBLOCK_CRONET_TAGS)
+TEST_DOCKER_INTEGRATION_TAGS ?= with_adblock,with_adblock_cronet,with_quic,with_purego,with_naive_outbound,with_utls,badlinkname
+TEST_DOCKER_GO_TEST_ARGS ?= -count=1 -v
+TEST_DOCKER_ROOT_PACKAGES ?= ./...
+TEST_DOCKER_INTEGRATION_PACKAGES ?= .
+ADBLOCK_RUST_TOOLCHAIN ?= 1.97.0
+ADBLOCK_DOCKER_CACHE_DIR ?= $(HOME)/.cache/sing-box-adblock
+ADBLOCK_CRONET_DOCKERFILE ?= Dockerfile.adblock-cronet
+ADBLOCK_CRONET_GO_IMAGE ?= golang:1.27-bookworm
+ADBLOCK_CRONET_DOCKER_IMAGE ?= sing-box-adblock-cronet:go1.27
+ADBLOCK_RESOURCES_ASSETS_DIR ?= common/adblock/adblockrust/resources/files
+ADBLOCK_RESOURCES_DIR ?= ../adblock-resources
+ADBLOCK_CARGO_TARGET_DIR ?= $(CURDIR)/$(ADBLOCK_BRIDGE_DIR)/target
+ADBLOCK_TEST_TLS_DIR ?= /tmp/adblock-test-sing-box
+ADBLOCK_TEST_TLS_CERT ?= $(ADBLOCK_TEST_TLS_DIR)/tls.crt
+ADBLOCK_TEST_TLS_KEY ?= $(ADBLOCK_TEST_TLS_DIR)/tls.key
+ADBLOCK_TEST_CHROMIUM ?= chromium
+ADBLOCK_TEST_CHROMIUM_PROFILE ?= /tmp/adblock-test-sing-box-chromium
+ADBLOCK_TEST_TUN_IF ?= sbtun0
+ADBLOCK_TEST_TUN_TABLE ?= 18009
+ADBLOCK_TEST_TUN_MARK ?= 0x18009
+ADBLOCK_TEST_CHROMIUM_CGROUP ?= adblock-test-chromium
+ADBLOCK_4PDA_PAGE ?= ../Logs/4pda/4PDA.html
+ADBLOCK_4PDA_CONFIG ?= ../adblock-test-with-filters.json
+ADBLOCK_4PDA_DATABASE ?= /tmp/adblock-sing-box.db
+ADBLOCK_RESOURCES_REPO ?= https://github.com/brave/adblock-resources.git
+ADBLOCK_RESOURCES_COMMIT ?= 9a0cc4312e155cb5b16b701afc0ab9285dc30f24
+UBLOCK_REPO ?= https://github.com/gorhill/uBlock.git
+UBLOCK_COMMIT ?= 1.73.0
+UBLOCK_DIR ?= ../uBlock
+
+ADBLOCK_DEBUG_LDFLAGS := \
+	-X 'github.com/sagernet/sing-box/constant.Version=$(VERSION)' $(LDFLAGS_SHARED)
+	-buildid=
+
+ADBLOCK_DEBUG_PARAMS := \
+	-v \
+	-trimpath=false \
+	-ldflags "$(ADBLOCK_DEBUG_LDFLAGS)"
+
+.PHONY: adblock-rust-sync adblock-rust-build adblock-resources-sync ublock-sync adblock-resources-generate adblock-resources-generate-legacy adblock-test-cert adblock-sing-box adblock-test-chromium-profile adblock-test-chromium adblock-test-chromium-tun adblock-test-4pda-replay build-adblock docker-build-adblock-cronet build-adblock-cronet test-adblock-cronet-httpconn test-adblock-cronet test-docker install-adblock clean-adblock docker-build-adblock
+
+define ADBLOCK_CRONET_DOCKER_RUN
+docker run --rm \
+	--platform linux/amd64 \
+	$(ADBLOCK_CRONET_DOCKER_EXTRA_ARGS) \
+	-v "$(abspath $(CURDIR)/..)":/workspace \
+	-w "/workspace/$(notdir $(CURDIR))" \
+	-v "$(ADBLOCK_DOCKER_CACHE_DIR)/go-build":/root/.cache/go-build \
+	-v "$(ADBLOCK_DOCKER_CACHE_DIR)/go-mod":/go/pkg/mod \
+	-v "$(ADBLOCK_DOCKER_CACHE_DIR)/cargo-registry":/opt/cargo/registry \
+	-v "$(ADBLOCK_DOCKER_CACHE_DIR)/cargo-git":/opt/cargo/git \
+	-v "$(ADBLOCK_DOCKER_CACHE_DIR)/adblock-rust":/workspace/adblock-rust \
+	-v "$(abspath $(ADBLOCK_RESOURCES_DIR))":/workspace/adblock-resources \
+	-v "$(ADBLOCK_DOCKER_CACHE_DIR)/uBlock":/workspace/uBlock \
+	-v "$(ADBLOCK_DOCKER_CACHE_DIR)/adblock-bridge-target":/workspace/$(notdir $(CURDIR))/$(ADBLOCK_BRIDGE_DIR)/target \
+	$(ADBLOCK_CRONET_DOCKER_IMAGE)
+endef
+
+define ADBLOCK_CRONET_DOCKER_SCRIPT_PREFIX
+set -eo pipefail; \
+export PATH=/opt/cargo/bin:/usr/local/go/bin:/go/bin:$$PATH; \
+git config --global --add safe.directory /workspace/$(notdir $(CURDIR)); \
+git config --global --add safe.directory /workspace/adblock-rust; \
+git config --global --add safe.directory /workspace/adblock-resources; \
+git config --global --add safe.directory /workspace/uBlock; \
+BASE_LDFLAGS=$$(sed 's/,tlsunsafeekm=1//' release/LDFLAGS); \
+$(MAKE) -f Makefile.plus adblock-rust-build adblock-resources-generate \
+	ADBLOCK_RUST_REPO="$(ADBLOCK_RUST_REPO)" \
+	ADBLOCK_RUST_COMMIT="$(ADBLOCK_RUST_COMMIT)" \
+	ADBLOCK_RUST_DIR="../adblock-rust" \
+	ADBLOCK_RESOURCES_DIR="../adblock-resources" \
+	ADBLOCK_CARGO_TARGET_DIR="/workspace/$(notdir $(CURDIR))/$(ADBLOCK_BRIDGE_DIR)/target" \
+	ADBLOCK_RESOURCES_REPO="$(ADBLOCK_RESOURCES_REPO)" \
+	ADBLOCK_RESOURCES_COMMIT="$(ADBLOCK_RESOURCES_COMMIT)" \
+	UBLOCK_REPO="$(UBLOCK_REPO)" \
+	UBLOCK_COMMIT="$(UBLOCK_COMMIT)" \
+	UBLOCK_DIR="../uBlock"; \
+	export CC="clang"; \
+	export CGO_ENABLED=1; \
+	export GOOS=linux; \
+	export GOARCH=amd64; \
+	export CGO_LDFLAGS="-fuse-ld=lld"; \
+	export TAGS="$(ADBLOCK_CRONET_TAGS)"; \
+	CRONET_LIB_DIR=$$(go list -f "{{.Dir}}" -tags "$$TAGS" github.com/sagernet/cronet-go/lib/linux_amd64); \
+	export LD_LIBRARY_PATH="$$CRONET_LIB_DIR$${LD_LIBRARY_PATH:+:$$LD_LIBRARY_PATH}";
+endef
+
+adblock-rust-sync:
+	@if [ ! -d "$(ADBLOCK_RUST_DIR)/.git" ]; then \
+		echo "Cloning adblock-rust into $(ADBLOCK_RUST_DIR)"; \
+		git clone "$(ADBLOCK_RUST_REPO)" "$(ADBLOCK_RUST_DIR)"; \
+        git -C "$(ADBLOCK_RUST_DIR)" fetch --tags origin; \
+	fi
+	@if [ -n "$$(git -C "$(ADBLOCK_RUST_DIR)" status --porcelain)" ] && [ "$(ADBLOCK_RUST_FORCE)" != "1" ]; then \
+		echo "$(ADBLOCK_RUST_DIR) has local changes; set ADBLOCK_RUST_FORCE=1 to override checkout"; \
+		exit 1; \
+	fi
+	git -C "$(ADBLOCK_RUST_DIR)" fetch origin tag "$(ADBLOCK_RUST_COMMIT)"
+	git -C "$(ADBLOCK_RUST_DIR)" checkout "$(ADBLOCK_RUST_COMMIT)"
+
+adblock-rust-build: adblock-rust-sync
+	cd "$(ADBLOCK_BRIDGE_DIR)" && \
+	CARGO_TARGET_DIR="$(ADBLOCK_CARGO_TARGET_DIR)" cargo build --release
+
+adblock-resources-sync:
+	@if [ ! -d "$(ADBLOCK_RESOURCES_DIR)/.git" ]; then \
+		echo "Cloning adblock-resources into $(ADBLOCK_RESOURCES_DIR)"; \
+		rm -rf "$(ADBLOCK_RESOURCES_DIR)"; \
+		git clone "$(ADBLOCK_RESOURCES_REPO)" "$(ADBLOCK_RESOURCES_DIR)"; \
+        git -C "$(ADBLOCK_RESOURCES_DIR)" fetch --tags origin; \
+	fi
+	@if [ -n "$$(git -C "$(ADBLOCK_RESOURCES_DIR)" status --porcelain)" ] && [ "$(ADBLOCK_RESOURCES_FORCE)" != "1" ]; then \
+		echo "$(ADBLOCK_RESOURCES_DIR) has local changes; set ADBLOCK_RESOURCES_FORCE=1 to override checkout"; \
+		exit 1; \
+	fi
+	git -C "$(ADBLOCK_RESOURCES_DIR)" fetch origin "$(ADBLOCK_RESOURCES_COMMIT)"
+	git -C "$(ADBLOCK_RESOURCES_DIR)" checkout "$(ADBLOCK_RESOURCES_COMMIT)"
+
+ublock-sync:
+	@if [ ! -d "$(UBLOCK_DIR)/.git" ]; then \
+		echo "Cloning uBlock Origin into $(UBLOCK_DIR)"; \
+		mkdir -p "$(UBLOCK_DIR)"; \
+		git clone "$(UBLOCK_REPO)" "$(UBLOCK_DIR)"; \
+		git -C "$(UBLOCK_DIR)" fetch --tags origin; \
+	fi
+	@if [ -n "$$(git -C "$(UBLOCK_DIR)" status --porcelain)" ] && [ "$(UBLOCK_FORCE)" != "1" ]; then \
+		echo "$(UBLOCK_DIR) has local changes; set UBLOCK_FORCE=1 to override checkout"; \
+		exit 1; \
+	fi
+	git -C "$(UBLOCK_DIR)" fetch origin tag "$(UBLOCK_COMMIT)"
+	git -C "$(UBLOCK_DIR)" checkout "$(UBLOCK_COMMIT)"
+
+adblock-resources-generate: adblock-resources-sync ublock-sync
+	@if [ ! -f "$(ADBLOCK_RESOURCES_DIR)/dist/resources.json" ]; then \
+		echo "Building adblock resources in $(ADBLOCK_RESOURCES_DIR)"; \
+		(cd "$(ADBLOCK_RESOURCES_DIR)" && npm install && npm run build); \
+	fi
+	mkdir -p "$(ADBLOCK_RESOURCES_ASSETS_DIR)"
+	rm -rf "$(ADBLOCK_RESOURCES_ASSETS_DIR)/src" "$(ADBLOCK_RESOURCES_ASSETS_DIR)/resources"
+	if ! cmp -s "$(ADBLOCK_RESOURCES_DIR)/dist/resources.json" "$(ADBLOCK_RESOURCES_ASSETS_DIR)/dist/resources.json"; then \
+		rm -rf "$(ADBLOCK_RESOURCES_ASSETS_DIR)/dist"; \
+		cp -R "$(ADBLOCK_RESOURCES_DIR)/dist" "$(ADBLOCK_RESOURCES_ASSETS_DIR)/dist"; \
+	fi
+	node common/adblock/adblockrust/resources/generate.mjs "$(UBLOCK_DIR)" "$(ADBLOCK_RESOURCES_ASSETS_DIR)"
+
+adblock-resources-generate-legacy: adblock-resources-generate
+
+adblock-test-cert:
+	@if [ -f "$(ADBLOCK_TEST_TLS_CERT)" ] && [ -f "$(ADBLOCK_TEST_TLS_KEY)" ] && \
+		openssl x509 -in "$(ADBLOCK_TEST_TLS_CERT)" -noout -text | grep -q "CA:TRUE" && \
+		openssl x509 -in "$(ADBLOCK_TEST_TLS_CERT)" -noout -text | grep -q "Certificate Sign"; then \
+		echo "$(ADBLOCK_TEST_TLS_CERT) and $(ADBLOCK_TEST_TLS_KEY) already exist; skipping certificate generation"; \
+	else \
+		mkdir -p "$(ADBLOCK_TEST_TLS_DIR)" && \
+		openssl req -x509 -newkey rsa:2048 -nodes \
+			-keyout "$(ADBLOCK_TEST_TLS_KEY)" \
+			-out "$(ADBLOCK_TEST_TLS_CERT)" \
+			-days 3650 \
+			-subj "/CN=sing-box-plus Adblock CA" \
+			-addext "basicConstraints=critical,CA:TRUE" \
+			-addext "keyUsage=critical,keyCertSign,cRLSign" \
+			-addext "subjectKeyIdentifier=hash"; \
+	fi
+
+adblock-sing-box: adblock-test-cert
+	@./sing-box -c ./release/config/adblock-test.json run
+
+adblock-sing-box-tun: adblock-test-cert
+	@sudo chown root:root /tmp/adblock-sing-box.db
+	@sudo ./sing-box -c ./release/config/adblock-test-tun.json run
+
+adblock-test-chromium-profile: adblock-test-cert adblock-resources-sync
+	@if [ -d "$(ADBLOCK_TEST_CHROMIUM_PROFILE)" ]; then \
+		echo "$(ADBLOCK_TEST_CHROMIUM_PROFILE) already exists; skipping profile creation"; \
+	else \
+		mkdir -p "$(ADBLOCK_TEST_CHROMIUM_PROFILE)/.pki/nssdb" && \
+		certutil -N -d "sql:$(ADBLOCK_TEST_CHROMIUM_PROFILE)/.pki/nssdb" --empty-password && \
+		certutil -A \
+			-d "sql:$(ADBLOCK_TEST_CHROMIUM_PROFILE)/.pki/nssdb" \
+			-n "sing-box-plus Adblock CA" \
+			-t "C,," \
+			-i "$(ADBLOCK_TEST_TLS_CERT)"; \
+	fi
+
+adblock-test-chromium-tun: adblock-test-chromium-profile
+	@set -eu; \
+	TUN_IF="$(ADBLOCK_TEST_TUN_IF)"; \
+	TABLE="$(ADBLOCK_TEST_TUN_TABLE)"; \
+	MARK="$(ADBLOCK_TEST_TUN_MARK)"; \
+	CGROUP="$(ADBLOCK_TEST_CHROMIUM_CGROUP)"; \
+	CGROUP_PATH="/sys/fs/cgroup/$$CGROUP"; \
+	if ! ip link show "$$TUN_IF" >/dev/null 2>&1; then \
+		echo "TUN interface $$TUN_IF does not exist. Start sing-box with release/config/adblock-test.json first."; \
+		exit 1; \
+	fi; \
+	if ! sudo test -d /sys/fs/cgroup; then \
+		echo "cgroup v2 is required to mark only Chromium traffic."; \
+		exit 1; \
+	fi; \
+	cleanup() { \
+		echo $$$$ | sudo tee /sys/fs/cgroup/cgroup.procs >/dev/null 2>&1 || true; \
+		sudo iptables -t mangle -D OUTPUT -m cgroup --path "$$CGROUP" -j MARK --set-mark "$$MARK" 2>/dev/null || true; \
+		sudo ip rule del fwmark "$$MARK" table "$$TABLE" 2>/dev/null || true; \
+		sudo ip route flush table "$$TABLE" 2>/dev/null || true; \
+		sudo rmdir "$$CGROUP_PATH" 2>/dev/null || true; \
+	}; \
+	trap cleanup EXIT INT TERM; \
+	sudo mkdir -p "$$CGROUP_PATH"; \
+	sudo ip route replace default dev "$$TUN_IF" table "$$TABLE"; \
+	sudo ip rule del fwmark "$$MARK" table "$$TABLE" 2>/dev/null || true; \
+	sudo ip rule add fwmark "$$MARK" table "$$TABLE" priority "$$TABLE"; \
+	sudo iptables -t mangle -D OUTPUT -m cgroup --path "$$CGROUP" -j MARK --set-mark "$$MARK" 2>/dev/null || true; \
+	sudo iptables -t mangle -A OUTPUT -m cgroup --path "$$CGROUP" -j MARK --set-mark "$$MARK"; \
+	echo $$$$ | sudo tee "$$CGROUP_PATH/cgroup.procs" >/dev/null; \
+	HOME="$(ADBLOCK_TEST_CHROMIUM_PROFILE)" "$(ADBLOCK_TEST_CHROMIUM)" \
+		--user-data-dir="$(ADBLOCK_TEST_CHROMIUM_PROFILE)"
+
+adblock-test-chromium: adblock-test-chromium-profile
+	HOME="$(ADBLOCK_TEST_CHROMIUM_PROFILE)" "$(ADBLOCK_TEST_CHROMIUM)" \
+		--user-data-dir="$(ADBLOCK_TEST_CHROMIUM_PROFILE)" \
+		--proxy-server="socks5://127.0.0.1:18009" \
+		--host-resolver-rules="MAP * ~NOTFOUND , EXCLUDE 127.0.0.1" \
+		--dns-prefetch-disable
+
+adblock-test-4pda-replay:
+	ADBLOCK_4PDA_PAGE="$(abspath $(ADBLOCK_4PDA_PAGE))" \
+	ADBLOCK_4PDA_CONFIG="$(abspath $(ADBLOCK_4PDA_CONFIG))" \
+	ADBLOCK_4PDA_DATABASE="$(ADBLOCK_4PDA_DATABASE)" \
+	go test -count=1 -tags "with_adblock,adblock_replay" ./experimental/adblock -run Test4PDASavedPageReplay -v
+
+build-adblock: adblock-rust-build
+	$(MAKE) -f Makefile.plus adblock-resources-generate; \
+	export CGO_ENABLED=1 GOTOOLCHAIN=local && \
+	go build $(BUILD_MOD) $(PARAMS) -tags "$(ADBLOCK_TAGS)" $(MAIN)
+
+docker-build-adblock-cronet:
+	DOCKER_BUILDKIT=1 docker build \
+		--platform linux/amd64 \
+		-f "$(ADBLOCK_CRONET_DOCKERFILE)" \
+		--build-arg GO_IMAGE="$(ADBLOCK_CRONET_GO_IMAGE)" \
+		--build-arg ADBLOCK_RUST_TOOLCHAIN="$(ADBLOCK_RUST_TOOLCHAIN)" \
+		-t "$(ADBLOCK_CRONET_DOCKER_IMAGE)" \
+		.
+
+build-adblock-cronet: docker-build-adblock-cronet
+	$(ADBLOCK_CRONET_DOCKER_RUN) bash -c '\
+	$(ADBLOCK_CRONET_DOCKER_SCRIPT_PREFIX) \
+	VERSION=$$(CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go run ./cmd/internal/read_tag_plus); \
+	go build $(BUILD_MOD) -v -trimpath \
+		-ldflags "-X '\''github.com/sagernet/sing-box/constant.Version=$$VERSION'\'' $$BASE_LDFLAGS -linkmode=external -extldflags \"-fuse-ld=lld -lm -no-pie\" -s -w -buildid=" \
+		-tags "$$TAGS" \
+		$(MAIN); \
+	cp "$$CRONET_LIB_DIR/libcronet.so" ./libcronet.so; \
+	file sing-box; \
+	ldd sing-box || true; \
+	ldd libcronet.so || true; \
+	./sing-box version; \
+	'
+
+test-adblock-cronet-httpconn: docker-build-adblock-cronet
+	$(ADBLOCK_CRONET_DOCKER_RUN) bash -c '\
+	$(ADBLOCK_CRONET_DOCKER_SCRIPT_PREFIX) \
+	go test -count=1 -tags "$$TAGS" -ldflags "$$BASE_LDFLAGS -linkmode=external -extldflags \"-fuse-ld=lld -lm -no-pie\"" ./experimental/adblock/httpconn; \
+	'
+
+test-adblock-cronet: docker-build-adblock-cronet
+	$(ADBLOCK_CRONET_DOCKER_RUN) bash -c '\
+	$(ADBLOCK_CRONET_DOCKER_SCRIPT_PREFIX) \
+	go test -count=1 -tags "$$TAGS" -ldflags "$$BASE_LDFLAGS -linkmode=external -extldflags \"-fuse-ld=lld -lm -no-pie\"" ./common/adblock/adblockrust/... ./experimental/adblock/...; \
+	'
+
+test-docker: ADBLOCK_CRONET_DOCKER_EXTRA_ARGS = --privileged --network host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp -v "$(abspath $(CURDIR)/..):$(abspath $(CURDIR)/..)"
+test-docker: docker-build-adblock-cronet
+	$(ADBLOCK_CRONET_DOCKER_RUN) bash -c '\
+	$(ADBLOCK_CRONET_DOCKER_SCRIPT_PREFIX) \
+	export TAGS="$(TEST_DOCKER_TAGS)"; \
+	TEST_LDFLAGS="$$BASE_LDFLAGS -linkmode=external -extldflags \"-fuse-ld=lld -lm -no-pie\""; \
+	go test $(TEST_DOCKER_GO_TEST_ARGS) -tags "$$TAGS" -ldflags "$$TEST_LDFLAGS" $(TEST_DOCKER_ROOT_PACKAGES); \
+	TEST_MODULE_DIR=$$(mktemp -d); \
+	trap "rm -rf \"$$TEST_MODULE_DIR\"" EXIT; \
+	cp -R test/. "$$TEST_MODULE_DIR"; \
+	cd "$$TEST_MODULE_DIR"; \
+	go mod edit \
+		-replace github.com/sagernet/sing-box=/workspace/$(notdir $(CURDIR)) \
+		-replace github.com/sagernet/sing-vmess=/workspace/sing-vmess \
+		-replace github.com/amnezia-vpn/amneziawg-go/v3=/workspace/amneziawg-go \
+		-replace github.com/metacubex/utls=/workspace/utls; \
+	go mod tidy; \
+	go test $(TEST_DOCKER_GO_TEST_ARGS) $(TEST_DOCKER_INTEGRATION_ARGS) -tags "$(TEST_DOCKER_INTEGRATION_TAGS)" -ldflags "$$TEST_LDFLAGS" $(TEST_DOCKER_INTEGRATION_PACKAGES); \
+	'
+
+run-adblock: adblock-rust-build
+	@./sing-box -c ./release/config/adblock-test.json run
+
+build-adblock-debug: adblock-rust-build
+	$(MAKE) -f Makefile.plus adblock-resources-generate; \
+	export CGO_ENABLED=1 GOTOOLCHAIN=local && \
+	go build -gcflags "all=-N -l -dwarflocationlists=true" $(BUILD_MOD) $(ADBLOCK_DEBUG_PARAMS) -tags "$(ADBLOCK_TAGS)" $(MAIN)
+
+debug-adblock-dap: build-adblock-debug
+	dlv dap --listen=127.0.0.1:2345 --log
+
+install-adblock: adblock-rust-build
+	$(MAKE) -f Makefile.plus adblock-resources-generate; \
+	export CGO_ENABLED=1 && \
+	go build $(BUILD_MOD) -o $(PREFIX)/bin/$(NAME) $(PARAMS) -tags "$(ADBLOCK_TAGS)" $(MAIN)
+
+clean-adblock:
+	rm -rf "$(ADBLOCK_CARGO_TARGET_DIR)"
+
+docker-build-adblock:
+	docker build -f Dockerfile.plus --build-arg ADBLOCK_RUST_COMMIT="$(ADBLOCK_RUST_COMMIT)" -t sing-box-adblock .
+
+test:
+	@go test -v ./... && \
+	cd test && \
+	go mod tidy && \
+	go test -v -tags "$(ADBLOCK_TAGS)" .

@@ -1,0 +1,234 @@
+version: "2"
+
+run:
+  go: "1.24"
+  timeout: 10m
+  tests: true
+  modules-download-mode: readonly
+  allow-parallel-runners: true
+  build-tags:
+    - with_gvisor
+    - with_quic
+    - with_dhcp
+    - with_wireguard
+    - with_utls
+    - with_acme
+    - with_clash_api
+    - with_tailscale
+    - with_ccm
+    - with_ocm
+    - badlinkname
+    - tfogo_checklinkname0
+
+linters:
+  default: none
+
+  enable:
+    # Existing baseline.
+    - ineffassign
+    - paralleltest
+    - staticcheck
+    - unused
+    - modernize
+
+    # Core correctness / resource handling.
+    - govet
+    - errcheck
+    - bodyclose
+
+    # Context lifecycle / misuse.
+    - noctx
+    - contextcheck
+    - containedctx
+    - fatcontext
+
+    # Concurrency footguns.
+    - copyloopvar
+    - durationcheck
+
+    # Error-path bugs that often hide leaks.
+    - errorlint
+    - nilerr
+    - nilnesserr
+    - nilnil
+    - makezero
+
+    # Security-adjacent bug finding.
+    - gosec
+
+    # Code-shape pressure. These may be noisy; tune thresholds below.
+    - gocritic
+    - revive
+    - nestif
+    - cyclop
+    - gocognit
+
+    # Enforce useful nolint comments.
+    - nolintlint
+
+  settings:
+    modernize:
+      disable:
+        # Nested struct omitempty -> omitzero changes JSON output semantics.
+        - omitzero
+
+    staticcheck:
+      checks:
+        - all
+        - -QF1008 # could remove embedded field "<interface>" from selector
+        - -ST1003 # should not use ALL_CAPS in Go names; use CamelCase instead
+        - -QF1001 # could apply De Morgan's law
+
+    bodyclose:
+      # Catches resp.Body not being consumed before close.
+      # Useful for HTTP-heavy services, but can create false positives.
+      check-consumption: true
+
+    copyloopvar:
+      # Helps catch loop variable aliases that later feed closures/goroutines.
+      check-alias: true
+
+    fatcontext:
+      # Detect nested contexts in loops/function literals.
+      check-struct-pointers: true
+
+    errcheck:
+      # Resource cleanup bugs often hide behind ignored Close/Flush/Commit errors.
+      check-type-assertions: true
+      check-blank: true
+
+      # Tune this list to taste. Remove entries for stricter cleanup/error handling.
+      exclude-functions:
+        - (*bytes.Buffer).Write
+        - (*bytes.Buffer).WriteString
+        - fmt.Print
+        - fmt.Printf
+        - fmt.Println
+
+    govet:
+      enable:
+        # Core vet analyzers.
+        - appends
+        - asmdecl
+        - assign
+        - atomic
+        - bools
+        - buildtag
+        - cgocall
+        - composites
+        - copylocks
+        - defers
+        - directive
+        - errorsas
+        - framepointer
+        - httpresponse
+        - ifaceassert
+        - loopclosure
+        - lostcancel
+        - nilfunc
+        - printf
+        - shift
+        - sigchanyzer
+        - slog
+        - stdmethods
+        - stringintconv
+        - structtag
+        - testinggoroutine
+        - tests
+        - timeformat
+        - unmarshal
+        - unreachable
+        - unsafeptr
+        - unusedresult
+
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+        - style
+        - experimental
+        - opinionated
+      disabled-checks:
+        # Often noisy; enable later if your team likes it.
+        - whyNoLint
+        - hugeParam
+        - rangeValCopy
+
+    revive:
+      severity: warning
+      rules:
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: early-return
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: exported
+          disabled: true
+        - name: if-return
+        - name: receiver-naming
+        - name: time-naming
+        - name: var-naming
+        - name: waitgroup-by-value
+
+    cyclop:
+      max-complexity: 18
+      package-average: 10.0
+
+    gocognit:
+      min-complexity: 25
+
+    nestif:
+      min-complexity: 5
+
+    nilnil:
+      only-two: false
+
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+      allow-unused: false
+
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+    paths:
+      - transport/simple-obfs
+      - \.pb\.go$
+      - third_party$
+      - builtin$
+      - examples$
+
+    rules:
+      # Tests often intentionally use background contexts or store test contexts.
+      # Keep paralleltest enabled, but relax context-specific rules in tests.
+      - path: _test\.go
+        linters:
+          - noctx
+          - containedctx
+          - fatcontext
+
+      # Generated/mocks/fixtures tend to be noisy beyond the global path exclusions.
+      - path: (mock|mocks|testdata|fixtures)/
+        linters:
+          - revive
+          - gocritic
+          - cyclop
+          - gocognit
+          - errcheck
+          - gosec
+
+formatters:
+  enable:
+    - gci
+    - gofumpt
+
+  settings:
+    gci:
+      sections:
+        - standard
+        - prefix(github.com/sagernet/)
+        - default
+      custom-order: true

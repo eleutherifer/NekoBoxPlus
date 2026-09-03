@@ -1,0 +1,21 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "sing-box: connect to dlv dap",
+      "type": "go",
+      "request": "launch",
+      "debugAdapter": "dlv-dap",
+      "mode": "exec",
+      "program": "${workspaceFolder}/sing-box",
+      "cwd": "${workspaceFolder}",
+      "args": [
+        "-c",
+        "./release/config/adblock-test.json",
+        "run"
+      ],
+      "host": "127.0.0.1",
+      "port": 2345
+    }
+  ]
+}

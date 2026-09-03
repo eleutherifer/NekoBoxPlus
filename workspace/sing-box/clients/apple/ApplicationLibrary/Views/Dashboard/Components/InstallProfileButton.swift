@@ -1,0 +1,32 @@
+import Library
+import SwiftUI
+
+@MainActor
+public struct InstallProfileButton: View {
+    @State private var alert: AlertState?
+
+    private let callback: () async -> Void
+    public init(_ callback: @escaping (() async -> Void)) {
+        self.callback = callback
+    }
+
+    public var body: some View {
+        FormButton {
+            Task {
+                await installProfile()
+            }
+        } label: {
+            Label("Install Network Extension", systemImage: "lock.doc.fill")
+        }
+        .alert($alert)
+    }
+
+    private func installProfile() async {
+        do {
+            try await ExtensionProfile.install()
+            await callback()
+        } catch {
+            alert = AlertState(action: "install network extension", error: error)
+        }
+    }
+}

@@ -1,0 +1,45 @@
+{
+  "log": {
+    "level": "error"
+  },
+  "dns": {
+    "servers": [
+      {
+        "type": "local",
+        "tag": "default"
+      }
+    ]
+  },
+  "inbounds": [
+    {
+      "type": "mixed",
+      "tag": "mixed-in",
+      "listen_port": 7897
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "direct",
+      "tag": "direct"
+    },
+    {
+      "type": "mieru",
+      "tag": "mieru-out",
+      "server": "example.com",
+      "server_port": 27017,
+      "server_ports": [
+        "27017-27019"
+      ],
+      "transport": "TCP",
+      "username": "username",
+      "password": "password",
+      "multiplexing": "MULTIPLEXING_LOW",
+      "traffic_pattern": "GgQIARAK"
+    }
+  ],
+  "route": {
+    "final": "mieru-out",
+    "default_domain_resolver": "default",
+    "auto_detect_interface": true
+  }
+}
