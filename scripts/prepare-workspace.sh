@@ -53,6 +53,15 @@ fetch_ref() {
     git -C "$dest" fetch origin -q
   fi
   git -C "$dest" checkout -q FETCH_HEAD
+  # A bare `fetch <ref>` doesn't leave a local tag ref behind even when
+  # $ref names one, so anything reading the version back out via `git
+  # describe`/`git tag --points-at` finds nothing and falls back to a
+  # short hash. If $ref isn't a raw 40-char commit SHA, recreate it as a
+  # real local tag so that lookup finds the same name the README/header
+  # actually specified.
+  if ! [[ "$ref" =~ ^[0-9a-fA-F]{40}$ ]]; then
+    git -C "$dest" tag "$ref" FETCH_HEAD 2>/dev/null || true
+  fi
 }
 
 # Strip a trailing /commits/<branch>[/] or /tree/<branch> or .git from a
@@ -180,3 +189,113 @@ fi
 echo
 echo "workspace ready:"
 find "$WORKSPACE_DIR" -maxdepth 1 -mindepth 1 -type d -printf '  %f\n'
+
+# --- bake in the version strings libcore/build.sh would otherwise compute
+# via git, before .git disappears below ---------------------------------
+#
+# libcore/build.sh (added by NekoBoxForAndroid.patch) sets:
+#   VERSION_AMNEZIA="$(resolve_version ../../amneziawg-go)"
+#   VERSION_BYEDPI="$(resolve_version ../../byedpi)"
+#   VERSION_MASTERDNSVPN="$(resolve_version ../../MasterDnsVPN-plus tag)"
+#   VERSION_SING_BOX="$(cd ../../sing-box && ... go run ./cmd/internal/read_tag_plus)"
+# resolve_version's default mode is `git describe --tags --exact-match`
+# (falls back to a short hash), needing no history. Its "tag" mode and
+# read_tag_plus's ReadTag() (sing-box/cmd/internal/read_tag_plus/build_shared/tag.go)
+# both need real commit ancestry -- and ReadTag() additionally needs an
+# "upstream" remote with a "testing" branch to compute a merge-base
+# against. We replicate all of that here, once, while .git still exists,
+# then sed the computed literal straight into build.sh. If a future
+# patch rewords any of these lines, its sed below just matches nothing
+# and that one value silently stays at build.sh's own default ("unknown"
+# / "<not set>") -- never a hard failure.
+BUILD_SH="$WORKSPACE_DIR/NekoBoxForAndroid/libcore/build.sh"
+
+resolve_exact_or_hash() {
+  local dir="$1"
+  [ -d "$dir" ] || return 0
+  git -C "$dir" describe --tags --exact-match 2>/dev/null || git -C "$dir" rev-parse --short HEAD 2>/dev/null
+}
+
+# Deepen a shallow checkout just enough for `git describe --tags` to
+# reach a tag, bounded so a tag-less or very-far-tagged repo can't hang
+# the build -- gives up (returns non-zero) past ~1600 commits back.
+deepen_until() {
+  local dir="$1" probe_cmd="$2" depth=50
+  while [ "$depth" -le 1600 ]; do
+    git -C "$dir" fetch -q --tags --depth "$depth" origin HEAD 2>/dev/null || true
+    if eval "$probe_cmd" >/dev/null 2>&1; then
+      return 0
+    fi
+    depth=$((depth * 4))
+  done
+  return 1
+}
+
+resolve_nearest_tag() {
+  local dir="$1"
+  [ -d "$dir" ] || return 0
+  deepen_until "$dir" "git -C '$dir' describe --tags --abbrev=0" || return 1
+  git -C "$dir" describe --tags --abbrev=0 2>/dev/null
+}
+
+resolve_singbox_version() {
+  local dir="$1"
+  [ -d "$dir" ] || return 0
+
+  # First get just enough ancestry for --abbrev=0 (nearest tag) to work.
+  deepen_until "$dir" "git -C '$dir' describe --tags --abbrev=0" || return 1
+  local current_tag_rev current_tag
+  current_tag_rev="$(git -C "$dir" describe --tags --abbrev=0 2>/dev/null)"
+  current_tag="$(git -C "$dir" describe --tags 2>/dev/null)"
+
+  # Exactly at a tag already -- this is ReadTag()'s simple path, no
+  # merge-base needed at all.
+  if [ "$current_tag" = "$current_tag_rev" ]; then
+    echo "${current_tag#v}"
+    return 0
+  fi
+
+  # Not exactly at a tag: ReadTag() instead reports <tag>-<short hash of
+  # the merge-base with upstream/testing>, which can need real history on
+  # both sides. Keep deepening both until it resolves or we give up.
+  git -C "$dir" remote add upstream "$(git -C "$dir" remote get-url origin)" 2>/dev/null || true
+  local depth=200
+  while [ "$depth" -le 6400 ]; do
+    git -C "$dir" fetch -q --depth "$depth" origin HEAD 2>/dev/null || true
+    git -C "$dir" fetch -q --depth "$depth" upstream testing 2>/dev/null || true
+    if git -C "$dir" merge-base HEAD upstream/testing >/dev/null 2>&1; then
+      local common_commit short_commit
+      common_commit="$(git -C "$dir" merge-base HEAD upstream/testing 2>/dev/null)"
+      short_commit="$(git -C "$dir" rev-parse --short "$common_commit" 2>/dev/null)"
+      echo "${current_tag_rev#v}-${short_commit}"
+      return 0
+    fi
+    depth=$((depth * 4))
+  done
+
+  # Couldn't pin down the exact merge-base -- fall back to plain
+  # `describe --tags` (tag + distance + hash). Close to the author's
+  # format, just not byte-identical, and far better than "unknown".
+  git -C "$dir" describe --tags 2>/dev/null | sed 's/^v//'
+}
+
+if [ -f "$BUILD_SH" ]; then
+  v_amnezia="$(resolve_exact_or_hash "$WORKSPACE_DIR/amneziawg-go" || true)"
+  v_byedpi="$(resolve_exact_or_hash "$WORKSPACE_DIR/byedpi" || true)"
+  v_mdvpn="$(resolve_nearest_tag "$WORKSPACE_DIR/MasterDnsVPN-plus" || true)"
+  v_singbox="$(resolve_singbox_version "$WORKSPACE_DIR/sing-box" || true)"
+
+  [ -n "$v_amnezia" ] && sed -i "s|VERSION_AMNEZIA=\"\$(resolve_version ../../amneziawg-go)\"|VERSION_AMNEZIA=\"$v_amnezia\"|" "$BUILD_SH"
+  [ -n "$v_byedpi" ] && sed -i "s|VERSION_BYEDPI=\"\$(resolve_version ../../byedpi)\"|VERSION_BYEDPI=\"$v_byedpi\"|" "$BUILD_SH"
+  [ -n "$v_mdvpn" ] && sed -i "s|VERSION_MASTERDNSVPN=\"\$(resolve_version ../../MasterDnsVPN-plus tag)\"|VERSION_MASTERDNSVPN=\"$v_mdvpn\"|" "$BUILD_SH"
+  if [ -n "$v_singbox" ]; then
+    sed -i "s|VERSION_SING_BOX=\"\$(cd ../../sing-box.*|VERSION_SING_BOX=\"$v_singbox\"|" "$BUILD_SH"
+  fi
+  echo "baked into build.sh: amneziawg-go=${v_amnezia:-<unresolved>} byedpi=${v_byedpi:-<unresolved>} masterdnsvpn=${v_mdvpn:-<unresolved>} sing-box=${v_singbox:-<unresolved>}"
+fi
+
+# Strip nested .git dirs so workspace/ can be committed as plain files
+# instead of git treating each cloned sibling as a submodule gitlink --
+# needed so it can be browsed/edited directly in the repo afterward.
+rm -rf "$WORKSPACE_DIR"/*/.git
+echo "stripped nested .git dirs (workspace/ is now plain files, commit-safe)"

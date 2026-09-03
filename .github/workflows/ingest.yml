@@ -48,6 +48,11 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # If a previous run ever committed workspace/* as gitlinks (nested
+          # .git not stripped in time), a plain `add -A` won't fix that on
+          # its own -- git leaves an existing 160000 index entry alone
+          # unless it's explicitly uncached first.
+          git rm -r --cached workspace >/dev/null 2>&1 || true
           git add -A .
           if git diff --cached --quiet; then
             echo "nothing to commit"
