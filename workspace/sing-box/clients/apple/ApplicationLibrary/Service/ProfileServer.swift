@@ -1,0 +1,166 @@
+import Foundation
+import Libbox
+import Library
+import Network
+#if canImport(UIKit)
+    import UIKit
+#endif
+
+public class ProfileServer {
+    private var listener: NWListener
+
+    @available(iOS 16.0, macOS 13.0, *)
+    public init() throws {
+        listener = try NWListener(using: .applicationService)
+        listener.service = NWListener.Service(applicationService: "sing-box:profile")
+        listener.newConnectionHandler = { connection in
+            connection.stateUpdateHandler = { state in
+                if state == .ready {
+                    Task.detached {
+                        try await Task.sleep(nanoseconds: NSEC_PER_MSEC * 100)
+                        await ProfileConnection(connection).process()
+                    }
+                }
+            }
+            connection.start(queue: .global())
+        }
+    }
+
+    public func start() {
+        listener.start(queue: .global())
+    }
+
+    public func cancel() {
+        listener.cancel()
+    }
+
+    class ProfileConnection {
+        private let connection: NWSocket
+        #if os(iOS)
+            private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
+        #endif
+
+        init(_ connection: NWConnection) {
+            self.connection = NWSocket(connection)
+        }
+
+        func process() async {
+            #if os(iOS)
+                beginBackgroundTask()
+                defer {
+                    endBackgroundTask()
+                }
+            #endif
+            do {
+                try await writeProfilePreviewList()
+            } catch {
+                NSLog("profile server: write profile list: \(error.localizedDescription)")
+                await writeError(error.localizedDescription)
+                return
+            }
+            do {
+                while true {
+                    let message = try await connection.read()
+                    try await processMessage(message)
+                }
+            } catch {
+                NSLog("profile server: process connection: \(error.localizedDescription)")
+                await writeError(error.localizedDescription)
+            }
+        }
+
+        #if os(iOS)
+            private func beginBackgroundTask() {
+                backgroundTaskID = UIApplication.shared.beginBackgroundTask { [weak self] in
+                    NSLog("profile server: background task expiring, cleaning up connection")
+                    self?.connection.cancel()
+                    self?.endBackgroundTask()
+                }
+                if backgroundTaskID != .invalid {
+                    NSLog("profile server: background task started")
+                }
+            }
+
+            private func endBackgroundTask() {
+                guard backgroundTaskID != .invalid else { return }
+                NSLog("profile server: background task ended")
+                UIApplication.shared.endBackgroundTask(backgroundTaskID)
+                backgroundTaskID = .invalid
+            }
+        #endif
+
+        private func processMessage(_ data: Data) async throws {
+            if data.count == 0 {
+                return
+            }
+            let messageType = Int64(data[0])
+            switch messageType {
+            case LibboxMessageTypeProfileContentRequest:
+                try await processProfileContentRequest(data)
+            default:
+                throw NSError(domain: "ProfileServer", code: 0, userInfo: [NSLocalizedDescriptionKey: String(localized: "Unexpected message type \(messageType)")])
+            }
+        }
+
+        private func processProfileContentRequest(_ data: Data) async throws {
+            var error: NSError?
+            let request = LibboxDecodeProfileContentRequest(data, &error)
+            if let error {
+                throw error
+            }
+
+            let profile = try await ProfileManager.get(request!.profileID)
+            guard let profile else {
+                throw NSError(domain: "ProfileServer", code: 0, userInfo: [NSLocalizedDescriptionKey: String(localized: "Profile not found")])
+            }
+            let content = LibboxProfileContent()
+            content.name = profile.name
+            switch profile.type {
+            case .local:
+                content.type = LibboxProfileTypeLocal
+            case .icloud:
+                content.type = LibboxProfileTypeiCloud
+            case .remote:
+                content.type = LibboxProfileTypeRemote
+            }
+            content.config = try profile.read()
+            if profile.type != .local {
+                content.remotePath = profile.remoteURL!
+            }
+            if profile.type == .remote {
+                content.autoUpdate = profile.autoUpdate
+                content.autoUpdateInterval = profile.autoUpdateInterval
+                if let lastUpdated = profile.lastUpdated {
+                    content.lastUpdated = Int64(lastUpdated.timeIntervalSince1970)
+                }
+            }
+            try await connection.write(content.encode())
+        }
+
+        private func writeProfilePreviewList() async throws {
+            let profiles = try await ProfileManager.list()
+            let encoder = LibboxProfileEncoder()
+            for profile in profiles {
+                let preview = LibboxProfilePreview()
+                preview.profileID = profile.mustID
+                preview.name = profile.name
+                switch profile.type {
+                case .local:
+                    preview.type = LibboxProfileTypeLocal
+                case .icloud:
+                    preview.type = LibboxProfileTypeiCloud
+                case .remote:
+                    preview.type = LibboxProfileTypeRemote
+                }
+                encoder.append(preview)
+            }
+            try await connection.write(encoder.encode())
+        }
+
+        private func writeError(_ message: String) async {
+            let errorMessage = LibboxErrorMessage()
+            errorMessage.message = message
+            try? await connection.write(errorMessage.encode())
+        }
+    }
+}

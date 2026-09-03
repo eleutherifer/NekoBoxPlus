@@ -1,0 +1,6 @@
+Should be applied to metacubex/utls to get the version used by NekoBox+.
+
+Usage:
+1. Clone https://github.com/metacubex/utls
+2. Checkout to f7d52c22f3a8d2f510ad1470f75cb6c3fe26aa37
+3. Apply the patch.

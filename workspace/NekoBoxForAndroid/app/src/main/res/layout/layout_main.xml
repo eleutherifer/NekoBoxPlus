@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/coordinator"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipChildren="false">
+
+        <androidx.coordinatorlayout.widget.CoordinatorLayout
+            android:id="@+id/fragment_holder"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <io.nekohasekai.sagernet.widget.StatsBar
+            android:id="@+id/stats"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:nextFocusUp="@+id/fab"
+            app:backgroundTint="?colorSurfaceContainerHigh"
+            app:contentInsetStart="0dp"
+            app:fabAlignmentMode="center"
+            app:fabAnchorMode="cradle"
+            app:fabCradleMargin="8dp"
+            app:fabCradleRoundedCornerRadius="24dp"
+            app:fabCradleVerticalOffset="0dp"
+            app:hideOnScroll="true"
+            app:layout_scrollFlags="enterAlways|scroll"
+            app:shapeAppearance="@style/ShapeAppearance.SagerNet.Material3.BottomAppBar">
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?android:attr/selectableItemBackground">
+
+                <LinearLayout
+                    android:id="@+id/stats_regular_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingStart="16dp"
+                    android:paddingTop="24dp"
+                    android:paddingEnd="16dp"
+                    android:paddingBottom="24dp">
+
+                    <TextView
+                        android:id="@+id/tx"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_columnWeight="1"
+                        android:layout_gravity="fill_horizontal"
+                        android:ellipsize="marquee"
+                        android:singleLine="true"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/rx"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_columnWeight="1"
+                        android:layout_gravity="fill_horizontal"
+                        android:ellipsize="marquee"
+                        android:singleLine="true"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/ip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="fill_horizontal"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/status"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="fill_horizontal"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="16sp"
+                        tools:text="@string/connection_test_available" />
+
+                </LinearLayout>
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/stats_compact_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="72dp"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:id="@+id/compact_info_group"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:gravity="center_vertical"
+                        android:orientation="vertical"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toStartOf="@id/compact_section_divider"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        android:paddingStart="16dp"
+                        android:paddingTop="18dp"
+                        android:paddingEnd="8dp"
+                        android:paddingBottom="10dp">
+
+                        <TextView
+                            android:id="@+id/compact_ip"
+                            android:layout_width="match_parent"
+                            android:layout_height="0dp"
+                            android:layout_weight="1"
+                            android:ellipsize="end"
+                            android:gravity="center_vertical"
+                            android:includeFontPadding="false"
+                            android:maxLines="1"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="14sp"
+                            tools:text="🇳🇱 121.17.03.17 NL, North Holland" />
+
+                        <androidx.appcompat.widget.AppCompatTextView
+                            android:id="@+id/compact_status"
+                            android:layout_width="match_parent"
+                            android:layout_height="0dp"
+                            android:layout_weight="1"
+                            android:drawablePadding="6dp"
+                            android:ellipsize="end"
+                            android:gravity="center_vertical"
+                            android:includeFontPadding="false"
+                            android:maxLines="1"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="14sp"
+                            app:drawableStartCompat="@drawable/ic_baseline_lock_24"
+                            app:drawableTint="?attr/colorOnSurface"
+                            tools:text="HTTPS: 75 ms" />
+
+                    </LinearLayout>
+
+                    <View
+                        android:id="@+id/compact_section_divider"
+                        android:layout_width="1dp"
+                        android:layout_height="32dp"
+                        android:background="?attr/colorOutlineVariant"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toStartOf="@id/compact_speed_group"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <LinearLayout
+                        android:id="@+id/compact_speed_group"
+                        android:layout_width="168dp"
+                        android:layout_height="0dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="8dp"
+                        android:paddingTop="18dp"
+                        android:paddingEnd="8dp"
+                        android:paddingBottom="10dp"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="parent">
+
+                        <androidx.appcompat.widget.AppCompatTextView
+                            android:id="@+id/compact_tx"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:drawablePadding="3dp"
+                            android:ellipsize="end"
+                            android:gravity="center"
+                            android:includeFontPadding="false"
+                            android:maxLines="1"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="13sp"
+                            app:drawableStartCompat="@drawable/ic_baseline_upload_24"
+                            app:drawableTint="?attr/colorOnSurface"
+                            tools:text="0 B/s" />
+
+                        <View
+                            android:id="@+id/compact_speed_divider"
+                            android:layout_width="1dp"
+                            android:layout_height="32dp"
+                            android:background="?attr/colorOutlineVariant" />
+
+                        <androidx.appcompat.widget.AppCompatTextView
+                            android:id="@+id/compact_rx"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:drawablePadding="3dp"
+                            android:ellipsize="end"
+                            android:gravity="center"
+                            android:includeFontPadding="false"
+                            android:maxLines="1"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="13sp"
+                            app:drawableStartCompat="@drawable/ic_baseline_download_24"
+                            app:drawableTint="?attr/colorOnSurface"
+                            tools:text="0 B/s" />
+
+                    </LinearLayout>
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+            </FrameLayout>
+
+        </io.nekohasekai.sagernet.widget.StatsBar>
+
+        <io.nekohasekai.sagernet.widget.FabCluster
+            android:id="@+id/fabCluster"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:translationZ="12dp"
+            app:layout_anchor="@id/stats"
+            app:layout_anchorGravity="top|center_horizontal">
+
+            <io.nekohasekai.sagernet.widget.ServiceButton
+                android:id="@+id/fab"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:elevation="6dp"
+                android:nextFocusDown="@+id/stats"
+                app:backgroundTint="?attr/colorPrimary"
+                app:pressedTranslationZ="6dp"
+                app:srcCompat="@drawable/ic_service_idle"
+                app:tint="?attr/colorOnPrimary" />
+
+            <!-- We double trackThickness as half of it will be invisible -->
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                android:id="@+id/fabProgress"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:max="1"
+                android:translationZ="13dp"
+                android:visibility="invisible"
+                app:indicatorColor="?attr/colorPrimary"
+                app:trackCornerRadius="@dimen/mtrl_progress_track_thickness"
+                app:trackThickness="8dp" />
+
+        </io.nekohasekai.sagernet.widget.FabCluster>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

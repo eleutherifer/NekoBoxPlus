@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_search"
+        android:title="@android:string/search_go"
+        app:actionViewClass="androidx.appcompat.widget.SearchView"
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/action_add"
+        android:icon="@drawable/ic_action_note_add"
+        android:title="@string/add_profile"
+        app:showAsAction="ifRoom">
+        <menu>
+            <item
+                android:id="@+id/action_scan_qr_code"
+                android:title="@string/add_profile_methods_scan_qr_code" />
+            <item
+                android:id="@+id/action_import_clipboard"
+                android:title="@string/action_import" />
+            <item
+                android:id="@+id/action_import_file"
+                android:title="@string/action_import_file" />
+            <item android:title="@string/add_profile_methods_manual_settings">
+                <menu>
+                    <item
+                        android:id="@+id/action_new_socks"
+                        android:title="@string/action_socks" />
+                    <item
+                        android:id="@+id/action_new_http"
+                        android:title="@string/action_http" />
+                    <item
+                        android:id="@+id/action_new_ss"
+                        android:title="@string/action_shadowsocks" />
+                    <item
+                        android:id="@+id/action_new_ssr"
+                        android:title="@string/action_shadowsocksr" />
+                    <item
+                        android:id="@+id/action_new_vmess"
+                        android:title="@string/action_vmess" />
+                    <item
+                        android:id="@+id/action_new_vless"
+                        android:title="VLESS" />
+                    <item
+                        android:id="@+id/action_new_trojan"
+                        android:title="@string/action_trojan" />
+                    <item
+                        android:id="@+id/action_new_trojan_go"
+                        android:title="@string/action_trojan_go" />
+                    <item
+                        android:id="@+id/action_new_mieru"
+                        android:title="@string/action_mieru" />
+                    <item
+                        android:id="@+id/action_new_naive"
+                        android:title="@string/action_naive" />
+                    <item
+                        android:id="@+id/action_new_hysteria"
+                        android:title="@string/action_hysteria" />
+                    <item
+                        android:id="@+id/action_new_tuic"
+                        android:title="@string/action_tuic" />
+                    <item
+                        android:id="@+id/action_new_juicity"
+                        android:title="@string/action_juicity" />
+                    <item
+                        android:id="@+id/action_new_trusttunnel"
+                        android:title="@string/action_trusttunnel" />
+                    <item
+                        android:id="@+id/action_new_masterdnsvpn"
+                        android:title="@string/masterdnsvpn" />
+                    <item
+                        android:id="@+id/action_new_byedpi"
+                        android:title="@string/action_byedpi" />
+                    <item
+                        android:id="@+id/action_new_shadowtls"
+                        android:title="@string/action_shadowtls" />
+                    <item
+                        android:id="@+id/action_new_anytls"
+                        android:title="@string/action_anytls" />
+                    <item
+                        android:id="@+id/action_new_masque"
+                        android:title="@string/action_masque" />
+                    <item
+                        android:id="@+id/action_new_tailscale"
+                        android:title="@string/action_tailscale" />
+                    <item
+                        android:id="@+id/action_new_openvpn"
+                        android:title="@string/action_openvpn" />
+                    <item
+                        android:id="@+id/action_new_openconnect"
+                        android:title="@string/action_openconnect" />
+                    <item
+                        android:id="@+id/action_new_snell"
+                        android:title="@string/action_snell" />
+                    <item
+                        android:id="@+id/action_new_ssh"
+                        android:title="@string/action_ssh" />
+                    <item
+                        android:id="@+id/action_new_wg"
+                        android:title="@string/action_wireguard" />
+                    <item
+                        android:id="@+id/action_new_awg"
+                        android:title="@string/action_amneziawg" />
+                    <item
+                        android:id="@+id/action_new_config"
+                        android:title="@string/custom_config" />
+                    <item
+                        android:id="@+id/action_new_direct"
+                        android:title="@string/action_direct" />
+                    <item
+                        android:id="@+id/action_new_proxy_set"
+                        android:title="@string/proxy_set" />
+                    <item
+                        android:id="@+id/action_new_chain"
+                        android:title="@string/proxy_chain" />
+                </menu>
+            </item>
+        </menu>
+    </item>
+
+    <item
+        android:id="@+id/action_misc"
+        android:icon="@drawable/ic_baseline_more_vert_24"
+        android:title="@string/toolbar_more_actions"
+        app:showAsAction="always">
+        <menu>
+            <item
+                android:id="@+id/action_select_profiles"
+                android:title="@string/select" />
+            <item
+                android:id="@+id/action_update_subscription"
+                android:title="@string/update_current_subscription" />
+            <item
+                android:id="@+id/action_statistics_menu"
+                android:title="@string/statistics">
+                <menu>
+                    <item
+                        android:id="@+id/action_clear_traffic_statistics"
+                        android:title="@string/clear_traffic_statistics" />
+                    <item
+                        android:id="@+id/action_connection_test_clear_results"
+                        android:title="@string/connection_test_clear_results" />
+                </menu>
+            </item>
+            <item
+                android:id="@+id/action_delete_menu"
+                android:title="@string/delete">
+                <menu>
+                    <item
+                        android:id="@+id/action_remove_duplicate"
+                        android:title="@string/remove_duplicate" />
+                    <item
+                        android:id="@+id/action_connection_test_delete_unavailable"
+                        android:title="@string/selection_unavailable" />
+                    <item
+                        android:id="@+id/action_remove_insecure"
+                        android:title="@string/selection_insecure" />
+                </menu>
+            </item>
+            <item
+                android:id="@+id/action_connection_icmp_ping"
+                android:title="@string/connection_test_icmp_ping" />
+            <item
+                android:id="@+id/action_connection_tcp_ping"
+                android:title="@string/connection_test_tcp_ping" />
+            <item
+                android:id="@+id/action_connection_url_test"
+                android:title="@string/connection_test_url_test" />
+            <item
+                android:id="@+id/action_global_mode"
+                android:title="@string/global_mode"
+                android:checkable="true"
+                android:checked="false"
+                app:showAsAction="never" />
+            <item
+                android:id="@+id/action_clash_mode"
+                android:title="@string/clash_mode"
+                app:showAsAction="never" />
+            <item
+                android:id="@+id/action_show_active"
+                android:title="@string/show_active" />
+            <item
+                android:id="@+id/action_order_layout"
+                android:title="@string/sort_and_layout">
+                <menu>
+                    <item
+                        android:title="@string/group_order"
+                        android:enabled="false" />
+                    <group android:id="@+id/order_group" android:checkableBehavior="single">
+                        <item
+                            android:id="@+id/action_order_origin"
+                            android:title="@string/group_order_origin" />
+                        <item
+                            android:id="@+id/action_order_by_name"
+                            android:title="@string/group_order_by_name" />
+                        <item
+                            android:id="@+id/action_order_by_delay"
+                            android:title="@string/group_order_by_delay" />
+                        <item
+                            android:id="@+id/action_order_manual"
+                            android:title="@string/group_order_manual" />
+                    </group>
+                    <item
+                        android:title="@string/group_order_mode"
+                        android:enabled="false" />
+                    <group android:id="@+id/order_mode" android:checkableBehavior="all">
+                        <item
+                            android:id="@+id/action_order_mode_always"
+                            android:title="@string/group_order_mode_always" />
+                        <item
+                            android:id="@+id/action_order_mode_urltest"
+                            android:title="@string/group_order_mode_urltest" />
+                        <item
+                            android:id="@+id/action_order_mode_update"
+                            android:title="@string/group_order_mode_update" />
+                    </group>
+                    <item
+                        android:title="@string/layout"
+                        android:enabled="false" />
+                    <group android:id="@+id/layout_group" android:checkableBehavior="single">
+                        <item
+                            android:id="@+id/action_layout_single"
+                            android:title="@string/layout_single_column" />
+                        <item
+                            android:id="@+id/action_layout_double"
+                            android:title="@string/layout_double_column" />
+                        <item
+                            android:id="@+id/action_layout_compact"
+                            android:title="@string/layout_compact" />
+                        <item
+                            android:id="@+id/action_layout_alternate"
+                            android:title="@string/layout_alternate" />
+                    </group>
+                    <item
+                        android:id="@+id/action_profile_card_borders"
+                        android:checkable="true"
+                        android:title="@string/profile_card_borders" />
+                </menu>
+            </item>
+        </menu>
+    </item>
+
+</menu>
