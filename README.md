@@ -1,8 +1,10 @@
-NekoBox+
+# NekoBox+
 
 Разработчик: MrEternal
 
 https://4pda.to/forum/index.php?showtopic=1121122
+
+<img src="https://4pda.to/s/Zy0hQiz0uez16wFVR8mVRz13wFaLl2Ls0oiPLV.webp" />
 
 .github/workflows/ingest.yml — триггер на push patches.tar.gz, распаковывает архив в patches/, гоняет prepare-workspace.sh, затем удаляет и patches/ и patches.tar.gz с диска, архив коммитится при загрузке, а этим же прогоном его удаление уходит в тот же коммит, что добавляет workspace/. В репозитории остаётся только workspace/.
 Архив patches.tar.gz нужно брать из темы на 4pda.to по ссылке выше.
