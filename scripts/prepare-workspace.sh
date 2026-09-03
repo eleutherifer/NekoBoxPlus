@@ -294,6 +294,18 @@ if [ -f "$BUILD_SH" ]; then
   echo "baked into build.sh: amneziawg-go=${v_amnezia:-<unresolved>} byedpi=${v_byedpi:-<unresolved>} masterdnsvpn=${v_mdvpn:-<unresolved>} sing-box=${v_singbox:-<unresolved>}"
 fi
 
+# core.docker.sh finds its own project root via `git -C "$SCRIPT_DIR"
+# rev-parse --show-toplevel`, falling back to a plain path computation
+# only if that fails. Once NekoBoxForAndroid no longer has its own .git
+# (stripped below) but lives *inside* the outer repo's .git instead, that
+# git call now succeeds -- just pointing at the outer repo's root, which
+# breaks every relative `source "buildScript/..."` after it. Force that
+# branch to skip so the (correct, here) path-only fallback always runs.
+CORE_DOCKER_SH="$WORKSPACE_DIR/NekoBoxForAndroid/buildScript/lib/core.docker.sh"
+if [ -f "$CORE_DOCKER_SH" ]; then
+  sed -i 's|if PROJECT_ROOT="\$(git -C "\$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null)"; then|if false; then|' "$CORE_DOCKER_SH"
+fi
+
 # Strip nested .git dirs so workspace/ can be committed as plain files
 # instead of git treating each cloned sibling as a submodule gitlink --
 # needed so it can be browsed/edited directly in the repo afterward.
