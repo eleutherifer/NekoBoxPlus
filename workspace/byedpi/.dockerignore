@@ -1,0 +1,6 @@
+.git
+.vscode
+dist
+*.o
+ciadpi
+ciadpi.exe

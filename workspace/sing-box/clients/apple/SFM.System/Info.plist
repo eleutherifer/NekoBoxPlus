@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>BasePackageIdentifier</key>
+	<string>$(BASE_PACKAGE_IDENTIFIER)</string>
+	<key>AppGroupIdentifier</key>
+	<string>$(APP_GROUP_IDENTIFIER)</string>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeIconFile</key>
+			<string>AppIcon.icns</string>
+			<key>CFBundleTypeName</key>
+			<string>sing-box Profile</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>$(BASE_PACKAGE_IDENTIFIER).profile</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>CFBundleURLIconFile</key>
+			<string>AppIcon.icns</string>
+			<key>CFBundleURLName</key>
+			<string>sing-box</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>sing-box</string>
+			</array>
+		</dict>
+	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>NSUbiquitousContainers</key>
+	<dict>
+		<key>iCloud.$(BASE_PACKAGE_IDENTIFIER)</key>
+		<dict>
+			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
+			<true/>
+			<key>NSUbiquitousContainerName</key>
+			<string>sing-box</string>
+			<key>NSUbiquitousContainerSupportedFolderLevels</key>
+			<string>Any</string>
+		</dict>
+	</dict>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.item</string>
+				<string>public.content</string>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>sing-box Profile</string>
+			<key>UTTypeIconFiles</key>
+			<array/>
+			<key>UTTypeIdentifier</key>
+			<string>$(BASE_PACKAGE_IDENTIFIER).profile</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>bpf</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+	<key>UTImportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.item</string>
+				<string>public.content</string>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>sing-box Profile</string>
+			<key>UTTypeIconFiles</key>
+			<array>
+				<string>AppIcon.icns</string>
+			</array>
+			<key>UTTypeIdentifier</key>
+			<string>$(BASE_PACKAGE_IDENTIFIER).profile</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>bpf</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>zh-Hans</string>
+		<string>zh-Hant</string>
+		<string>ru</string>
+		<string>fa</string>
+	</array>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>As a universal proxy platform, sing-box configures routing according to your configuration.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Camera access is required to scan QR codes for importing profiles.</string>
+	<key>NSLocationUsageDescription</key>
+	<string>sing-box uses the Location permission to provide users with routing based on WIFI SSID and BSSID rules, without reading your location.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>sing-box uses the Location permission to provide users with routing based on WIFI SSID and BSSID rules, without reading your location.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>sing-box uses the Location permission to provide users with routing based on WIFI SSID and BSSID rules, without reading your location.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>sing-box uses the Location permission to provide users with routing based on WIFI SSID and BSSID rules, without reading your location.</string>
+</dict>
+</plist>

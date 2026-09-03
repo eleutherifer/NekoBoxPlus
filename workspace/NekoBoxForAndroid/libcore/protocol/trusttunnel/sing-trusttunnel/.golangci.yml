@@ -1,0 +1,35 @@
+version: "2"
+run:
+  go: "1.24"
+linters:
+  default: none
+  enable:
+    - ineffassign
+    - paralleltest
+    - staticcheck
+    - unused
+    - modernize
+  settings:
+    staticcheck:
+      checks:
+        - all
+        - -QF1008 # could remove embedded field "<interface>" from selector
+        - -ST1003 # should not use ALL_CAPS in Go names; use CamelCase instead
+        - -QF1001 # could apply De Morgan's law
+  exclusions:
+    rules:
+      - path: force_close\.go
+        linters:
+          - unused
+        text: "field (srv|hs) is unused"
+formatters:
+  enable:
+    - gci
+    - gofumpt
+  settings:
+    gci:
+      sections:
+        - standard
+        - prefix(github.com/sagernet/)
+        - default
+      custom-order: true

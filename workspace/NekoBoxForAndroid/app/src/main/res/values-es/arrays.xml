@@ -1,0 +1,402 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string-array name="traffic_fragmentation_entry">
+        <item>@string/traffic_fragmentation_none</item>
+        <item>starifly</item>
+        <item>Exclave</item>
+        <item>ByeDPI</item>
+    </string-array>
+
+    <string-array name="masterdnsvpn_resolver_balancing_entry">
+        <item>Ronda Robin</item>
+        <item>Aleatorio</item>
+        <item>Menor pérdida</item>
+        <item>Latencia más baja</item>
+        <item>Puntuación híbrida</item>
+        <item>Pérdida y luego latencia</item>
+        <item>Mínima pérdida Top aleatorio</item>
+        <item>Mínima pérdida en el round robin superior</item>
+    </string-array>
+
+    <string-array name="masterdnsvpn_compression_entry">
+        <item>Apagado</item>
+        <item>ZSTD</item>
+        <item>LZ4</item>
+        <item>ZLIB</item>
+    </string-array>
+
+    <string-array name="masterdnsvpn_encryption_method_entry">
+        <item>Ninguno</item>
+        <item>XOR</item>
+        <item>ChaCha20</item>
+        <item>AES-128-GCM</item>
+        <item>AES-192-GCM</item>
+        <item>AES-256-GCM</item>
+    </string-array>
+
+    <string-array name="route_network_type_entry">
+        <item>Wifi</item>
+        <item>@string/cellular</item>
+        <item>Ethernet</item>
+        <item>@string/routing_region_other</item>
+    </string-array>
+
+    <string-array name="route_protocol_entry">
+        <item>TCP y UDP</item>
+        <item>TCP</item>
+        <item>UDP</item>
+    </string-array>
+
+    <string-array name="route_sniff_protocol_entry">
+        <item>@string/not_set</item>
+        <item>HTTP</item>
+        <item>TLS</item>
+        <item>QUIC</item>
+        <item>STUN</item>
+        <item>DNS</item>
+        <item>BitTorrent</item>
+        <item>DTLS</item>
+        <item>SSH</item>
+        <item>RDP</item>
+        <item>NTP</item>
+        <item>@string/route_protocol_custom</item>
+    </string-array>
+
+    <string-array name="networks_entry">
+        <item>TCP</item>
+        <item>KCP</item>
+        <item>WebSocket</item>
+        <item>HTTP/2</item>
+        <item>QUIC</item>
+        <item>gRPC</item>
+        <item>Actualización HTTP</item>
+        <item>XHTTP</item>
+    </string-array>
+
+    <string-array name="kcp_headers_entry">
+        <item>@string/none</item>
+        <item>SRTP</item>
+        <item>uTP</item>
+        <item>WeChat Video</item>
+        <item>DTLS</item>
+        <item>WireGuard</item>
+        <item>DNS</item>
+    </string-array>
+
+    <string-array name="xhttp_mode_entry">
+        <item>Auto</item>
+        <item>Packet up</item>
+        <item>Stream up</item>
+        <item>Stream one</item>
+    </string-array>
+
+    <string-array name="xhttp_uplink_data_placement_entry">
+        <item>Predeterminado (body)</item>
+        <item>Header</item>
+        <item>Cookie</item>
+    </string-array>
+
+    <string-array name="xhttp_session_placement_entry">
+        <item>Predeterminado (path)</item>
+        <item>Header</item>
+        <item>Query</item>
+        <item>Cookie</item>
+    </string-array>
+
+    <string-array name="xhttp_padding_method_entry">
+        <item>Predeterminado (repeat-X)</item>
+        <item>Tokenish (Huffman)</item>
+    </string-array>
+
+    <string-array name="xhttp_x_padding_placement_entry">
+        <item>Predeterminado</item>
+        <item>queryInHeader</item>
+        <item>Header</item>
+        <item>Cookie</item>
+        <item>Query</item>
+        <item>Path</item>
+        <item>Body</item>
+    </string-array>
+
+    <string-array name="xhttp_uplink_http_method_entry">
+        <item>Predeterminado (POST)</item>
+        <item>GET</item>
+        <item>PUT</item>
+        <item>PATCH</item>
+        <item>DELETE</item>
+        <item>OPTIONS</item>
+    </string-array>
+
+    <string-array name="xhttp_seq_placement_entry">
+        <item>Predeterminado (path)</item>
+        <item>Header</item>
+        <item>Query</item>
+        <item>Cookie</item>
+    </string-array>
+
+    <string-array name="trojan_go_networks_entry">
+        <item>@string/none</item>
+        <item>WebSocket</item>
+    </string-array>
+
+    <string-array name="trojan_go_security_entry">
+        <item>@string/none</item>
+        <item>Shadowsocks</item>
+    </string-array>
+
+    <string-array name="vmess_encryption_entry">
+        <item>ChaCha20-Poly1305</item>
+        <item>AES-128-GCM</item>
+        <item>Auto</item>
+        <item>@string/none</item>
+        <item>Cero</item>
+    </string-array>
+
+    <string-array name="transport_layer_encryption_entry">
+        <item>@string/none</item>
+        <item>TLS</item>
+        <item>REALITY</item>
+    </string-array>
+
+    <string-array name="notification_entry">
+        <item>@string/disable</item>
+        <item>500ms</item>
+        <item>1s</item>
+        <item>3s</item>
+        <item>10</item>
+    </string-array>
+
+    <string-array name="naive_proto_entry">
+        <item>HTTPS</item>
+        <item>QUIC</item>
+    </string-array>
+
+    <string-array name="hysteria_auth_type">
+        <item>@string/plugin_disabled</item>
+        <item>String</item>
+        <item>Base64</item>
+    </string-array>
+
+    <string-array name="tun_implementation">
+        <item>gVisor</item>
+        <item>Sistema</item>
+        <item>Mezclado</item>
+    </string-array>
+
+    <string-array name="hysteria_protocol">
+        <item>UDP</item>
+        <item>FakeTCP (se requiere raíz)</item>
+        <item>WeChat Video</item>
+    </string-array>
+
+    <string-array name="packet_encoding_entry">
+        <item>@string/none</item>
+        <item>Paquete</item>
+        <item>XUDP</item>
+    </string-array>
+
+    <string-array name="dns_network_entry">
+        <item>Auto</item>
+        <item>Prefiero IPv6</item>
+        <item>Prefiero IPv4</item>
+        <item>Sólo IPv4</item>
+        <item>Sólo IPv6</item>
+    </string-array>
+
+    <string-array name="utls_fingerprint_entry">
+        <item></item>
+        <item>Chrome</item>
+        <item>Firefox</item>
+        <item>Edge</item>
+        <item>Safari</item>
+        <item>360</item>
+        <item>QQ</item>
+        <item>iOS</item>
+        <item>Android</item>
+        <item>Aleatorio</item>
+        <item>Aleatorizado</item>
+        <item>Golang</item>
+        <item>Custom</item>
+        <item>RandomizedALPN</item>
+        <item>RandomizedNoALPN</item>
+        <item>Firefox_Auto</item>
+        <item>Firefox_55</item>
+        <item>Firefox_56</item>
+        <item>Firefox_63</item>
+        <item>Firefox_65</item>
+        <item>Firefox_99</item>
+        <item>Firefox_102</item>
+        <item>Firefox_105</item>
+        <item>Firefox_120</item>
+        <item>Firefox_148</item>
+        <item>Chrome_Auto</item>
+        <item>Chrome_58</item>
+        <item>Chrome_62</item>
+        <item>Chrome_70</item>
+        <item>Chrome_72</item>
+        <item>Chrome_83</item>
+        <item>Chrome_87</item>
+        <item>Chrome_96</item>
+        <item>Chrome_100</item>
+        <item>Chrome_102</item>
+        <item>Chrome_100_PSK</item>
+        <item>Chrome_112_PSK_Shuf</item>
+        <item>Chrome_114_Padding_PSK_Shuf</item>
+        <item>Chrome_115_PQ</item>
+        <item>Chrome_115_PQ_PSK</item>
+        <item>Chrome_120</item>
+        <item>Chrome_120_PQ</item>
+        <item>Chrome_131</item>
+        <item>Chrome_133</item>
+        <item>Chrome_141_TA</item>
+        <item>Chrome_144_TA_PQS</item>
+        <item>IOS_Auto</item>
+        <item>IOS_12_1</item>
+        <item>IOS_13</item>
+        <item>IOS_14</item>
+        <item>Android_OkHttp_Auto</item>
+        <item>Android_11_OkHttp</item>
+        <item>Android_16_OkHttp</item>
+        <item>Edge_Auto</item>
+        <item>Edge_85</item>
+        <item>Edge_106</item>
+        <item>Safari_Auto</item>
+        <item>Safari_16_0</item>
+        <item>Safari_26_3</item>
+        <item>360_Auto</item>
+        <item>360_7_5</item>
+        <item>360_11_0</item>
+        <item>QQ_Auto</item>
+        <item>QQ_11_1</item>
+    </string-array>
+
+    <string-array name="adblock_https_fingerprint_entry">
+        <item>@string/none</item>
+        <item>Chrome</item>
+        <item>Firefox</item>
+        <item>Edge</item>
+        <item>Safari</item>
+        <item>360</item>
+        <item>QQ</item>
+        <item>iOS</item>
+        <item>Android</item>
+        <item>Aleatorio</item>
+        <item>Aleatorizado</item>
+        <item>Golang</item>
+        <item>Custom</item>
+        <item>RandomizedALPN</item>
+        <item>RandomizedNoALPN</item>
+        <item>Firefox_Auto</item>
+        <item>Firefox_55</item>
+        <item>Firefox_56</item>
+        <item>Firefox_63</item>
+        <item>Firefox_65</item>
+        <item>Firefox_99</item>
+        <item>Firefox_102</item>
+        <item>Firefox_105</item>
+        <item>Firefox_120</item>
+        <item>Firefox_148</item>
+        <item>Chrome_Auto</item>
+        <item>Chrome_58</item>
+        <item>Chrome_62</item>
+        <item>Chrome_70</item>
+        <item>Chrome_72</item>
+        <item>Chrome_83</item>
+        <item>Chrome_87</item>
+        <item>Chrome_96</item>
+        <item>Chrome_100</item>
+        <item>Chrome_102</item>
+        <item>Chrome_100_PSK</item>
+        <item>Chrome_112_PSK_Shuf</item>
+        <item>Chrome_114_Padding_PSK_Shuf</item>
+        <item>Chrome_115_PQ</item>
+        <item>Chrome_115_PQ_PSK</item>
+        <item>Chrome_120</item>
+        <item>Chrome_120_PQ</item>
+        <item>Chrome_131</item>
+        <item>Chrome_133</item>
+        <item>Chrome_141_TA</item>
+        <item>Chrome_144_TA_PQS</item>
+        <item>IOS_Auto</item>
+        <item>IOS_12_1</item>
+        <item>IOS_13</item>
+        <item>IOS_14</item>
+        <item>Android_OkHttp_Auto</item>
+        <item>Android_11_OkHttp</item>
+        <item>Android_16_OkHttp</item>
+        <item>Edge_Auto</item>
+        <item>Edge_85</item>
+        <item>Edge_106</item>
+        <item>Safari_Auto</item>
+        <item>Safari_16_0</item>
+        <item>Safari_26_3</item>
+        <item>360_Auto</item>
+        <item>360_7_5</item>
+        <item>360_11_0</item>
+        <item>QQ_Auto</item>
+        <item>QQ_11_1</item>
+    </string-array>
+
+    <string-array name="trusttunnel_protocol_entry">
+        <item>HTTPS</item>
+        <item>Prefiero QUIC</item>
+        <item>Fuerza QUIC</item>
+    </string-array>
+
+    <string-array name="trusttunnel_cronet_stack_entry">
+        <item>No</item>
+        <item>Para HTTPS</item>
+        <item>Para QUIC</item>
+        <item>Para HTTPS y QUIC</item>
+    </string-array>
+
+    <string-array name="tuic_udp_relay_mode_entry">
+        <item>Native</item>
+        <item>QUIC</item>
+    </string-array>
+
+    <string-array name="tuic_congestion_controller_entry">
+        <item>CUBIC</item>
+        <item>New Reno</item>
+        <item>BBR</item>
+    </string-array>
+
+    <string-array name="log_level_entry">
+        <item>@string/none</item>
+        <item>Panic</item>
+        <item>Fatal</item>
+        <item>Error</item>
+        <item>Advertencia</item>
+        <item>Información</item>
+        <item>Depurar</item>
+        <item>Rastro</item>
+    </string-array>
+
+    <string-array name="tun_unrecognized_traffic_mode">
+        <item>Bloquear</item>
+        <item>Normal: Directo, Bypass: Bloquear</item>
+        <item>Sin proxy (directo)</item>
+        <item>Siempre proxy</item>
+        <item>No protejas TUN</item>
+    </string-array>
+
+    <string-array name="tun_system_dns_traffic_mode">
+        <item>Normal: Proxy, Bypass: Directo</item>
+        <item>Apoderado</item>
+        <item>Directo (¡fuga DNS!)</item>
+    </string-array>
+
+    <string-array name="snell_obfs_modes_entry">
+        <item>Ninguno</item>
+        <item>HTTP</item>
+        <item>TLS</item>
+    </string-array>
+
+    <string-array name="snell_network_entry">
+        <item>Auto</item>
+        <item>TCP</item>
+        <item>UDP</item>
+    </string-array>
+
+</resources>

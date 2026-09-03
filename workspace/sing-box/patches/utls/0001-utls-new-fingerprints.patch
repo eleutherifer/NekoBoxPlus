@@ -1,0 +1,870 @@
+diff --git a/common.go b/common.go
+index 1952150..107cd53 100644
+--- a/common.go
++++ b/common.go
+@@ -18,7 +18,6 @@ import (
+ 	"crypto/x509"
+ 	"errors"
+ 	"fmt"
+-	"golang.org/x/exp/slices"
+ 	"io"
+ 	"net"
+ 	"strings"
+@@ -26,6 +25,8 @@ import (
+ 	"time"
+ 	_ "unsafe" // for linkname
+ 
++	"golang.org/x/exp/slices"
++
+ 	"github.com/metacubex/utls/internal/fips140tls"
+ )
+ 
+@@ -130,6 +131,7 @@ const (
+ 	extensionRenegotiationInfo       uint16 = 0xff01
+ 	extensionECHOuterExtensions      uint16 = 0xfd00
+ 	extensionEncryptedClientHello    uint16 = 0xfe0d
++	extensionTrustAnchors            uint16 = 0xca34
+ )
+ 
+ // TLS signaling cipher suite values
+@@ -152,6 +154,8 @@ const (
+ 	CurveP521      CurveID = 25
+ 	X25519         CurveID = 29
+ 	X25519MLKEM768 CurveID = 4588
++	FFDHE2048      CurveID = 0x0100
++	FFDHE3072      CurveID = 0x0101
+ )
+ 
+ func isTLS13OnlyKeyExchange(curve CurveID) bool {
+@@ -393,6 +397,7 @@ type ClientSessionCache interface {
+ 
+ // SignatureScheme identifies a signature algorithm supported by TLS. See
+ // RFC 8446, Section 4.2.3.
++// RFC 9881 for PQ
+ type SignatureScheme uint16
+ 
+ const (
+@@ -417,6 +422,11 @@ const (
+ 	// Legacy signature and hash algorithms for TLS 1.2.
+ 	PKCS1WithSHA1 SignatureScheme = 0x0201
+ 	ECDSAWithSHA1 SignatureScheme = 0x0203
++
++	// MLDSA algorithms for PQ cryptography
++	MLDSA44 SignatureScheme = 0x0904
++	MLDSA65 SignatureScheme = 0x0905
++	MLDSA87 SignatureScheme = 0x0906
+ )
+ 
+ // ClientHelloInfo contains information from a ClientHello message in order to
+diff --git a/handshake_messages.go b/handshake_messages.go
+index 7919c1c..673a2d8 100644
+--- a/handshake_messages.go
++++ b/handshake_messages.go
+@@ -7,9 +7,10 @@ package tls
+ import (
+ 	"errors"
+ 	"fmt"
+-	"golang.org/x/exp/slices"
+ 	"strings"
+ 
++	"golang.org/x/exp/slices"
++
+ 	"golang.org/x/crypto/cryptobyte"
+ )
+ 
+@@ -98,6 +99,7 @@ type clientHelloMsg struct {
+ 	pskBinders              [][]byte
+ 	quicTransportParameters []byte
+ 	encryptedClientHello    []byte
++	trustAnchors            bool
+ 	// extensions are only populated on the server-side of a handshake
+ 	extensions []uint16
+ 
+@@ -317,6 +319,17 @@ func (m *clientHelloMsg) marshalMsgReorderOuterExts(echInner bool, outerExts []u
+ 			})
+ 		}
+ 	}
++	if m.trustAnchors {
++		// RFC 9881
++		if echInner {
++			echOuterExts = append(echOuterExts, extensionTrustAnchors)
++		} else {
++			exts.AddUint16(extensionTrustAnchors)
++			exts.AddUint16LengthPrefixed(func(exts *cryptobyte.Builder) {
++				exts.AddUint16(0) // 00 00
++			})
++		}
++	}
+ 	// [uTLS SECTION BEGIN]
+ 	// reorder OuterExtensions according to their order in the spec
+ 	if echInner && outerExts != nil {
+@@ -690,6 +703,12 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
+ 				}
+ 				m.pskBinders = append(m.pskBinders, binder)
+ 			}
++		case extensionTrustAnchors:
++			var data uint16
++			if !extData.ReadUint16(&data) {
++				return false
++			}
++			m.trustAnchors = data == 0
+ 		case extensionEncryptedClientHello:
+ 			if !extData.ReadBytes(&m.encryptedClientHello, len(extData)) {
+ 				return false
+diff --git a/handshake_messages_test.go b/handshake_messages_test.go
+index b71d97c..8f5aab7 100644
+--- a/handshake_messages_test.go
++++ b/handshake_messages_test.go
+@@ -234,6 +234,9 @@ func (*clientHelloMsg) Generate(rand *rand.Rand, size int) reflect.Value {
+ 	if rand.Intn(10) > 5 {
+ 		m.earlyData = true
+ 	}
++	if rand.Intn(10) > 5 {
++		m.trustAnchors = true
++	}
+ 	if rand.Intn(10) > 5 {
+ 		m.encryptedClientHello = randomBytes(rand.Intn(50)+1, rand)
+ 	}
+diff --git a/u_common.go b/u_common.go
+index ad4ced7..dbd46d7 100644
+--- a/u_common.go
++++ b/u_common.go
+@@ -602,7 +602,7 @@ var (
+ 	HelloRandomizedNoALPN = ClientHelloID{helloRandomizedNoALPN, helloAutoVers, nil, nil}
+ 
+ 	// The rest will will parrot given browser.
+-	HelloFirefox_Auto = HelloFirefox_120
++	HelloFirefox_Auto = HelloFirefox_148
+ 	HelloFirefox_55   = ClientHelloID{helloFirefox, "55", nil, nil}
+ 	HelloFirefox_56   = ClientHelloID{helloFirefox, "56", nil, nil}
+ 	HelloFirefox_63   = ClientHelloID{helloFirefox, "63", nil, nil}
+@@ -611,8 +611,9 @@ var (
+ 	HelloFirefox_102  = ClientHelloID{helloFirefox, "102", nil, nil}
+ 	HelloFirefox_105  = ClientHelloID{helloFirefox, "105", nil, nil}
+ 	HelloFirefox_120  = ClientHelloID{helloFirefox, "120", nil, nil}
++	HelloFirefox_148  = ClientHelloID{helloFirefox, "148", nil, nil}
+ 
+-	HelloChrome_Auto        = HelloChrome_133
++	HelloChrome_Auto        = HelloChrome_144_TA_PQS
+ 	HelloChrome_58          = ClientHelloID{helloChrome, "58", nil, nil}
+ 	HelloChrome_62          = ClientHelloID{helloChrome, "62", nil, nil}
+ 	HelloChrome_70          = ClientHelloID{helloChrome, "70", nil, nil}
+@@ -644,6 +645,10 @@ var (
+ 	HelloChrome_131 = ClientHelloID{helloChrome, "131", nil, nil}
+ 	// Chrome w/ New ALPS codepoint
+ 	HelloChrome_133 = ClientHelloID{helloChrome, "133", nil, nil}
++	// Chrome w/ Trust anchors (Draft)
++	HelloChrome_141_TA = ClientHelloID{helloChrome, "141", nil, nil}
++	// Chrome w/ TA and PQ MLDSA Signatures (Experimental feature)
++	HelloChrome_144_TA_PQS = ClientHelloID{helloChrome, "144", nil, nil}
+ 
+ 	HelloIOS_Auto = HelloIOS_14
+ 	HelloIOS_11_1 = ClientHelloID{helloIOS, "111", nil, nil} // legacy "111" means 11.1
+@@ -651,14 +656,19 @@ var (
+ 	HelloIOS_13   = ClientHelloID{helloIOS, "13", nil, nil}
+ 	HelloIOS_14   = ClientHelloID{helloIOS, "14", nil, nil}
+ 
+-	HelloAndroid_11_OkHttp = ClientHelloID{helloAndroid, "11", nil, nil}
++	HelloAndroid_OkHttp_Auto = HelloAndroid_16_OkHttp
++	HelloAndroid_11_OkHttp   = ClientHelloID{helloAndroid, "11", nil, nil}
++	HelloAndroid_16_OkHttp   = ClientHelloID{helloAndroid, "16", nil, nil}
+ 
+-	HelloEdge_Auto = HelloEdge_85 // HelloEdge_106 seems to be incompatible with this library
++	// Probably should be deleted completely
++	HelloEdge_Auto = HelloEdge_133 // HelloEdge_106 seems to be incompatible with this library
+ 	HelloEdge_85   = ClientHelloID{helloEdge, "85", nil, nil}
+ 	HelloEdge_106  = ClientHelloID{helloEdge, "106", nil, nil}
++	HelloEdge_133  = HelloChrome_133 // It's basically Chrome 1:1
+ 
+-	HelloSafari_Auto = HelloSafari_16_0
++	HelloSafari_Auto = HelloSafari_26_3
+ 	HelloSafari_16_0 = ClientHelloID{helloSafari, "16.0", nil, nil}
++	HelloSafari_26_3 = ClientHelloID{helloSafari, "26.3", nil, nil}
+ 
+ 	Hello360_Auto = Hello360_7_5 // Hello360_11_0 seems to be incompatible with this library
+ 	Hello360_7_5  = ClientHelloID{hello360, "7.5", nil, nil}
+diff --git a/u_parrots.go b/u_parrots.go
+index 7fcf0d6..17469ef 100644
+--- a/u_parrots.go
++++ b/u_parrots.go
+@@ -5,6 +5,7 @@
+ package tls
+ 
+ import (
++	"crypto/ecdh"
+ 	crand "crypto/rand"
+ 	"crypto/sha256"
+ 	"encoding/binary"
+@@ -23,6 +24,15 @@ import (
+ 
+ var ErrUnknownClientHelloID = errors.New("tls: unknown ClientHelloID")
+ 
++func classicalCurveForHybrid(curveID CurveID) (CurveID, bool) {
++	switch curveID {
++	case X25519MLKEM768, X25519Kyber768Draft00:
++		return X25519, true
++	default:
++		return 0, false
++	}
++}
++
+ // UTLSIdToSpec converts a ClientHelloID to a corresponding ClientHelloSpec.
+ //
+ // Exported internal function utlsIdToSpec per request.
+@@ -954,6 +964,157 @@ func utlsIdToSpec(id ClientHelloID) (ClientHelloSpec, error) {
+ 				&UtlsGREASEExtension{},
+ 			}),
+ 		}, nil
++	case HelloChrome_141_TA:
++		return ClientHelloSpec{
++			CipherSuites: []uint16{
++				GREASE_PLACEHOLDER,
++				TLS_AES_128_GCM_SHA256,
++				TLS_AES_256_GCM_SHA384,
++				TLS_CHACHA20_POLY1305_SHA256,
++				TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
++				TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
++				TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
++				TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
++				TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
++				TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
++				TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
++				TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
++				TLS_RSA_WITH_AES_128_GCM_SHA256,
++				TLS_RSA_WITH_AES_256_GCM_SHA384,
++				TLS_RSA_WITH_AES_128_CBC_SHA,
++				TLS_RSA_WITH_AES_256_CBC_SHA,
++			},
++			CompressionMethods: []byte{
++				0x00, // compressionNone
++			},
++			Extensions: ShuffleChromeTLSExtensions([]TLSExtension{
++				&UtlsGREASEExtension{},
++				&SNIExtension{},
++				&ExtendedMasterSecretExtension{},
++				&RenegotiationInfoExtension{Renegotiation: RenegotiateOnceAsClient},
++				&SupportedCurvesExtension{[]CurveID{
++					GREASE_PLACEHOLDER,
++					X25519MLKEM768,
++					X25519,
++					CurveP256,
++					CurveP384,
++				}},
++				&SupportedPointsExtension{SupportedPoints: []byte{
++					0x00, // pointFormatUncompressed
++				}},
++				&SessionTicketExtension{},
++				&ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}},
++				&StatusRequestExtension{},
++				&SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []SignatureScheme{
++					ECDSAWithP256AndSHA256,
++					PSSWithSHA256,
++					PKCS1WithSHA256,
++					ECDSAWithP384AndSHA384,
++					PSSWithSHA384,
++					PKCS1WithSHA384,
++					PSSWithSHA512,
++					PKCS1WithSHA512,
++				}},
++				&SCTExtension{},
++				&KeyShareExtension{[]KeyShare{
++					{Group: CurveID(GREASE_PLACEHOLDER), Data: []byte{0}},
++					{Group: X25519MLKEM768},
++					{Group: X25519},
++				}},
++				&PSKKeyExchangeModesExtension{[]uint8{
++					PskModeDHE,
++				}},
++				&SupportedVersionsExtension{[]uint16{
++					GREASE_PLACEHOLDER,
++					VersionTLS13,
++					VersionTLS12,
++				}},
++				&UtlsCompressCertExtension{[]CertCompressionAlgo{
++					CertCompressionBrotli,
++				}},
++				&ApplicationSettingsExtensionNew{SupportedProtocols: []string{"h2"}},
++				&TrustAnchorsExtension{},
++				BoringGREASEECH(),
++				&UtlsGREASEExtension{},
++			}),
++		}, nil
++	case HelloChrome_144_TA_PQS:
++		return ClientHelloSpec{
++			CipherSuites: []uint16{
++				GREASE_PLACEHOLDER,
++				TLS_AES_128_GCM_SHA256,
++				TLS_AES_256_GCM_SHA384,
++				TLS_CHACHA20_POLY1305_SHA256,
++				TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
++				TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
++				TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
++				TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
++				TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
++				TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
++				TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
++				TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
++				TLS_RSA_WITH_AES_128_GCM_SHA256,
++				TLS_RSA_WITH_AES_256_GCM_SHA384,
++				TLS_RSA_WITH_AES_128_CBC_SHA,
++				TLS_RSA_WITH_AES_256_CBC_SHA,
++			},
++			CompressionMethods: []byte{
++				0x00, // compressionNone
++			},
++			Extensions: ShuffleChromeTLSExtensions([]TLSExtension{
++				&UtlsGREASEExtension{},
++				&SNIExtension{},
++				&ExtendedMasterSecretExtension{},
++				&RenegotiationInfoExtension{Renegotiation: RenegotiateOnceAsClient},
++				&SupportedCurvesExtension{[]CurveID{
++					GREASE_PLACEHOLDER,
++					X25519MLKEM768,
++					X25519,
++					CurveP256,
++					CurveP384,
++				}},
++				&SupportedPointsExtension{SupportedPoints: []byte{
++					0x00, // pointFormatUncompressed
++				}},
++				&SessionTicketExtension{},
++				&ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}},
++				&StatusRequestExtension{},
++				&SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []SignatureScheme{
++					MLDSA44,
++					MLDSA65,
++					MLDSA87,
++					ECDSAWithP256AndSHA256,
++					PSSWithSHA256,
++					PKCS1WithSHA256,
++					ECDSAWithP384AndSHA384,
++					PSSWithSHA384,
++					PKCS1WithSHA384,
++					PSSWithSHA512,
++					PKCS1WithSHA512,
++				}},
++				&SCTExtension{},
++				&KeyShareExtension{[]KeyShare{
++					{Group: CurveID(GREASE_PLACEHOLDER), Data: []byte{0}},
++					{Group: X25519MLKEM768},
++					{Group: X25519},
++				}},
++				&PSKKeyExchangeModesExtension{[]uint8{
++					PskModeDHE,
++				}},
++				&SupportedVersionsExtension{[]uint16{
++					GREASE_PLACEHOLDER,
++					VersionTLS13,
++					VersionTLS12,
++				}},
++				&UtlsCompressCertExtension{[]CertCompressionAlgo{
++					CertCompressionBrotli,
++				}},
++				&ApplicationSettingsExtensionNew{SupportedProtocols: []string{"h2"}},
++				&TrustAnchorsExtension{},
++				BoringGREASEECH(),
++				&UtlsGREASEExtension{},
++			}),
++		}, nil
+ 	case HelloFirefox_55, HelloFirefox_56:
+ 		return ClientHelloSpec{
+ 			TLSVersMax: VersionTLS12,
+@@ -1456,6 +1617,132 @@ func utlsIdToSpec(id ClientHelloID) (ClientHelloSpec, error) {
+ 				},
+ 			},
+ 		}, nil
++	case HelloFirefox_148:
++		return ClientHelloSpec{
++			TLSVersMin: VersionTLS12,
++			TLSVersMax: VersionTLS13,
++			CipherSuites: []uint16{
++				TLS_AES_128_GCM_SHA256,
++				TLS_CHACHA20_POLY1305_SHA256,
++				TLS_AES_256_GCM_SHA384,
++				TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
++				TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
++				TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
++				TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
++				TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
++				TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
++				TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
++				TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
++				TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
++				TLS_RSA_WITH_AES_128_GCM_SHA256,
++				TLS_RSA_WITH_AES_256_GCM_SHA384,
++				TLS_RSA_WITH_AES_128_CBC_SHA,
++				TLS_RSA_WITH_AES_256_CBC_SHA,
++			},
++			CompressionMethods: []uint8{
++				0x0, // no compression
++			},
++			Extensions: []TLSExtension{
++				&SNIExtension{},
++				&ExtendedMasterSecretExtension{},
++				&RenegotiationInfoExtension{
++					Renegotiation: RenegotiateOnceAsClient,
++				},
++				&SupportedCurvesExtension{
++					Curves: []CurveID{
++						X25519MLKEM768,
++						X25519,
++						CurveP256,
++						CurveP384,
++						CurveP521,
++						FFDHE2048,
++						FFDHE3072,
++					},
++				},
++				&SupportedPointsExtension{
++					SupportedPoints: []uint8{
++						0x0, // uncompressed
++					},
++				},
++				&SessionTicketExtension{}, // Actually it's supported from Firefox 3.0
++				&ALPNExtension{
++					AlpnProtocols: []string{
++						"h2",
++						"http/1.1",
++					},
++				},
++				&StatusRequestExtension{},
++				&FakeDelegatedCredentialsExtension{
++					SupportedSignatureAlgorithms: []SignatureScheme{
++						ECDSAWithP256AndSHA256,
++						ECDSAWithP384AndSHA384,
++						ECDSAWithP521AndSHA512,
++						ECDSAWithSHA1,
++					},
++				},
++				&SCTExtension{},
++				&KeyShareExtension{
++					KeyShares: append(
++						ReuseHybridAndClassicalKeyShares(
++							KeyShare{
++								Group: X25519MLKEM768,
++							},
++							KeyShare{
++								Group: X25519,
++							},
++						),
++						KeyShare{
++							Group: CurveP256,
++						},
++					),
++				},
++				&SupportedVersionsExtension{
++					Versions: []uint16{
++						VersionTLS13,
++						VersionTLS12,
++					},
++				},
++				&SignatureAlgorithmsExtension{
++					SupportedSignatureAlgorithms: []SignatureScheme{
++						ECDSAWithP256AndSHA256,
++						ECDSAWithP384AndSHA384,
++						ECDSAWithP521AndSHA512,
++						PSSWithSHA256,
++						PSSWithSHA384,
++						PSSWithSHA512,
++						PKCS1WithSHA256,
++						PKCS1WithSHA384,
++						PKCS1WithSHA512,
++						ECDSAWithSHA1,
++						PKCS1WithSHA1,
++					},
++				},
++				&PSKKeyExchangeModesExtension{[]uint8{
++					PskModeDHE,
++				}}, // This is default since Firefox 60
++				&FakeRecordSizeLimitExtension{
++					Limit: 0x4001,
++				},
++				&UtlsCompressCertExtension{[]CertCompressionAlgo{
++					CertCompressionZlib,
++					CertCompressionBrotli,
++					CertCompressionZstd,
++				}},
++				&GREASEEncryptedClientHelloExtension{
++					CandidateCipherSuites: []HPKESymmetricCipherSuite{
++						{
++							KdfId:  dicttls.HKDF_SHA256,
++							AeadId: dicttls.AEAD_AES_128_GCM,
++						},
++						{
++							KdfId:  dicttls.HKDF_SHA256,
++							AeadId: dicttls.AEAD_CHACHA20_POLY1305,
++						},
++					},
++					CandidatePayloadLens: []uint16{223}, // +16: 239
++				},
++			},
++		}, nil
+ 	case HelloIOS_11_1:
+ 		return ClientHelloSpec{
+ 			TLSVersMax: VersionTLS12,
+@@ -1744,10 +2031,10 @@ func utlsIdToSpec(id ClientHelloID) (ClientHelloSpec, error) {
+ 			CipherSuites: []uint16{
+ 				TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+ 				TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+-				0xcca9, // Cipher Suite: TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256 (0xcca9)
++				TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+ 				TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+ 				TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+-				0xcca8, // Cipher Suite: TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256 (0xcca8)
++				TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+ 				TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+ 				TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+ 				TLS_RSA_WITH_AES_128_GCM_SHA256,
+@@ -1785,6 +2072,67 @@ func utlsIdToSpec(id ClientHelloID) (ClientHelloSpec, error) {
+ 				}},
+ 			},
+ 		}, nil
++	case HelloAndroid_16_OkHttp:
++		return ClientHelloSpec{
++			CipherSuites: []uint16{
++				TLS_AES_128_GCM_SHA256,
++				TLS_AES_256_GCM_SHA384,
++				TLS_CHACHA20_POLY1305_SHA256,
++				TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
++				TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
++				TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
++				TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
++				TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
++				TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
++				TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
++				TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
++				TLS_RSA_WITH_AES_128_GCM_SHA256,
++				TLS_RSA_WITH_AES_256_GCM_SHA384,
++				TLS_RSA_WITH_AES_128_CBC_SHA,
++				TLS_RSA_WITH_AES_256_CBC_SHA,
++			},
++			CompressionMethods: []byte{
++				0x00,
++			},
++			Extensions: []TLSExtension{
++				&SNIExtension{},
++				&ExtendedMasterSecretExtension{},
++				&RenegotiationInfoExtension{Renegotiation: RenegotiateOnceAsClient},
++				&SupportedCurvesExtension{Curves: []CurveID{
++					X25519,
++					CurveP256,
++					CurveP384,
++				}},
++				&SupportedPointsExtension{SupportedPoints: []byte{
++					0x00,
++				}},
++				&SessionTicketExtension{},
++				&ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}},
++				&StatusRequestExtension{},
++				&SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []SignatureScheme{
++					ECDSAWithP256AndSHA256,
++					PSSWithSHA256,
++					PKCS1WithSHA256,
++					ECDSAWithP384AndSHA384,
++					PSSWithSHA384,
++					PKCS1WithSHA384,
++					PSSWithSHA512,
++					PKCS1WithSHA512,
++					PKCS1WithSHA1,
++				}},
++				&KeyShareExtension{KeyShares: []KeyShare{
++					{Group: X25519},
++				}},
++				&PSKKeyExchangeModesExtension{Modes: []uint8{
++					PskModeDHE,
++				}},
++				&SupportedVersionsExtension{Versions: []uint16{
++					VersionTLS13,
++					VersionTLS12,
++				}},
++				&UtlsPaddingExtension{GetPaddingLen: BoringPaddingStyle},
++			},
++		}, nil
+ 	case HelloEdge_85:
+ 		return ClientHelloSpec{
+ 			CipherSuites: []uint16{
+@@ -2106,6 +2454,116 @@ func utlsIdToSpec(id ClientHelloID) (ClientHelloSpec, error) {
+ 				},
+ 			},
+ 		}, nil
++	case HelloSafari_26_3:
++		return ClientHelloSpec{
++			TLSVersMin: VersionTLS12,
++			TLSVersMax: VersionTLS13,
++			CipherSuites: []uint16{
++				GREASE_PLACEHOLDER,
++				TLS_AES_256_GCM_SHA384,
++				TLS_CHACHA20_POLY1305_SHA256,
++				TLS_AES_128_GCM_SHA256,
++				TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
++				TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
++				TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
++				TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
++				TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
++				TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
++				TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
++				TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
++				TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
++				TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
++				TLS_RSA_WITH_AES_256_GCM_SHA384,
++				TLS_RSA_WITH_AES_128_GCM_SHA256,
++				TLS_RSA_WITH_AES_256_CBC_SHA,
++				TLS_RSA_WITH_AES_128_CBC_SHA,
++				FAKE_TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA,
++				TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
++				TLS_RSA_WITH_3DES_EDE_CBC_SHA,
++			},
++			CompressionMethods: []uint8{
++				0x0, // no compression
++			},
++			Extensions: []TLSExtension{
++				&UtlsGREASEExtension{},
++				&SNIExtension{},
++				&ExtendedMasterSecretExtension{},
++				&RenegotiationInfoExtension{
++					Renegotiation: RenegotiateOnceAsClient,
++				},
++				&SupportedCurvesExtension{
++					Curves: []CurveID{
++						GREASE_PLACEHOLDER,
++						X25519MLKEM768,
++						X25519,
++						CurveP256,
++						CurveP384,
++						CurveP521,
++					},
++				},
++				&SupportedPointsExtension{
++					SupportedPoints: []uint8{
++						0x0, // uncompressed
++					},
++				},
++				&ALPNExtension{
++					AlpnProtocols: []string{
++						"h2",
++						"http/1.1",
++					},
++				},
++				&StatusRequestExtension{},
++				&SignatureAlgorithmsExtension{
++					SupportedSignatureAlgorithms: []SignatureScheme{
++						ECDSAWithP256AndSHA256,
++						PSSWithSHA256,
++						PKCS1WithSHA256,
++						ECDSAWithP384AndSHA384,
++						PSSWithSHA384,
++						PSSWithSHA384,
++						PKCS1WithSHA384,
++						PSSWithSHA512,
++						PKCS1WithSHA512,
++						PKCS1WithSHA1,
++					},
++				},
++				&SCTExtension{},
++				&KeyShareExtension{
++					KeyShares: []KeyShare{
++						{
++							Group: GREASE_PLACEHOLDER,
++							Data: []byte{
++								0,
++							},
++						},
++						{
++							Group: X25519MLKEM768,
++						},
++						{
++							Group: X25519,
++						},
++					},
++				},
++				&PSKKeyExchangeModesExtension{
++					Modes: []uint8{
++						PskModeDHE,
++					},
++				},
++				&SupportedVersionsExtension{
++					Versions: []uint16{
++						GREASE_PLACEHOLDER,
++						VersionTLS13,
++						VersionTLS12,
++					},
++				},
++				&UtlsCompressCertExtension{
++					Algorithms: []CertCompressionAlgo{
++						CertCompressionZlib,
++					},
++				},
++				&UtlsGREASEExtension{},
++			},
++		}, nil
+ 	case Hello360_7_5:
+ 		return ClientHelloSpec{
+ 			CipherSuites: []uint16{
+@@ -2874,6 +3332,7 @@ func (uconn *UConn) ApplyPreset(p *ClientHelloSpec) error {
+ 			}
+ 		case *KeyShareExtension:
+ 			preferredCurveIsSet := false
++			reusableClassicalKeys := make(map[CurveID][]*ecdh.PrivateKey)
+ 			for i := range ext.KeyShares {
+ 				curveID := ext.KeyShares[i].Group
+ 				if isGREASEUint16(uint16(curveID)) { // just in case the user set a GREASE value instead of unGREASEd
+@@ -2884,7 +3343,19 @@ func (uconn *UConn) ApplyPreset(p *ClientHelloSpec) error {
+ 					continue
+ 				}
+ 
++				isHybridReuse := len(ext.KeyShares[i].Data) == 1 && ext.KeyShares[i].Data[0] == keyShareHybridReuseMarker
++				isClassicalReuse := len(ext.KeyShares[i].Data) == 1 && ext.KeyShares[i].Data[0] == keyShareClassicalReuseMarker
+ 				if curveID == X25519MLKEM768 || curveID == X25519Kyber768Draft00 {
++					if isClassicalReuse {
++						return fmt.Errorf("hybrid keyshare reuse mismatch: classical marker is invalid for hybrid group %v", curveID)
++					}
++					if isHybridReuse {
++						_, ok := classicalCurveForHybrid(curveID)
++						if !ok {
++							return fmt.Errorf("hybrid keyshare reuse mismatch: hybrid group %v is not supported for reuse", curveID)
++						}
++					}
++
+ 					ecdheKey, err := generateECDHEKey(uconn.config.rand(), X25519)
+ 					if err != nil {
+ 						return err
+@@ -2905,7 +3376,36 @@ func (uconn *UConn) ApplyPreset(p *ClientHelloSpec) error {
+ 					}
+ 					uconn.HandshakeState.State13.KeyShareKeys.Mlkem = mlkemKey
+ 					uconn.HandshakeState.State13.KeyShareKeys.MlkemEcdhe = ecdheKey
++					if isHybridReuse {
++						expectedClassical, _ := classicalCurveForHybrid(curveID)
++						reusableClassicalKeys[expectedClassical] = append(
++							reusableClassicalKeys[expectedClassical],
++							ecdheKey,
++						)
++					}
+ 				} else {
++					if isHybridReuse {
++						return fmt.Errorf("classical keyshare reuse mismatch: hybrid marker is invalid for classical group %v", curveID)
++					}
++					if isClassicalReuse {
++						keysForCurve := reusableClassicalKeys[curveID]
++						if len(keysForCurve) == 0 {
++							return fmt.Errorf("classical keyshare %v is configured to reuse a hybrid keyshare, but no matching hybrid keyshare was generated first",
++								curveID)
++						}
++
++						reusedKey := keysForCurve[0]
++						reusableClassicalKeys[curveID] = keysForCurve[1:]
++
++						ext.KeyShares[i].Data = reusedKey.PublicKey().Bytes()
++						if !preferredCurveIsSet {
++							// only do this once for the first non-grease curve
++							uconn.HandshakeState.State13.KeyShareKeys.Ecdhe = reusedKey
++							preferredCurveIsSet = true
++						}
++						continue
++					}
++
+ 					ecdheKey, err := generateECDHEKey(uconn.config.rand(), curveID)
+ 					if err != nil {
+ 						return fmt.Errorf("unsupported Curve in KeyShareExtension: %v."+
+diff --git a/u_public.go b/u_public.go
+index d9443b5..e4fe376 100644
+--- a/u_public.go
++++ b/u_public.go
+@@ -368,6 +368,7 @@ type PubClientHelloMsg struct {
+ 	PskIdentities                    []PskIdentity
+ 	PskBinders                       [][]byte
+ 	QuicTransportParameters          []byte
++	TrustAnchors                     bool
+ 
+ 	cachedPrivateHello   *clientHelloMsg // todo: further optimize to reduce clientHelloMsg construction
+ 	encryptedClientHello []byte
+@@ -406,6 +407,7 @@ func (chm *PubClientHelloMsg) getPrivatePtr() *clientHelloMsg {
+ 			pskIdentities:           PskIdentities(chm.PskIdentities).ToPrivate(),
+ 			pskBinders:              chm.PskBinders,
+ 			quicTransportParameters: chm.QuicTransportParameters,
++			trustAnchors:            chm.TrustAnchors,
+ 			encryptedClientHello:    chm.encryptedClientHello,
+ 
+ 			nextProtoNeg: chm.NextProtoNeg,
+@@ -457,6 +459,7 @@ func (chm *clientHelloMsg) getPublicPtr() *PubClientHelloMsg {
+ 			PskIdentities:                    pskIdentities(chm.pskIdentities).ToPublic(),
+ 			PskBinders:                       chm.pskBinders,
+ 			QuicTransportParameters:          chm.quicTransportParameters,
++			TrustAnchors:                     chm.trustAnchors,
+ 			cachedPrivateHello:               chm,
+ 			encryptedClientHello:             chm.encryptedClientHello,
+ 		}
+@@ -616,6 +619,21 @@ type KeyShare struct {
+ 	Data  []byte  `json:"key_exchange,omitempty"` // optional
+ }
+ 
++const (
++	// Internal marker bytes used by ReuseHybridAndClassicalKeyShares.
++	// ApplyPreset consumes these and generates real keyshare bytes.
++	keyShareHybridReuseMarker    byte = 0xf1
++	keyShareClassicalReuseMarker byte = 0xf2
++)
++
++// ReuseHybridAndClassicalKeyShares marks a hybrid/classical keyshare pair so
++// ApplyPreset reuses the same classical key material for both entries.
++func ReuseHybridAndClassicalKeyShares(hybrid, classical KeyShare) []KeyShare {
++	hybrid.Data = []byte{keyShareHybridReuseMarker}
++	classical.Data = []byte{keyShareClassicalReuseMarker}
++	return []KeyShare{hybrid, classical}
++}
++
+ func (ks KeyShare) ToPrivate() keyShare {
+ 	return keyShare{group: ks.Group, data: ks.Data}
+ }
+diff --git a/u_tls_extensions.go b/u_tls_extensions.go
+index c6e9ab8..6a4483c 100644
+--- a/u_tls_extensions.go
++++ b/u_tls_extensions.go
+@@ -1700,6 +1700,48 @@ func (e *RenegotiationInfoExtension) writeToUConn(uc *UConn) error {
+ 	return nil
+ }
+ 
++// TrustAnchorsExtension implements trust_anchors
++type TrustAnchorsExtension struct {
++}
++
++func (e *TrustAnchorsExtension) Len() int {
++	return 6
++}
++
++func (e *TrustAnchorsExtension) Read(b []byte) (int, error) {
++	if len(b) < e.Len() {
++		return 0, io.ErrShortBuffer
++	}
++	b[0] = byte(extensionTrustAnchors >> 8)
++	b[1] = byte(extensionTrustAnchors & 0xff)
++	b[2] = 0
++	b[3] = 2
++	// 00 00
++	return e.Len(), io.EOF
++}
++
++func (e *TrustAnchorsExtension) UnmarshalJSON(_ []byte) error {
++	return nil
++}
++
++func (e *TrustAnchorsExtension) Write(b []byte) (int, error) {
++	fullLen := len(b)
++	extData := cryptobyte.String(b)
++	var data uint16
++	if !extData.ReadUint16(&data) {
++		return fullLen, errors.New("unable to read trust anchors extension data")
++	}
++	if data != 0 {
++		return fullLen, errors.New("trust anchors extension data is not empty") // todo: support non empty
++	}
++	return fullLen, nil
++}
++
++func (e *TrustAnchorsExtension) writeToUConn(uc *UConn) error {
++	uc.HandshakeState.Hello.TrustAnchors = true
++	return nil
++}
++
+ /*
+ FAKE EXTENSIONS
+ */

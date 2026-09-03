@@ -1,0 +1,89 @@
+From c038d877a21e3d95afd7fda17fd76b3f1781be1e Mon Sep 17 00:00:00 2001
+From: Author <author@example.com>
+Date: Tue, 28 Jul 2026 17:48:40 +0300
+Subject: [PATCH] perf(android): cap device worker count
+
+---
+ device/device.go            |  3 +--
+ device/worker_count.go      | 16 ++++++++++++++++
+ device/worker_count_test.go | 24 ++++++++++++++++++++++++
+ 3 files changed, 41 insertions(+), 2 deletions(-)
+ create mode 100644 device/worker_count.go
+ create mode 100644 device/worker_count_test.go
+
+diff --git a/device/device.go b/device/device.go
+index 26c8ede..a92fb7f 100644
+--- a/device/device.go
++++ b/device/device.go
+@@ -6,7 +6,6 @@
+ package device
+ 
+ import (
+-	"runtime"
+ 	"sync"
+ 	"sync/atomic"
+ 	"time"
+@@ -357,7 +356,7 @@ func NewDevice(tunDevice tun.Device, bind conn.Bind, logger *Logger) *Device {
+ 
+ 	// start workers
+ 
+-	cpus := runtime.NumCPU()
++	cpus := workerCount()
+ 	device.state.stopping.Wait()
+ 	device.queue.encryption.wg.Add(cpus) // One for each RoutineHandshake
+ 	for i := 0; i < cpus; i++ {
+diff --git a/device/worker_count.go b/device/worker_count.go
+new file mode 100644
+index 0000000..eb9e7c5
+--- /dev/null
++++ b/device/worker_count.go
+@@ -0,0 +1,16 @@
++package device
++
++import "runtime"
++
++const maxAndroidWorkers = 4
++
++func workerCount() int {
++	return workerCountFor(runtime.GOOS, runtime.NumCPU())
++}
++
++func workerCountFor(goos string, cpus int) int {
++	if goos == "android" {
++		return min(cpus, maxAndroidWorkers)
++	}
++	return cpus
++}
+diff --git a/device/worker_count_test.go b/device/worker_count_test.go
+new file mode 100644
+index 0000000..ddd0fe5
+--- /dev/null
++++ b/device/worker_count_test.go
+@@ -0,0 +1,24 @@
++package device
++
++import "testing"
++
++func TestWorkerCountFor(t *testing.T) {
++	tests := []struct {
++		name string
++		goos string
++		cpus int
++		want int
++	}{
++		{name: "Android capped", goos: "android", cpus: 8, want: 4},
++		{name: "Android below cap", goos: "android", cpus: 2, want: 2},
++		{name: "other OS", goos: "linux", cpus: 8, want: 8},
++	}
++
++	for _, test := range tests {
++		t.Run(test.name, func(t *testing.T) {
++			if got := workerCountFor(test.goos, test.cpus); got != test.want {
++				t.Fatalf("worker count = %d, want %d", got, test.want)
++			}
++		})
++	}
++}
+-- 
+2.55.0
+

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="tag_tv_focus_outline" type="id" />
+    <item name="nav_configuration" type="id" />
+    <item name="nav_group" type="id" />
+    <item name="nav_route" type="id" />
+    <item name="nav_route_apps" type="id" />
+    <item name="nav_adblock" type="id" />
+    <item name="nav_settings" type="id" />
+    <item name="nav_logcat" type="id" />
+    <item name="nav_traffic" type="id" />
+    <item name="nav_tools" type="id" />
+    <item name="nav_about" type="id" />
+    <item name="action_delete" type="id" />
+    <item name="action_apply" type="id" />
+    <item name="action_share_server" type="id" />
+    <item name="action_group_qr" type="id" />
+    <item name="action_standard_qr" type="id" />
+    <item name="action_universal_qr" type="id" />
+    <item name="action_group_clipboard" type="id" />
+    <item name="action_standard_clipboard" type="id" />
+    <item name="action_universal_clipboard" type="id" />
+    <item name="action_group_configuration" type="id" />
+    <item name="action_config_export_clipboard" type="id" />
+    <item name="action_config_export_file" type="id" />
+    <item name="action_create_shortcut" type="id" />
+    <item name="action_move" type="id" />
+    <item name="action_custom_outbound_json" type="id" />
+    <item name="action_custom_config_json" type="id" />
+</resources>

@@ -1,0 +1,253 @@
+diff --git a/src/internal/cpu/cpu_arm64_android.go b/src/internal/cpu/cpu_arm64_android.go
+--- a/src/internal/cpu/cpu_arm64_android.go
++++ b/src/internal/cpu/cpu_arm64_android.go
+@@ -6,6 +6,40 @@
+ 
+ package cpu
+ 
++import "internal/runtime/syscall/linux"
++
++var (
++	arm64CPUInfoPath = []byte("/proc/cpuinfo\x00")
++	arm64CPUInfoData [128 << 10]byte
++)
++
+ func osInit() {
++	if HWCap == 0 {
++		HWCap = arm64HWCAPFromCPUInfoFile()
++	}
+ 	hwcapInit("android")
+ }
++
++func arm64HWCAPFromCPUInfoFile() uint {
++	fd, errno := linux.Open(&arm64CPUInfoPath[0], 0 /* O_RDONLY */, 0)
++	if errno != 0 {
++		return 0
++	}
++	used := 0
++	for used < len(arm64CPUInfoData) {
++		n, errno := linux.Read(fd, arm64CPUInfoData[used:])
++		if errno != 0 {
++			linux.Close(fd)
++			return 0
++		}
++		if n == 0 {
++			break
++		}
++		used += n
++	}
++	linux.Close(fd)
++	if used == 0 || used == len(arm64CPUInfoData) {
++		return 0
++	}
++	return arm64HWCAPFromCPUInfo(arm64CPUInfoData[:used])
++}
+diff --git a/src/internal/cpu/cpu_arm64_hwcap.go b/src/internal/cpu/cpu_arm64_hwcap.go
+--- a/src/internal/cpu/cpu_arm64_hwcap.go
++++ b/src/internal/cpu/cpu_arm64_hwcap.go
+@@ -24,6 +24,8 @@
+ // HWCAP bits. These are exposed by Linux.
+ // See arch/arm64/include/uapi/asm/hwcap.h.
+ const (
++	hwcap_FP      = 1 << 0
++	hwcap_ASIMD   = 1 << 1
+ 	hwcap_AES     = 1 << 3
+ 	hwcap_PMULL   = 1 << 4
+ 	hwcap_SHA1    = 1 << 5
+@@ -36,6 +38,114 @@
+ 	hwcap_DIT     = 1 << 24
+ )
+ 
++func arm64HWCAPFromCPUInfo(data []byte) uint {
++	var commonFeatures uint
++	featureLines := 0
++	for len(data) > 0 {
++		lineEnd := byteIndex(data, '\n')
++		if lineEnd < 0 {
++			break
++		}
++		line := data[:lineEnd]
++		data = data[lineEnd+1:]
++		colon := byteIndex(line, ':')
++		if colon < 0 || !bytesEqualTrimSpace(line[:colon], "Features") {
++			continue
++		}
++		features := arm64HWCAPFromFeatureLine(line[colon+1:])
++		if featureLines == 0 {
++			commonFeatures = features
++		} else {
++			commonFeatures &= features
++		}
++		featureLines++
++	}
++	if featureLines == 0 {
++		return 0
++	}
++	return commonFeatures
++}
++
++func arm64HWCAPFromFeatureLine(line []byte) uint {
++	var features uint
++	for len(line) > 0 {
++		for len(line) > 0 && isASCIISpace(line[0]) {
++			line = line[1:]
++		}
++		wordEnd := 0
++		for wordEnd < len(line) && !isASCIISpace(line[wordEnd]) {
++			wordEnd++
++		}
++		if wordEnd == 0 {
++			break
++		}
++		word := line[:wordEnd]
++		switch {
++		case bytesEqual(word, "fp"):
++			features |= hwcap_FP
++		case bytesEqual(word, "asimd"):
++			features |= hwcap_ASIMD
++		case bytesEqual(word, "aes"):
++			features |= hwcap_AES
++		case bytesEqual(word, "pmull"):
++			features |= hwcap_PMULL
++		case bytesEqual(word, "sha1"):
++			features |= hwcap_SHA1
++		case bytesEqual(word, "sha2"):
++			features |= hwcap_SHA2
++		case bytesEqual(word, "crc32"):
++			features |= hwcap_CRC32
++		case bytesEqual(word, "atomics"):
++			features |= hwcap_ATOMICS
++		case bytesEqual(word, "cpuid"):
++			features |= hwcap_CPUID
++		case bytesEqual(word, "sha3"):
++			features |= hwcap_SHA3
++		case bytesEqual(word, "sha512"):
++			features |= hwcap_SHA512
++		case bytesEqual(word, "dit"):
++			features |= hwcap_DIT
++		}
++		line = line[wordEnd:]
++	}
++	return features
++}
++
++func byteIndex(data []byte, value byte) int {
++	for i, current := range data {
++		if current == value {
++			return i
++		}
++	}
++	return -1
++}
++
++func bytesEqualTrimSpace(data []byte, value string) bool {
++	for len(data) > 0 && isASCIISpace(data[0]) {
++		data = data[1:]
++	}
++	for len(data) > 0 && isASCIISpace(data[len(data)-1]) {
++		data = data[:len(data)-1]
++	}
++	return bytesEqual(data, value)
++}
++
++func bytesEqual(data []byte, value string) bool {
++	if len(data) != len(value) {
++		return false
++	}
++	for i, current := range data {
++		if current != value[i] {
++			return false
++		}
++	}
++	return true
++}
++
++func isASCIISpace(value byte) bool {
++	return value == ' ' || value == '\t' || value == '\r'
++}
++
+ func hwcapInit(os string) {
+ 	// HWCap was populated by the runtime from the auxiliary vector.
+ 	// See https://docs.kernel.org/arch/arm64/elf_hwcaps.html.
+diff --git a/src/internal/cpu/export_arm64_test.go b/src/internal/cpu/export_arm64_test.go
+--- /dev/null
++++ b/src/internal/cpu/export_arm64_test.go
+@@ -0,0 +1,19 @@
++// Copyright 2026 The Go Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style
++// license that can be found in the LICENSE file.
++
++//go:build arm64 && linux
++
++package cpu
++
++var ARM64HWCAPFromCPUInfo = arm64HWCAPFromCPUInfo
++
++const (
++	ARM64HWCAPFP    = hwcap_FP
++	ARM64HWCAPASIMD = hwcap_ASIMD
++	ARM64HWCAPAES   = hwcap_AES
++	ARM64HWCAPPMULL = hwcap_PMULL
++	ARM64HWCAPSHA1  = hwcap_SHA1
++	ARM64HWCAPSHA2  = hwcap_SHA2
++	ARM64HWCAPCRC32 = hwcap_CRC32
++)
+diff --git a/src/internal/cpu/cpu_arm64_hwcap_test.go b/src/internal/cpu/cpu_arm64_hwcap_test.go
+--- /dev/null
++++ b/src/internal/cpu/cpu_arm64_hwcap_test.go
+@@ -0,0 +1,55 @@
++// Copyright 2026 The Go Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style
++// license that can be found in the LICENSE file.
++
++//go:build arm64 && linux
++
++package cpu_test
++
++import (
++	"internal/cpu"
++	"testing"
++)
++
++func TestARM64HWCAPFromCPUInfo(t *testing.T) {
++	tests := []struct {
++		name     string
++		cpuInfo  string
++		expected uint
++	}{
++		{
++			name:     "single CPU",
++			cpuInfo:  "processor : 0\nFeatures : fp asimd aes pmull sha1 sha2 crc32\n",
++			expected: cpu.ARM64HWCAPFP | cpu.ARM64HWCAPASIMD | cpu.ARM64HWCAPAES | cpu.ARM64HWCAPPMULL | cpu.ARM64HWCAPSHA1 | cpu.ARM64HWCAPSHA2 | cpu.ARM64HWCAPCRC32,
++		},
++		{
++			name: "intersection",
++			cpuInfo: "processor : 0\nFeatures : fp asimd aes pmull sha2 crc32\n" +
++				"processor : 1\nFeatures : fp asimd sha2 crc32\n",
++			expected: cpu.ARM64HWCAPFP | cpu.ARM64HWCAPASIMD | cpu.ARM64HWCAPSHA2 | cpu.ARM64HWCAPCRC32,
++		},
++		{
++			name:     "unknown and whitespace",
++			cpuInfo:  "Features\t: fp unknown aes pmull\r\n",
++			expected: cpu.ARM64HWCAPFP | cpu.ARM64HWCAPAES | cpu.ARM64HWCAPPMULL,
++		},
++		{
++			name:     "truncated feature line",
++			cpuInfo:  "processor : 0\nFeatures : fp asimd aes pmull",
++			expected: 0,
++		},
++		{
++			name:     "missing feature line",
++			cpuInfo:  "processor : 0\nCPU implementer : 0x41\n",
++			expected: 0,
++		},
++	}
++	for _, test := range tests {
++		t.Run(test.name, func(t *testing.T) {
++			actual := cpu.ARM64HWCAPFromCPUInfo([]byte(test.cpuInfo))
++			if actual != test.expected {
++				t.Fatalf("hwcap = %#x, expected %#x", actual, test.expected)
++			}
++		})
++	}
++}
