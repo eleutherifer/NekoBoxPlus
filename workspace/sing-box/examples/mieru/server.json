@@ -1,0 +1,32 @@
+{
+  "log": {
+    "level": "error"
+  },
+  "inbounds": [
+    {
+      "type": "mieru",
+      "tag": "mieru-in",
+      "listen_port": 27017,
+      "listen_ports": [
+        "27017-27019"
+      ],
+      "transport": "TCP",
+      "users": [
+        {
+          "name": "username",
+          "password": "password"
+        }
+      ],
+      "traffic_pattern": "GgQIARAK"
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "direct",
+      "tag": "direct"
+    }
+  ],
+  "route": {
+    "final": "direct"
+  }
+}

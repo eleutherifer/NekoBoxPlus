@@ -1,0 +1,402 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string-array name="traffic_fragmentation_entry">
+        <item>@string/traffic_fragmentation_none</item>
+        <item>starifly</item>
+        <item>Exclave</item>
+        <item>ByeDPI</item>
+    </string-array>
+
+    <string-array name="masterdnsvpn_resolver_balancing_entry">
+        <item>جولة روبن</item>
+        <item>عشوائي</item>
+        <item>أقل خسارة</item>
+        <item>أقل الكمون</item>
+        <item>النتيجة الهجينة</item>
+        <item>الخسارة ثم الكمون</item>
+        <item>أقل خسارة أعلى عشوائية</item>
+        <item>أقل خسارة أعلى جولة روبن</item>
+    </string-array>
+
+    <string-array name="masterdnsvpn_compression_entry">
+        <item>عن</item>
+        <item>ZSTD</item>
+        <item>LZ4</item>
+        <item>ZLIB</item>
+    </string-array>
+
+    <string-array name="masterdnsvpn_encryption_method_entry">
+        <item>لا شيء</item>
+        <item>XOR</item>
+        <item>ChaCha20</item>
+        <item>AES-128-GCM</item>
+        <item>AES-192-GCM</item>
+        <item>AES-256-GCM</item>
+    </string-array>
+
+    <string-array name="route_network_type_entry">
+        <item>واي فاي</item>
+        <item>@string/cellular</item>
+        <item>إيثرنت</item>
+        <item>@string/routing_region_other</item>
+    </string-array>
+
+    <string-array name="route_protocol_entry">
+        <item>TCP وUDP</item>
+        <item>TCP</item>
+        <item>UDP</item>
+    </string-array>
+
+    <string-array name="route_sniff_protocol_entry">
+        <item>@string/not_set</item>
+        <item>HTTP</item>
+        <item>TLS</item>
+        <item>QUIC</item>
+        <item>STUN</item>
+        <item>DNS</item>
+        <item>بت تورنت</item>
+        <item>DTLS</item>
+        <item>SSH</item>
+        <item>RDP</item>
+        <item>NTP</item>
+        <item>@string/route_protocol_custom</item>
+    </string-array>
+
+    <string-array name="networks_entry">
+        <item>TCP</item>
+        <item>KCP</item>
+        <item>WebSocket</item>
+        <item>HTTP/2</item>
+        <item>QUIC</item>
+        <item>gRPC</item>
+        <item>ترقية HTTP</item>
+        <item>XHTTP</item>
+    </string-array>
+
+    <string-array name="kcp_headers_entry">
+        <item>@string/none</item>
+        <item>SRTP</item>
+        <item>uTP</item>
+        <item>WeChat Video</item>
+        <item>DTLS</item>
+        <item>WireGuard</item>
+        <item>DNS</item>
+    </string-array>
+
+    <string-array name="xhttp_mode_entry">
+        <item>آلي</item>
+        <item>Packet up</item>
+        <item>Stream up</item>
+        <item>Stream one</item>
+    </string-array>
+
+    <string-array name="xhttp_uplink_data_placement_entry">
+        <item>الافتراضي (body)</item>
+        <item>Header</item>
+        <item>Cookie</item>
+    </string-array>
+
+    <string-array name="xhttp_session_placement_entry">
+        <item>الافتراضي (path)</item>
+        <item>Header</item>
+        <item>Query</item>
+        <item>Cookie</item>
+    </string-array>
+
+    <string-array name="xhttp_padding_method_entry">
+        <item>الافتراضي (repeat-X)</item>
+        <item>Tokenish (Huffman)</item>
+    </string-array>
+
+    <string-array name="xhttp_x_padding_placement_entry">
+        <item>الافتراضي</item>
+        <item>queryInHeader</item>
+        <item>Header</item>
+        <item>Cookie</item>
+        <item>Query</item>
+        <item>Path</item>
+        <item>Body</item>
+    </string-array>
+
+    <string-array name="xhttp_uplink_http_method_entry">
+        <item>الافتراضي (POST)</item>
+        <item>GET</item>
+        <item>PUT</item>
+        <item>PATCH</item>
+        <item>DELETE</item>
+        <item>OPTIONS</item>
+    </string-array>
+
+    <string-array name="xhttp_seq_placement_entry">
+        <item>الافتراضي (path)</item>
+        <item>Header</item>
+        <item>Query</item>
+        <item>Cookie</item>
+    </string-array>
+
+    <string-array name="trojan_go_networks_entry">
+        <item>@string/none</item>
+        <item>WebSocket</item>
+    </string-array>
+
+    <string-array name="trojan_go_security_entry">
+        <item>@string/none</item>
+        <item>Shadowsocks</item>
+    </string-array>
+
+    <string-array name="vmess_encryption_entry">
+        <item>ChaCha20-Poly1305</item>
+        <item>AES-128-GCM</item>
+        <item>آلي</item>
+        <item>@string/none</item>
+        <item>صفر</item>
+    </string-array>
+
+    <string-array name="transport_layer_encryption_entry">
+        <item>@string/none</item>
+        <item>TLS</item>
+        <item>REALITY</item>
+    </string-array>
+
+    <string-array name="notification_entry">
+        <item>@string/disable</item>
+        <item>500 مللي ثانية</item>
+        <item>1 ثانية</item>
+        <item>3ث</item>
+        <item>10 ثانية</item>
+    </string-array>
+
+    <string-array name="naive_proto_entry">
+        <item>HTTPS</item>
+        <item>QUIC</item>
+    </string-array>
+
+    <string-array name="hysteria_auth_type">
+        <item>@string/plugin_disabled</item>
+        <item>String</item>
+        <item>Base64</item>
+    </string-array>
+
+    <string-array name="tun_implementation">
+        <item>gVisor</item>
+        <item>النظام</item>
+        <item>مختلط</item>
+    </string-array>
+
+    <string-array name="hysteria_protocol">
+        <item>UDP</item>
+        <item>FakeTCP (الجذر مطلوب)</item>
+        <item>WeChat Video</item>
+    </string-array>
+
+    <string-array name="packet_encoding_entry">
+        <item>@string/none</item>
+        <item>الحزمة</item>
+        <item>XUDP</item>
+    </string-array>
+
+    <string-array name="dns_network_entry">
+        <item>آلي</item>
+        <item>تفضل IPv6</item>
+        <item>تفضل IPv4</item>
+        <item>IPv4 فقط</item>
+        <item>IPv6 فقط</item>
+    </string-array>
+
+    <string-array name="utls_fingerprint_entry">
+        <item></item>
+        <item>Chrome</item>
+        <item>Firefox</item>
+        <item>Edge</item>
+        <item>Safari</item>
+        <item>360</item>
+        <item>QQ</item>
+        <item>iOS</item>
+        <item>Android</item>
+        <item>عشوائي</item>
+        <item>عشوائية</item>
+        <item>Golang</item>
+        <item>Custom</item>
+        <item>RandomizedALPN</item>
+        <item>RandomizedNoALPN</item>
+        <item>Firefox_Auto</item>
+        <item>Firefox_55</item>
+        <item>Firefox_56</item>
+        <item>Firefox_63</item>
+        <item>Firefox_65</item>
+        <item>Firefox_99</item>
+        <item>Firefox_102</item>
+        <item>Firefox_105</item>
+        <item>Firefox_120</item>
+        <item>Firefox_148</item>
+        <item>Chrome_Auto</item>
+        <item>Chrome_58</item>
+        <item>Chrome_62</item>
+        <item>Chrome_70</item>
+        <item>Chrome_72</item>
+        <item>Chrome_83</item>
+        <item>Chrome_87</item>
+        <item>Chrome_96</item>
+        <item>Chrome_100</item>
+        <item>Chrome_102</item>
+        <item>Chrome_100_PSK</item>
+        <item>Chrome_112_PSK_Shuf</item>
+        <item>Chrome_114_Padding_PSK_Shuf</item>
+        <item>Chrome_115_PQ</item>
+        <item>Chrome_115_PQ_PSK</item>
+        <item>Chrome_120</item>
+        <item>Chrome_120_PQ</item>
+        <item>Chrome_131</item>
+        <item>Chrome_133</item>
+        <item>Chrome_141_TA</item>
+        <item>Chrome_144_TA_PQS</item>
+        <item>IOS_Auto</item>
+        <item>IOS_12_1</item>
+        <item>IOS_13</item>
+        <item>IOS_14</item>
+        <item>Android_OkHttp_Auto</item>
+        <item>Android_11_OkHttp</item>
+        <item>Android_16_OkHttp</item>
+        <item>Edge_Auto</item>
+        <item>Edge_85</item>
+        <item>Edge_106</item>
+        <item>Safari_Auto</item>
+        <item>Safari_16_0</item>
+        <item>Safari_26_3</item>
+        <item>360_Auto</item>
+        <item>360_7_5</item>
+        <item>360_11_0</item>
+        <item>QQ_Auto</item>
+        <item>QQ_11_1</item>
+    </string-array>
+
+    <string-array name="adblock_https_fingerprint_entry">
+        <item>@string/none</item>
+        <item>Chrome</item>
+        <item>Firefox</item>
+        <item>Edge</item>
+        <item>Safari</item>
+        <item>360</item>
+        <item>QQ</item>
+        <item>iOS</item>
+        <item>Android</item>
+        <item>عشوائي</item>
+        <item>عشوائية</item>
+        <item>Golang</item>
+        <item>Custom</item>
+        <item>RandomizedALPN</item>
+        <item>RandomizedNoALPN</item>
+        <item>Firefox_Auto</item>
+        <item>Firefox_55</item>
+        <item>Firefox_56</item>
+        <item>Firefox_63</item>
+        <item>Firefox_65</item>
+        <item>Firefox_99</item>
+        <item>Firefox_102</item>
+        <item>Firefox_105</item>
+        <item>Firefox_120</item>
+        <item>Firefox_148</item>
+        <item>Chrome_Auto</item>
+        <item>Chrome_58</item>
+        <item>Chrome_62</item>
+        <item>Chrome_70</item>
+        <item>Chrome_72</item>
+        <item>Chrome_83</item>
+        <item>Chrome_87</item>
+        <item>Chrome_96</item>
+        <item>Chrome_100</item>
+        <item>Chrome_102</item>
+        <item>Chrome_100_PSK</item>
+        <item>Chrome_112_PSK_Shuf</item>
+        <item>Chrome_114_Padding_PSK_Shuf</item>
+        <item>Chrome_115_PQ</item>
+        <item>Chrome_115_PQ_PSK</item>
+        <item>Chrome_120</item>
+        <item>Chrome_120_PQ</item>
+        <item>Chrome_131</item>
+        <item>Chrome_133</item>
+        <item>Chrome_141_TA</item>
+        <item>Chrome_144_TA_PQS</item>
+        <item>IOS_Auto</item>
+        <item>IOS_12_1</item>
+        <item>IOS_13</item>
+        <item>IOS_14</item>
+        <item>Android_OkHttp_Auto</item>
+        <item>Android_11_OkHttp</item>
+        <item>Android_16_OkHttp</item>
+        <item>Edge_Auto</item>
+        <item>Edge_85</item>
+        <item>Edge_106</item>
+        <item>Safari_Auto</item>
+        <item>Safari_16_0</item>
+        <item>Safari_26_3</item>
+        <item>360_Auto</item>
+        <item>360_7_5</item>
+        <item>360_11_0</item>
+        <item>QQ_Auto</item>
+        <item>QQ_11_1</item>
+    </string-array>
+
+    <string-array name="trusttunnel_protocol_entry">
+        <item>HTTPS</item>
+        <item>تفضل QUIC</item>
+        <item>قوة QUIC</item>
+    </string-array>
+
+    <string-array name="trusttunnel_cronet_stack_entry">
+        <item>لا</item>
+        <item>ل HTTPS</item>
+        <item>ل QUIC</item>
+        <item>لHTTPS وQUIC</item>
+    </string-array>
+
+    <string-array name="tuic_udp_relay_mode_entry">
+        <item>Native</item>
+        <item>QUIC</item>
+    </string-array>
+
+    <string-array name="tuic_congestion_controller_entry">
+        <item>CUBIC</item>
+        <item>New Reno</item>
+        <item>BBR</item>
+    </string-array>
+
+    <string-array name="log_level_entry">
+        <item>@string/none</item>
+        <item>Panic</item>
+        <item>Fatal</item>
+        <item>Error</item>
+        <item>تحذير</item>
+        <item>معلومات</item>
+        <item>تصحيح</item>
+        <item>يتعقب</item>
+    </string-array>
+
+    <string-array name="tun_unrecognized_traffic_mode">
+        <item>حاجز</item>
+        <item>عادي: مباشر، تجاوز: حظر</item>
+        <item>لا يوجد وكيل (مباشر)</item>
+        <item>وكيل دائما</item>
+        <item>لا تحمي TUN</item>
+    </string-array>
+
+    <string-array name="tun_system_dns_traffic_mode">
+        <item>عادي: وكيل، تجاوز: مباشر</item>
+        <item>الوكيل</item>
+        <item>مباشر (تسرب DNS!)</item>
+    </string-array>
+
+    <string-array name="snell_obfs_modes_entry">
+        <item>لا شيء</item>
+        <item>HTTP</item>
+        <item>TLS</item>
+    </string-array>
+
+    <string-array name="snell_network_entry">
+        <item>آلي</item>
+        <item>TCP</item>
+        <item>UDP</item>
+    </string-array>
+
+</resources>

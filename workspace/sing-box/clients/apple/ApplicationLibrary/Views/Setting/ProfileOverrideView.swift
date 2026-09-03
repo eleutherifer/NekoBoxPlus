@@ -1,0 +1,80 @@
+import Library
+import SwiftUI
+
+public struct ProfileOverrideView: View {
+    @EnvironmentObject private var environments: ExtensionEnvironments
+    @State private var isLoading = true
+    @State private var alert: AlertState?
+    @State private var excludeDefaultRoute = false
+    @State private var autoRouteUseSubRangesByDefault = false
+    @State private var excludeAPNsRoute = false
+
+    public init() {}
+    public var body: some View {
+        Group {
+            if isLoading {
+                ProgressView().onAppear {
+                    Task {
+                        await loadSettings()
+                    }
+                }
+            } else {
+                FormView {
+                    FormToggle("Hide VPN Icon", "Append `0.0.0.0/31` and `::/127` to `route_exclude_address` if not exists.", $excludeDefaultRoute) { newValue in
+                        await SharedPreferences.excludeDefaultRoute.set(newValue)
+                        await reloadService()
+                    }
+
+                    FormToggle("No Default Route", """
+                    By default, segment routing is used in `auto_route` instead of global routing.
+                    If `<route_address/route_exclude_address>` exists in the configuration, this item will not take effect on the corresponding network (commonly used to resolve HomeKit compatibility issues).
+                    On macOS, enabling this option will cause Internet Sharing to not work properly.
+                    """, $autoRouteUseSubRangesByDefault) { newValue in
+                        await SharedPreferences.autoRouteUseSubRangesByDefault.set(newValue)
+                        await reloadService()
+                    }
+
+                    FormToggle("Exclude APNs Route", "Append `push.apple.com` to `bypass_domain`, and `17.0.0.0/8` to `route_exclude_address`.", $excludeAPNsRoute) { newValue in
+                        await SharedPreferences.excludeAPNsRoute.set(newValue)
+                        await reloadService()
+                    }
+
+                    FormButton {
+                        Task {
+                            await SharedPreferences.resetProfileOverride()
+                            await reloadService()
+                            isLoading = true
+                        }
+                    } label: {
+                        Label("Reset", systemImage: "eraser.fill")
+                    }
+                    .foregroundColor(.red)
+                }
+            }
+        }
+        .navigationTitle("Profile Override")
+        .alert($alert)
+        #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+        #endif
+    }
+
+    private func reloadService() async {
+        guard let profile = environments.extensionProfile, profile.status.isConnected else {
+            return
+        }
+        do {
+            try await profile.reloadService()
+        } catch {
+            alert = AlertState(action: "reload service", error: error)
+        }
+    }
+
+    @MainActor
+    private func loadSettings() async {
+        excludeDefaultRoute = await SharedPreferences.excludeDefaultRoute.get()
+        autoRouteUseSubRangesByDefault = await SharedPreferences.autoRouteUseSubRangesByDefault.get()
+        excludeAPNsRoute = await SharedPreferences.excludeAPNsRoute.get()
+        isLoading = false
+    }
+}

@@ -1,0 +1,36 @@
+# syntax=docker/dockerfile:1.7
+
+ARG GO_IMAGE=golang:1.25-bookworm
+FROM --platform=$BUILDPLATFORM ${GO_IMAGE}
+
+ARG ADBLOCK_RUST_TOOLCHAIN=1.97.0
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV CARGO_HOME=/opt/cargo
+ENV RUSTUP_HOME=/opt/rustup
+ENV PATH=/opt/cargo/bin:/usr/local/go/bin:/go/bin:$PATH
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+        ca-certificates \
+        clang \
+        curl \
+        file \
+        git \
+        lld \
+        nodejs \
+        npm \
+        pkg-config \
+        tcpdump; \
+    rm -rf /var/lib/apt/lists/*
+
+RUN set -eux; \
+    curl --proto '=https' --tlsv1.2 -sSf --retry 5 --retry-all-errors --retry-delay 2 https://sh.rustup.rs | \
+        sh -s -- -y --profile minimal --default-toolchain "${ADBLOCK_RUST_TOOLCHAIN}"; \
+    rustc --version; \
+    cargo --version
+
+WORKDIR /workspace/sing-box

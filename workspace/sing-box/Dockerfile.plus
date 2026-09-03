@@ -1,0 +1,36 @@
+FROM --platform=$BUILDPLATFORM rust:1.97-alpine AS rust
+RUN apk add --no-cache git musl-dev build-base
+WORKDIR /src
+ARG ADBLOCK_RUST_REPO=https://github.com/brave/adblock-rust
+ARG ADBLOCK_RUST_COMMIT=d5ed6133b853cc062865456678dfa5eca68e7e8e
+RUN git clone "$ADBLOCK_RUST_REPO" /adblock-rust \
+    && git -C /adblock-rust checkout "$ADBLOCK_RUST_COMMIT"
+COPY common/adblock/bridge /src/common/adblock/bridge
+WORKDIR /src/common/adblock/bridge
+RUN CARGO_TARGET_DIR=/src/common/adblock/bridge/target cargo build --release
+
+FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS builder
+RUN apk add --no-cache git build-base
+COPY . /go/src/github.com/sagernet/sing-box
+COPY --from=rust /adblock-rust /go/src/github.com/sagernet/adblock-rust
+COPY --from=rust /src/common/adblock/bridge/target /go/src/github.com/sagernet/sing-box/common/adblock/bridge/target
+WORKDIR /go/src/github.com/sagernet/sing-box
+ARG TARGETOS TARGETARCH
+ARG GOPROXY=""
+ENV GOPROXY=${GOPROXY}
+ENV CGO_ENABLED=1
+ENV GOOS=${TARGETOS}
+ENV GOARCH=${TARGETARCH}
+RUN set -ex \
+    && export VERSION=$(go run ./cmd/internal/read_tag) \
+    && export TAGS="$(cat release/DEFAULT_BUILD_TAGS_OTHERS),with_adblock" \
+    && export LDFLAGS_SHARED=$(cat release/LDFLAGS) \
+    && go build -v -trimpath -tags "$TAGS" \
+        -o /go/bin/sing-box \
+        -ldflags "-X \"github.com/sagernet/sing-box/constant.Version=$VERSION\" $LDFLAGS_SHARED -s -w -buildid=" \
+        ./cmd/sing-box
+
+FROM --platform=$TARGETPLATFORM alpine AS dist
+RUN apk add --no-cache --upgrade bash tzdata ca-certificates nftables
+COPY --from=builder /go/bin/sing-box /usr/local/bin/sing-box
+ENTRYPOINT ["sing-box"]

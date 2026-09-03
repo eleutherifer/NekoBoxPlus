@@ -1,0 +1,18 @@
+[package]
+name = "sing-box-adblock-bridge"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "sing_box_adblock_bridge"
+crate-type = ["staticlib"]
+
+[dependencies]
+adblock = { path = "../../../../adblock-rust", default-features = false, features = ["css-validation", "embedded-domain-resolver", "full-regex-handling", "resource-assembler"] }
+base64 = "0.22"
+serde_json = "1"
+
+[profile.release]
+lto = true
+codegen-units = 1
