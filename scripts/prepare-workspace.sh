@@ -244,16 +244,21 @@ resolve_singbox_version() {
 
   # First get just enough ancestry for --abbrev=0 (nearest tag) to work.
   deepen_until "$dir" "git -C '$dir' describe --tags --abbrev=0" || return 1
-  local current_tag_rev current_tag
-  current_tag_rev="$(git -C "$dir" describe --tags --abbrev=0 2>/dev/null)"
-  current_tag="$(git -C "$dir" describe --tags 2>/dev/null)"
 
-  # Exactly at a tag already -- this is ReadTag()'s simple path, no
-  # merge-base needed at all.
-  if [ "$current_tag" = "$current_tag_rev" ]; then
-    echo "${current_tag#v}"
+  # --exact-match is a direct, depth-independent check (a tag's SHA
+  # either equals HEAD's SHA or it doesn't -- no ancestry walk needed),
+  # unlike comparing `describe --tags` against `--abbrev=0`: on a shallow
+  # clone, those two can spuriously match right near the fetch boundary
+  # even when a full clone would show real commits in between.
+  local exact
+  exact="$(git -C "$dir" describe --tags --exact-match 2>/dev/null)"
+  if [ -n "$exact" ]; then
+    echo "${exact#v}"
     return 0
   fi
+
+  local current_tag_rev
+  current_tag_rev="$(git -C "$dir" describe --tags --abbrev=0 2>/dev/null)"
 
   # Not exactly at a tag: ReadTag() instead reports <tag>-<short hash of
   # the merge-base with upstream/testing>, which can need real history on
