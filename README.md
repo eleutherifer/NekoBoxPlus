@@ -23,6 +23,8 @@
 • Tailscale  
 • Adblock  
 
+Разработчик NekoBox+ выкладывает `.apk`-файлы и `push patches.tar.gz` в упомянутой теме на 4pda.to и не планирует перенести разработку на GitHub.
+
 # Скрипты в этом репозитории
 
 `.github/workflows/ingest.yml` — триггер на `push patches.tar.gz`, распаковывает архив в `patches/`, гоняет `prepare-workspace.sh`, затем удаляет и `patches/` и `patches.tar.gz` с диска, архив коммитится при загрузке, а этим же прогоном его удаление уходит в тот же коммит, что добавляет `workspace/`. В репозитории остаётся только `workspace/`.
