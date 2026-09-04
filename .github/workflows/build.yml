@@ -93,14 +93,13 @@ jobs:
           name: NekoBoxPlus-${{ steps.build.outputs.version_name }}
           path: dist/*.apk
 
-      - name: Publish GitHub Release
-        if: inputs.publish_release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.build.outputs.version_name }}
-          name: NekoBox+ ${{ steps.build.outputs.version_name }}
-          files: dist/*.apk
-
+      # VirusTotal scans asynchronously -- the upload only queues the file
+      # and returns an analysis id, so this polls for the actual verdict
+      # rather than just confirming the upload went through. Free API keys
+      # are capped at 4 req/min; polling every 20s stays under that.
+      # Uploaded files aren't private -- VT shares them with its paying
+      # (threat-intel) customers, so this only runs if you've deliberately
+      # added VIRUSTOTAL_API_KEY as a secret.
       - name: Scan APK with VirusTotal
         if: always()
         continue-on-error: true
@@ -116,12 +115,13 @@ jobs:
             echo "APK-файл не найден в dist/ — пропускаю проверку."
             exit 0
           fi
+
           echo "Отправляю $APK_PATH на VirusTotal..."
-          RESPONSE=$(curl -s -w "\n%{http_code}" "https://www.virustotal.com/api/v3/files/upload_url" -H "x-apikey: $VT_API_KEY")
+          RESPONSE=$(curl -s -w '\n%{http_code}' "https://www.virustotal.com/api/v3/files/upload_url" -H "x-apikey: $VT_API_KEY")
           HTTP_CODE=$(echo "$RESPONSE" | tail -1)
           BODY=$(echo "$RESPONSE" | sed '$d')
           if [ "$HTTP_CODE" != "200" ]; then
-            echo "VirusTotal вернул ошибку (HTTP $HTTP_CODE):"
+            echo "VirusTotal вернул ошибку при получении upload_url (HTTP $HTTP_CODE):"
             echo "$BODY"
             exit 0
           fi
@@ -131,5 +131,51 @@ jobs:
             echo "$BODY"
             exit 0
           fi
-          curl -s -X POST "$UPLOAD_URL" -H "x-apikey: $VT_API_KEY" -F "file=@$APK_PATH" > vt-result.json
-          cat vt-result.json
+
+          UPLOAD_RESPONSE=$(curl -s -w '\n%{http_code}' -X POST "$UPLOAD_URL" -H "x-apikey: $VT_API_KEY" -F "file=@$APK_PATH")
+          UPLOAD_HTTP_CODE=$(echo "$UPLOAD_RESPONSE" | tail -1)
+          UPLOAD_BODY=$(echo "$UPLOAD_RESPONSE" | sed '$d')
+          if [ "$UPLOAD_HTTP_CODE" != "200" ]; then
+            echo "VirusTotal вернул ошибку при загрузке файла (HTTP $UPLOAD_HTTP_CODE):"
+            echo "$UPLOAD_BODY"
+            exit 0
+          fi
+          ANALYSIS_ID=$(echo "$UPLOAD_BODY" | jq -r '.data.id // empty')
+          if [ -z "$ANALYSIS_ID" ]; then
+            echo "Не удалось получить analysis id из ответа VirusTotal:"
+            echo "$UPLOAD_BODY"
+            exit 0
+          fi
+          echo "Файл принят, analysis id: $ANALYSIS_ID"
+
+          STATUS="queued"
+          POLL="{}"
+          for i in $(seq 1 20); do
+            sleep 20
+            POLL=$(curl -s "https://www.virustotal.com/api/v3/analyses/$ANALYSIS_ID" -H "x-apikey: $VT_API_KEY")
+            STATUS=$(echo "$POLL" | jq -r '.data.attributes.status // empty')
+            echo "  [$i/20] статус: ${STATUS:-?}"
+            [ "$STATUS" = "completed" ] && break
+          done
+
+          REPORT_URL="https://www.virustotal.com/gui/analysis/$ANALYSIS_ID"
+          if [ "$STATUS" != "completed" ]; then
+            echo "Анализ не завершился за отведённое время (~7 мин). Проверить вручную: $REPORT_URL"
+            exit 0
+          fi
+
+          echo "$POLL" | jq '.data.attributes.stats'
+          MALICIOUS=$(echo "$POLL" | jq -r '.data.attributes.stats.malicious // 0')
+          SUSPICIOUS=$(echo "$POLL" | jq -r '.data.attributes.stats.suspicious // 0')
+          {
+            echo "### VirusTotal: вредоносным считают $MALICIOUS движков, подозрительным — $SUSPICIOUS"
+            echo "Полный отчёт: $REPORT_URL"
+          } >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+
+      - name: Publish GitHub Release
+        if: inputs.publish_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.build.outputs.version_name }}
+          name: NekoBox+ ${{ steps.build.outputs.version_name }}
+          files: dist/*.apk
