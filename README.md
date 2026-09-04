@@ -1,6 +1,9 @@
 # NekoBox+
 
-Разработчик: MrEternal
+**Требуется Android**: 6.0+  
+**Русский интерфейс**: Да  
+**Разработчик**: MrEternal  
+**Имя пакета**: com.nb4a.plus  
 
 [Тема на 4pda.to](https://4pda.to/forum/index.php?showtopic=1121122)
 
