@@ -5,6 +5,13 @@ enum class ServiceRestartOrigin {
     Automatic,
 }
 
+enum class ServiceRestartCause {
+    Default,
+    ProfileSwitch,
+    NetworkChange,
+    WakeReconnect,
+}
+
 internal object ServiceLifecyclePolicy {
     enum class ConnectionIntent {
         Start,
@@ -91,6 +98,28 @@ internal object ServiceLifecyclePolicy {
     ): Boolean {
         return (restartRequested || pendingRestart) && desiredProfileId != 0L
     }
+
+    fun profileReloadCause(runningProfileId: Long?, selectedProfileId: Long): ServiceRestartCause {
+        return if (runningProfileId != null && runningProfileId != selectedProfileId) {
+            ServiceRestartCause.ProfileSwitch
+        } else {
+            ServiceRestartCause.Default
+        }
+    }
+
+    fun shouldRetainTun(
+        restartCause: ServiceRestartCause,
+        cleanupAction: StopCleanupAction,
+        cleanupSucceeded: Boolean,
+    ): Boolean {
+        return cleanupAction == StopCleanupAction.Restart && cleanupSucceeded &&
+            isTunReuseEligible(restartCause)
+    }
+
+    fun isTunReuseEligible(restartCause: ServiceRestartCause): Boolean =
+        restartCause == ServiceRestartCause.ProfileSwitch ||
+            restartCause == ServiceRestartCause.NetworkChange ||
+            restartCause == ServiceRestartCause.WakeReconnect
 
     fun stopCleanupAction(
         shouldRestart: Boolean,

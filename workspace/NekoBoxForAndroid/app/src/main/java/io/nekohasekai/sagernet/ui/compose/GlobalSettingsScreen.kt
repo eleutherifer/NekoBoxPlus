@@ -54,6 +54,9 @@ internal data class GlobalSettingItem(
 internal fun globalSettingsFor(groupId: String): List<GlobalSettingItem> =
     GLOBAL_SETTINGS[groupId].orEmpty()
 
+internal fun maskedSecretSummary(value: String, notSet: String): String =
+    value.takeIf(String::isNotEmpty)?.let { "*".repeat(it.length) } ?: notSet
+
 @Composable
 internal fun GlobalSettingsGroupScreen(
     groupId: String,
@@ -128,6 +131,7 @@ internal fun GlobalSettingsGroupScreen(
                         item.key == "globalCustomConfig" && value.isNotBlank() ->
                             stringResource(R.string.lines, value.lineSequence().count())
                         item.fixedSummary != 0 -> stringResource(item.fixedSummary)
+                        item.key == "mixedPassword" -> maskedSecretSummary(value, notSet)
                         else -> value.ifBlank { notSet }
                     }
                     val title = stringResource(item.title)

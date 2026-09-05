@@ -22,6 +22,7 @@ import (
 	"github.com/sagernet/sing-box/common/kmutex"
 	"github.com/sagernet/sing-box/common/tls"
 	"github.com/sagernet/sing-box/common/xray/buf"
+	Xbadoption "github.com/sagernet/sing-box/common/xray/json/badoption"
 	xnet "github.com/sagernet/sing-box/common/xray/net"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
@@ -30,6 +31,7 @@ import (
 
 	"github.com/sagernet/sing-box/common/xray/signal/done"
 	"github.com/sagernet/sing/common"
+	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/logger"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
@@ -231,8 +233,8 @@ func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	sessionId, seqStr := ExtractMetaFromRequest(s.options, request, s.path)
-	if sessionId == "" && s.options.Mode != "" && s.options.Mode != "auto" && s.options.Mode != "stream-one" && s.options.Mode != "stream-up" {
-		s.logger.ErrorContext(request.Context(), "stream-one mode is not allowed")
+	if err := validateXHTTPSessionMode(s.options.Mode, sessionId); err != nil {
+		s.logger.ErrorContext(request.Context(), err)
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -317,24 +319,15 @@ func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 				Reader: httpSC,
 			})
 			if err != nil {
-				s.logger.InfoContext(request.Context(), err, "failed to upload (PushReader)")
+				s.logger.DebugContext(request.Context(), err, "failed to upload (PushReader)")
 				writer.WriteHeader(http.StatusConflict)
 			} else {
 				writer.Header().Set("X-Accel-Buffering", "no")
 				writer.Header().Set("Cache-Control", "no-store")
 				writer.WriteHeader(http.StatusOK)
 				scStreamUpServerSecs := s.options.GetNormalizedScStreamUpServerSecs()
-				referrer := request.Header.Get("Referer")
-				if referrer != "" && scStreamUpServerSecs.To > 0 {
-					go func() {
-						for {
-							_, err := httpSC.Write(bytes.Repeat([]byte{'X'}, int(s.options.GetNormalizedXPaddingBytes().Rand())))
-							if err != nil {
-								break
-							}
-							time.Sleep(time.Duration(scStreamUpServerSecs.Rand()) * time.Second)
-						}
-					}()
+				if shouldWriteStreamUpPadding(s.options, request, paddingValue, scStreamUpServerSecs) {
+					go s.writeStreamUpPadding(httpSC, scStreamUpServerSecs)
 				}
 				select {
 				case <-request.Context().Done():
@@ -362,7 +355,7 @@ func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 			headerPayloadEncoded := strings.Join(headerPayloadChunks, "")
 			headerPayload, err = base64.RawURLEncoding.DecodeString(headerPayloadEncoded)
 			if err != nil {
-				s.logger.InfoContext(request.Context(), err, "Invalid base64 in header's payload")
+				s.logger.DebugContext(request.Context(), err, "Invalid base64 in header's payload")
 				writer.WriteHeader(http.StatusBadRequest)
 				return
 			}
@@ -381,7 +374,7 @@ func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 			cookiePayloadEncoded := strings.Join(cookiePayloadChunks, "")
 			cookiePayload, err = base64.RawURLEncoding.DecodeString(cookiePayloadEncoded)
 			if err != nil {
-				s.logger.InfoContext(request.Context(), err, "Invalid base64 in cookies' payload")
+				s.logger.DebugContext(request.Context(), err, "Invalid base64 in cookies' payload")
 				writer.WriteHeader(http.StatusBadRequest)
 				return
 			}
@@ -401,7 +394,7 @@ func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 				bodyPayload, readErr = buf.ReadAllToBytes(io.LimitReader(request.Body, int64(scMaxEachPostBytes)+1))
 			}
 			if readErr != nil {
-				s.logger.InfoContext(request.Context(), readErr, "failed to read body payload")
+				s.logger.DebugContext(request.Context(), readErr, "failed to read body payload")
 				writer.WriteHeader(http.StatusBadRequest)
 				return
 			}
@@ -424,7 +417,7 @@ func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		}
 		seq, err := strconv.ParseUint(seqStr, 10, 64)
 		if err != nil {
-			s.logger.InfoContext(request.Context(), err, "failed to upload (ParseUint)")
+			s.logger.DebugContext(request.Context(), err, "failed to upload (ParseUint)")
 			writer.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -433,7 +426,7 @@ func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 			Seq:     seq,
 		})
 		if err != nil {
-			s.logger.InfoContext(request.Context(), err, "failed to upload (PushPayload)")
+			s.logger.DebugContext(request.Context(), err, "failed to upload (PushPayload)")
 			writer.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -481,6 +474,47 @@ func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	} else {
 		s.logger.ErrorContext(request.Context(), "unsupported method: ", request.Method)
 		writer.WriteHeader(http.StatusMethodNotAllowed)
+	}
+}
+
+func validateXHTTPSessionMode(mode string, sessionID string) error {
+	if mode == "" || mode == "auto" {
+		return nil
+	}
+	if sessionID == "" {
+		if mode != "stream-one" && mode != "stream-up" {
+			return E.New("stream-one mode is not allowed")
+		}
+	} else if mode == "stream-one" {
+		return E.New("session is not allowed in stream-one mode")
+	}
+	return nil
+}
+
+func shouldWriteStreamUpPadding(options *option.V2RayXHTTPOptions, request *http.Request, paddingValue string, interval Xbadoption.Range) bool {
+	if interval.To <= 0 {
+		return false
+	}
+	return request.Header.Get("Referer") != "" || options.XPaddingObfsMode && paddingValue != ""
+}
+
+func (s *Server) writeStreamUpPadding(conn *httpServerConn, interval Xbadoption.Range) {
+	timer := time.NewTimer(0)
+	if !timer.Stop() {
+		<-timer.C
+	}
+	defer timer.Stop()
+	for {
+		_, err := conn.Write(bytes.Repeat([]byte{'X'}, int(s.options.GetNormalizedXPaddingBytes().Rand())))
+		if err != nil {
+			return
+		}
+		timer.Reset(time.Duration(interval.Rand()) * time.Second)
+		select {
+		case <-timer.C:
+		case <-conn.Wait():
+			return
+		}
 	}
 }
 

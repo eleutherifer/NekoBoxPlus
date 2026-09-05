@@ -45,6 +45,7 @@ private const val SING_BOX_CLOSE_TIMEOUT = "sing-box did not close in time"
 private const val SERVICE_CLOSE_TIMEOUT_MS = 5_000L
 private const val CONNECTING_CANCEL_TIMEOUT_MS = 5_000L
 private const val EXTRA_RESTART_ORIGIN = "io.nekohasekai.sagernet.extra.RESTART_ORIGIN"
+private const val EXTRA_RESTART_CAUSE = "io.nekohasekai.sagernet.extra.RESTART_CAUSE"
 private const val EXTRA_RETRY_ATTEMPT = "io.nekohasekai.sagernet.extra.RETRY_ATTEMPT"
 
 internal suspend fun Job.cancelAndJoinWithin(timeoutMillis: Long): Boolean =
@@ -96,9 +97,11 @@ class BaseService {
         var coreRecoveryConnection: ServiceConnection? = null
         var pendingRestart = false
         var pendingRestartOrigin = ServiceRestartOrigin.Manual
+        var pendingRestartCause = ServiceRestartCause.Default
         var pendingRetryAttempt = 0
         var restartJob: Job? = null
         var restartGeneration = 0L
+        var activeRestartCause = ServiceRestartCause.Default
         var lastStartId = 0
         var desiredProfileId = 0L
         var latestRequestId = Long.MIN_VALUE
@@ -128,7 +131,8 @@ class BaseService {
                             proxy?.box?.wake()
                             service.handleConnectionRecovery(
                                 reconnect = DataStore.wakeReconnect,
-                                reset = DataStore.wakeResetConnections
+                                reset = DataStore.wakeResetConnections,
+                                restartCause = ServiceRestartCause.WakeReconnect,
                             )
                         }
                     }
@@ -590,6 +594,10 @@ class BaseService {
             if (intent.action == Action.SERVICE) data.binder else null
 
         fun reload(selectedProxy: Long = DataStore.selectedProxy) {
+            val restartCause = ServiceLifecyclePolicy.profileReloadCause(
+                runningProfileId = data.proxy?.profile?.id,
+                selectedProfileId = selectedProxy,
+            )
             data.desiredProfileId = selectedProxy
             val s = data.state
             val action = ServiceLifecyclePolicy.reloadAction(
@@ -625,10 +633,14 @@ class BaseService {
                     }
                 }
                 ServiceLifecyclePolicy.ReloadAction.Start -> startRunner()
-                ServiceLifecyclePolicy.ReloadAction.StopRestart -> stopRunner(true)
+                ServiceLifecyclePolicy.ReloadAction.StopRestart -> stopRunner(
+                    restart = true,
+                    restartCause = restartCause,
+                )
                 ServiceLifecyclePolicy.ReloadAction.MarkPendingRestart -> {
                     data.pendingRestart = true
                     data.pendingRestartOrigin = ServiceRestartOrigin.Manual
+                    data.pendingRestartCause = restartCause
                 }
                 ServiceLifecyclePolicy.ReloadAction.Ignore -> Logs.w("Illegal state $s when invoking use")
             }
@@ -655,6 +667,7 @@ class BaseService {
 
         fun startRunner(
             origin: ServiceRestartOrigin = ServiceRestartOrigin.Manual,
+            cause: ServiceRestartCause = ServiceRestartCause.Default,
             retryAttempt: Int = 0,
             delayMillis: Long = 0L,
         ) {
@@ -668,6 +681,7 @@ class BaseService {
                 }
                 val restartIntent = Intent(this@Interface, serviceClass)
                     .putExtra(EXTRA_RESTART_ORIGIN, origin.name)
+                    .putExtra(EXTRA_RESTART_CAUSE, cause.name)
                     .putExtra(EXTRA_RETRY_ATTEMPT, retryAttempt)
                     .putExtra(Action.EXTRA_PROFILE_ID, data.desiredProfileId)
                     .putExtra(Action.EXTRA_REQUEST_ID, data.latestRequestId)
@@ -739,9 +753,11 @@ class BaseService {
             )
         }
 
-        suspend fun beforeRestartAfterStop() {
+        suspend fun beforeRestartAfterStop(tunRetained: Boolean) {
             delay(300)
         }
+
+        fun finalizeProcessCleanup(retainTun: Boolean) = Unit
 
         private suspend fun stopCoreRecoveryForCleanupTimeout() {
             data.overloadWatchdog?.close()
@@ -817,6 +833,7 @@ class BaseService {
             restart: Boolean = false,
             msg: String? = null,
             restartOrigin: ServiceRestartOrigin = ServiceRestartOrigin.Manual,
+            restartCause: ServiceRestartCause = ServiceRestartCause.Default,
             retryAttempt: Int = 0,
         ) {
             if (!restart) {
@@ -825,10 +842,12 @@ class BaseService {
                 data.restartJob = null
                 data.pendingRestart = false
                 data.pendingRestartOrigin = ServiceRestartOrigin.Manual
+                data.pendingRestartCause = ServiceRestartCause.Default
                 data.pendingRetryAttempt = 0
             }
             if (ServiceLifecyclePolicy.shouldPreserveRestartOnDuplicateStop(data.state == State.Stopping, restart)) {
                 data.pendingRestart = true
+                data.pendingRestartCause = restartCause
                 if (restartOrigin == ServiceRestartOrigin.Automatic) {
                     data.pendingRestartOrigin = restartOrigin
                     data.pendingRetryAttempt = maxOf(data.pendingRetryAttempt, retryAttempt)
@@ -866,6 +885,8 @@ class BaseService {
                 var cleanupSucceeded = true
                 var shouldRestart = restart
                 var effectiveRetryAttempt = retryAttempt
+                var effectiveRestartOrigin = restartOrigin
+                var effectiveRestartCause = restartCause
                 var cleanupTimedOut = false
                 var cleanupError: Throwable? = null
                 data.lifecycleMutex.withLock {
@@ -906,15 +927,19 @@ class BaseService {
                         DataStore.baseService = null
                         DataStore.vpnService = null
                     }
-                    val effectiveRestartOrigin =
+                    effectiveRestartOrigin =
                         if (data.pendingRestartOrigin == ServiceRestartOrigin.Automatic) {
                             ServiceRestartOrigin.Automatic
                         } else {
                             restartOrigin
                         }
+                    if (data.pendingRestart) {
+                        effectiveRestartCause = data.pendingRestartCause
+                    }
                     effectiveRetryAttempt = maxOf(effectiveRetryAttempt, data.pendingRetryAttempt)
                     data.pendingRestart = false
                     data.pendingRestartOrigin = ServiceRestartOrigin.Manual
+                    data.pendingRestartCause = ServiceRestartCause.Default
                     data.pendingRetryAttempt = 0
 
                     if (cleanupTimedOut) {
@@ -923,9 +948,6 @@ class BaseService {
 
                     // change the state
                     data.changeState(State.Stopped, msg ?: cleanupError?.readableMessage)
-                    if (shouldRestart) {
-                        data.pendingRestartOrigin = effectiveRestartOrigin
-                    }
                 }
 
                 val cleanupAction = ServiceLifecyclePolicy.stopCleanupAction(
@@ -937,24 +959,33 @@ class BaseService {
                     "Service stop cleanup action: action=$cleanupAction restart=$shouldRestart " +
                         "cleanupSucceeded=$cleanupSucceeded cleanupTimedOut=$cleanupTimedOut"
                 )
+                val retainTun = ServiceLifecyclePolicy.shouldRetainTun(
+                    restartCause = effectiveRestartCause,
+                    cleanupAction = cleanupAction,
+                    cleanupSucceeded = cleanupSucceeded,
+                )
+                finalizeProcessCleanup(retainTun)
                 when (cleanupAction) {
                     ServiceLifecyclePolicy.StopCleanupAction.Restart -> {
-                        val effectiveOrigin = data.pendingRestartOrigin
-                        data.pendingRestartOrigin = ServiceRestartOrigin.Manual
                         val expectedRestartGeneration = data.restartGeneration
-                        beforeRestartAfterStop()
+                        beforeRestartAfterStop(retainTun)
                         if (data.restartGeneration != expectedRestartGeneration) {
                             return@runOnMainDispatcher
                         }
                         val delayMillis =
-                            if (effectiveOrigin == ServiceRestartOrigin.Automatic &&
+                            if (effectiveRestartOrigin == ServiceRestartOrigin.Automatic &&
                                 effectiveRetryAttempt > 0
                             ) {
                                 ServiceLifecyclePolicy.automaticRetryDelayMillis(effectiveRetryAttempt)
                             } else {
                                 0L
                             }
-                        startRunner(effectiveOrigin, effectiveRetryAttempt, delayMillis)
+                        startRunner(
+                            origin = effectiveRestartOrigin,
+                            cause = effectiveRestartCause,
+                            retryAttempt = effectiveRetryAttempt,
+                            delayMillis = delayMillis,
+                        )
                     }
                     ServiceLifecyclePolicy.StopCleanupAction.RecoverProcess -> {
                         requestBgProcessRecovery(
@@ -1067,7 +1098,11 @@ class BaseService {
             // TODO NEW save app stats?
         }
 
-        fun handleConnectionRecovery(reconnect: Boolean, reset: Boolean) {
+        fun handleConnectionRecovery(
+            reconnect: Boolean,
+            reset: Boolean,
+            restartCause: ServiceRestartCause = ServiceRestartCause.Default,
+        ) {
             val effectiveReset = shouldResetConnections(reset, data.urlTestTracker.isRunning)
             if (reset && !effectiveReset) {
                 Logs.d("Skip automatic connection reset while URL Test is running")
@@ -1077,6 +1112,7 @@ class BaseService {
                 stopRunner(
                     restart = true,
                     restartOrigin = ServiceRestartOrigin.Automatic,
+                    restartCause = restartCause,
                 )
                 return
             }
@@ -1125,7 +1161,8 @@ class BaseService {
                         if (!data.state.started) return@runOnDefaultDispatcher
                         handleConnectionRecovery(
                             reconnect = decision.reconnect,
-                            reset = decision.reset
+                            reset = decision.reset,
+                            restartCause = ServiceRestartCause.NetworkChange,
                         )
                     }
                 }
@@ -1177,6 +1214,9 @@ class BaseService {
             val restartOrigin = intent?.getStringExtra(EXTRA_RESTART_ORIGIN)
                 ?.let { runCatching { ServiceRestartOrigin.valueOf(it) }.getOrNull() }
                 ?: ServiceRestartOrigin.Manual
+            val restartCause = intent?.getStringExtra(EXTRA_RESTART_CAUSE)
+                ?.let { runCatching { ServiceRestartCause.valueOf(it) }.getOrNull() }
+                ?: ServiceRestartCause.Default
             val retryAttempt = intent?.getIntExtra(EXTRA_RETRY_ATTEMPT, 0) ?: 0
             val requestedProfileId = intent?.getLongExtra(
                 Action.EXTRA_PROFILE_ID,
@@ -1211,6 +1251,7 @@ class BaseService {
                 )
                 return Service.START_NOT_STICKY
             }
+            data.activeRestartCause = restartCause
             data.desiredProfileId = requestedProfileId
             val profile = AppData.profiles.getById(requestedProfileId)
             this as Context
@@ -1276,7 +1317,13 @@ class BaseService {
                                 desiredProfileId = data.desiredProfileId,
                             )
                         ) {
-                            stopRunner(restart = data.desiredProfileId != 0L)
+                            stopRunner(
+                                restart = data.desiredProfileId != 0L,
+                                restartCause = ServiceLifecyclePolicy.profileReloadCause(
+                                    runningProfileId = profile.id,
+                                    selectedProfileId = data.desiredProfileId,
+                                ),
+                            )
                             return@withLock
                         }
                         proxy.configNormalizationViolations
@@ -1303,7 +1350,13 @@ class BaseService {
                                 "Profile changed during startup: started=${profile.id} " +
                                     "desired=${data.desiredProfileId}"
                             )
-                            stopRunner(restart = data.desiredProfileId != 0L)
+                            stopRunner(
+                                restart = data.desiredProfileId != 0L,
+                                restartCause = ServiceLifecyclePolicy.profileReloadCause(
+                                    runningProfileId = profile.id,
+                                    selectedProfileId = data.desiredProfileId,
+                                ),
+                            )
                             return@withLock
                         }
                         DataStore.currentProfile = profile.id
@@ -1329,6 +1382,7 @@ class BaseService {
                     } catch (_: UnknownHostException) {
                         stopAfterStartFailure(
                             restartOrigin,
+                            restartCause,
                             retryAttempt,
                             getString(R.string.invalid_server),
                         )
@@ -1338,7 +1392,7 @@ class BaseService {
                         }
                         Logs.w(e)
                         data.binder.missingPlugin(e.plugin)
-                        stopAfterStartFailure(restartOrigin, retryAttempt, null)
+                        stopAfterStartFailure(restartOrigin, restartCause, retryAttempt, null)
                     } catch (exc: Throwable) {
                         if (exc.readableMessage.contains("no working DNS resolvers found", ignoreCase = true)) {
                             withContext(Dispatchers.Main.immediate) {
@@ -1348,7 +1402,7 @@ class BaseService {
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
-                            stopAfterStartFailure(restartOrigin, retryAttempt, null)
+                            stopAfterStartFailure(restartOrigin, restartCause, retryAttempt, null)
                             return@withLock
                         }
                         if (exc.javaClass.name.endsWith("proxyerror")) {
@@ -1359,6 +1413,7 @@ class BaseService {
                         }
                         stopAfterStartFailure(
                             restartOrigin,
+                            restartCause,
                             retryAttempt,
                             "${getString(R.string.service_failed)}: ${exc.readableMessage}",
                         )
@@ -1372,6 +1427,7 @@ class BaseService {
 
         private fun stopAfterStartFailure(
             restartOrigin: ServiceRestartOrigin,
+            restartCause: ServiceRestartCause,
             retryAttempt: Int,
             message: String?,
         ) {
@@ -1380,6 +1436,7 @@ class BaseService {
                     restart = true,
                     msg = message,
                     restartOrigin = restartOrigin,
+                    restartCause = restartCause,
                     retryAttempt = retryAttempt + 1,
                 )
             } else {

@@ -21,6 +21,20 @@ import kotlinx.coroutines.delay
 import moe.matsuri.nb4a.utils.NGUtil.isPureIpAddress
 import android.net.VpnService as BaseVpnService
 
+internal data class VpnTunPlan(
+    val core: AndroidTunPayload.Plan,
+    val metered: Boolean,
+    val bypassApplications: Boolean?,
+    val applications: List<String>,
+    val httpProxy: VpnHttpProxyPlan?,
+)
+
+internal data class VpnHttpProxyPlan(
+    val host: String,
+    val port: Int,
+    val exclusions: List<String>,
+)
+
 class VpnService :
     BaseVpnService(),
     BaseService.Interface {
@@ -32,6 +46,8 @@ class VpnService :
     var conn: ParcelFileDescriptor? = null
 
     private var metered = false
+    private var activeTunPlan: VpnTunPlan? = null
+    private var reuseTunOnNextOpen = false
 
     override var upstreamInterfaceName: String? = null
 
@@ -50,25 +66,17 @@ class VpnService :
                 .apply { acquire() }
     }
 
-    @Suppress("EXPERIMENTAL_API_USAGE")
-    override fun killProcesses() {
-        try {
-            super.killProcesses()
-        } finally {
-            conn?.let {
-                Logs.d("Closing Android VPN file descriptor")
-                runCatching {
-                    it.close()
-                }.onFailure { error ->
-                    Logs.w(error)
-                }
-                Logs.d("Android VPN file descriptor closed")
-            }
-            conn = null
+    override fun finalizeProcessCleanup(retainTun: Boolean) {
+        if (retainTun && conn != null) {
+            reuseTunOnNextOpen = true
+            Logs.d("Retaining Android VPN file descriptor for in-process restart")
+        } else {
+            closeTunConnection()
         }
     }
 
-    override suspend fun beforeRestartAfterStop() {
+    override suspend fun beforeRestartAfterStop(tunRetained: Boolean) {
+        if (tunRetained && conn != null) return
         val deadline = SystemClock.elapsedRealtime() + VPN_NETWORK_TEARDOWN_TIMEOUT_MS
         while (SystemClock.elapsedRealtime() < deadline && isVpnNetwork(SagerNet.connectivity.activeNetwork)) {
             delay(VPN_NETWORK_TEARDOWN_POLL_MS)
@@ -193,6 +201,8 @@ class VpnService :
                 .distinct()
                 .toList()
 
+        var effectiveBypass: Boolean? = null
+        var effectiveApplications = emptyList<String>()
         if (proxyApps || adblockSystemWideFilter || needBypassRootUid) {
             val individual = mutableSetOf<String>()
             val allApps by lazy {
@@ -257,8 +267,11 @@ class VpnService :
             } else {
                 Logs.d("Add allow: ${added.joinToString(", ")}")
             }
+            effectiveBypass = bypass
+            effectiveApplications = added.sorted()
         }
 
+        var httpProxyPlan: VpnHttpProxyPlan? = null
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && DataStore.appendHttpProxy && DataStore.requireProxyInVPN) {
             val proxyHost =
                 when {
@@ -275,11 +288,34 @@ class VpnService :
                     exclusions,
                 ),
             )
+            httpProxyPlan = VpnHttpProxyPlan(proxyHost, DataStore.mixedPort, exclusions)
         }
 
+        val requestedTunPlan = VpnTunPlan(
+            core = plan,
+            metered = metered,
+            bypassApplications = effectiveBypass,
+            applications = effectiveApplications,
+            httpProxy = httpProxyPlan,
+        )
+        if (reuseTunOnNextOpen &&
+            ServiceLifecyclePolicy.isTunReuseEligible(data.activeRestartCause) &&
+            activeTunPlan == requestedTunPlan
+        ) {
+            val retained = conn
+            if (retained != null) {
+                reuseTunOnNextOpen = false
+                Logs.d("Reusing retained Android VPN file descriptor")
+                updateUnderlyingNetwork()
+                return retained.fd
+            }
+        }
+
+        reuseTunOnNextOpen = false
         val previousConnection = conn
         val newConnection = builder.establish() ?: throw NullConnectionException()
         conn = newConnection
+        activeTunPlan = requestedTunPlan
         previousConnection?.let { previous ->
             runCatching { previous.close() }.onFailure { error -> Logs.w(error) }
         }
@@ -299,8 +335,21 @@ class VpnService :
     override fun onRevoke() = stopRunner()
 
     override fun onDestroy() {
+        closeTunConnection()
         DataStore.vpnService = null
         super.onDestroy()
         data.binder.close()
+    }
+
+    private fun closeTunConnection() {
+        val connection = conn
+        conn = null
+        activeTunPlan = null
+        reuseTunOnNextOpen = false
+        connection?.let {
+            Logs.d("Closing Android VPN file descriptor")
+            runCatching { it.close() }.onFailure { error -> Logs.w(error) }
+            Logs.d("Android VPN file descriptor closed")
+        }
     }
 }

@@ -265,7 +265,8 @@ private fun ProxySetProfileRow(
                     insecure = profile.shouldHighlightAsInsecure(
                         DataStore.globalAllowInsecure, DataStore.dontHighlightInsecureProfiles,
                     ),
-                    borders = false, middleRowVisible = false, middleRowReserved = false,
+                    borders = DataStore.profileCardBorders,
+                    middleRowVisible = false, middleRowReserved = false,
                     statusVisible = status.isNotEmpty(), batchSelection = false, batchSelected = false,
                     showEdit = !embedded, editEnabled = !embedded,
                     showUrlTest = embedded,

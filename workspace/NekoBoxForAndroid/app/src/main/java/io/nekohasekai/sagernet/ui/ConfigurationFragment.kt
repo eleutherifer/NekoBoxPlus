@@ -3591,15 +3591,11 @@ class ConfigurationFragment @JvmOverloads constructor(
                 val double = layout == ProfileCardLayout.DOUBLE ||
                     layout == ProfileCardLayout.ALTERNATE
                 val compact = layout == ProfileCardLayout.COMPACT
-                val showTrafficSeparately = compact || double
+                val showTrafficSeparately = !compact || entity.status > 0
                 val address = entity.displayAddress().takeIf {
                     entity.requireBean().name.isNotBlank() && parent.alwaysShowAddress
                 }.orEmpty()
-                val trafficUsesMiddleRow = showTraffic && when {
-                    double -> true
-                    compact -> entity.status > 0
-                    else -> false
-                }
+                val trafficUsesMiddleRow = showTraffic && showTrafficSeparately
                 val hasMiddleRow = trafficUsesMiddleRow || address.isNotBlank()
                 val reserveMiddleRow = !double && !hasMiddleRow &&
                     adapter?.neighbourHasMiddleRow(bindingAdapterPosition) == true
@@ -3608,10 +3604,9 @@ class ConfigurationFragment @JvmOverloads constructor(
                 var status = ""
                 var statusColor = context.getColorAttr(android.R.attr.textColorSecondary)
                 when {
-                    entity.status <= 0 && showTraffic && !double -> status = traffic
+                    entity.status <= 0 && showTraffic && !showTrafficSeparately -> status = traffic
                     entity.status == 1 -> {
                         status = getString(R.string.available, entity.ping)
-                        if (showTraffic && !showTrafficSeparately) status += "  $traffic"
                         statusColor = context.getColour(R.color.material_green_500)
                     }
                     entity.status == 2 -> {
@@ -3623,7 +3618,6 @@ class ConfigurationFragment @JvmOverloads constructor(
                         statusColor = context.getColour(R.color.material_red_500)
                     }
                 }
-
                 val countryCode = ProfileCountryResolver.effectiveCountryCode(entity)
                 val countryVisible = DataStore.profileCountryIndicator &&
                     CountryFlagRenderer.loadSvg(context, countryCode) != null

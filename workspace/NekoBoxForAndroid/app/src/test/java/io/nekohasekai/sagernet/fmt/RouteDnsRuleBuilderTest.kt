@@ -122,6 +122,69 @@ class RouteDnsRuleBuilderTest {
     }
 
     @Test
+    fun geoIpMatcherSkipsAllRouteDerivedDnsRules() {
+        val rulesetTags = listOf("ruleset-site" to false)
+        val rules = buildRouteDnsRules(
+            createDnsRule = true,
+            hasGeoIpOrRsipMatcher = hasGeoIpOrRsipMatcher(
+                ipList = listOf("geoip:ru"),
+                rulesetList = listOf("rssite:example"),
+            ),
+            outbound = -1L,
+            uidList = emptyList(),
+            domainList = listOf("domain:example.com"),
+            ruleSet = listOf("ruleset-site"),
+            rulesetTags = rulesetTags,
+            useFakeDns = false,
+        )
+
+        assertTrue(rules.isEmpty())
+    }
+
+    @Test
+    fun rsipMatcherSkipsAllRouteDerivedDnsRules() {
+        val rulesetTags = listOf(
+            "ruleset-site" to false,
+            "ruleset-ip" to true,
+        )
+        val rules = buildRouteDnsRules(
+            createDnsRule = true,
+            hasGeoIpOrRsipMatcher = hasGeoIpOrRsipMatcher(
+                ipList = null,
+                rulesetList = listOf("rssite:example", "rsip:ru"),
+            ),
+            outbound = 0L,
+            uidList = emptyList(),
+            domainList = listOf("domain:example.com"),
+            ruleSet = listOf("ruleset-site", "ruleset-ip"),
+            rulesetTags = rulesetTags,
+            useFakeDns = false,
+        )
+
+        assertTrue(rules.isEmpty())
+    }
+
+    @Test
+    fun plainIpCidrDoesNotSuppressRouteDerivedDnsRules() {
+        val rulesetTags = listOf("ruleset-site" to false)
+        val rules = buildRouteDnsRules(
+            createDnsRule = true,
+            hasGeoIpOrRsipMatcher = hasGeoIpOrRsipMatcher(
+                ipList = listOf("192.0.2.0/24"),
+                rulesetList = listOf("rssite:example"),
+            ),
+            outbound = 0L,
+            uidList = emptyList(),
+            domainList = listOf("domain:example.com"),
+            ruleSet = listOf("ruleset-site"),
+            rulesetTags = rulesetTags,
+            useFakeDns = false,
+        )
+
+        assertEquals(2, rules.size)
+    }
+
+    @Test
     fun domainRulesetDnsRulesSkipIpRulesets() {
         val rules = buildRouteDnsRules(
             createDnsRule = true,

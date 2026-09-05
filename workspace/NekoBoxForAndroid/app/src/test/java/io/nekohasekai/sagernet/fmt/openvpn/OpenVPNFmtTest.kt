@@ -69,6 +69,51 @@ class OpenVPNFmtTest {
     }
 
     @Test
+    fun omitsIncompleteClientCertificatePair() {
+        val certificateOnly = parseOpenVPNConfig(
+            """
+            client
+            remote vpn.example.com 443 tcp-client
+            client-cert-not-required
+            auth-user-pass
+            <ca>
+            CA
+            </ca>
+            <cert>
+            CLIENT-CERTIFICATE
+            </cert>
+            <auth-user-pass>
+            username
+            password
+            </auth-user-pass>
+            """.trimIndent(),
+        )
+        val certificateOnlyEndpoint = buildSingBoxEndpointOpenVPNBean(certificateOnly)
+        assertEquals(listOf("CA"), certificateOnlyEndpoint.tls.certificate)
+        assertEquals(null, certificateOnlyEndpoint.tls.client_certificate)
+        assertEquals(null, certificateOnlyEndpoint.tls.client_key)
+        assertEquals("username", certificateOnlyEndpoint.username)
+        assertEquals("password", certificateOnlyEndpoint.password)
+
+        val keyOnlyEndpoint = buildSingBoxEndpointOpenVPNBean(OpenVPNBean().apply {
+            initializeDefaultValues()
+            serverAddress = "vpn.example.com"
+            clientKey = "CLIENT-KEY"
+        })
+        assertEquals(null, keyOnlyEndpoint.tls.client_certificate)
+        assertEquals(null, keyOnlyEndpoint.tls.client_key)
+
+        val completePairEndpoint = buildSingBoxEndpointOpenVPNBean(OpenVPNBean().apply {
+            initializeDefaultValues()
+            serverAddress = "vpn.example.com"
+            clientCertificate = "CLIENT-CERTIFICATE"
+            clientKey = "CLIENT-KEY"
+        })
+        assertEquals(listOf("CLIENT-CERTIFICATE"), completePairEndpoint.tls.client_certificate)
+        assertEquals(listOf("CLIENT-KEY"), completePairEndpoint.tls.client_key)
+    }
+
+    @Test
     fun normalizesIpv6AndMutuallyExclusiveTlsOptions() {
         val endpoint = buildSingBoxEndpointOpenVPNBean(OpenVPNBean().apply {
             initializeDefaultValues()

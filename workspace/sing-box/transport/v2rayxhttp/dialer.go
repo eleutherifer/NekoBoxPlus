@@ -15,7 +15,6 @@ import (
 
 	"github.com/sagernet/sing-box/common/vision"
 	common "github.com/sagernet/sing-box/common/xray"
-	"github.com/sagernet/sing-box/common/xray/signal/done"
 	"github.com/sagernet/sing-box/option"
 	E "github.com/sagernet/sing/common/exceptions"
 	"golang.org/x/net/http2"
@@ -163,24 +162,30 @@ func (c *DefaultDialerClient) IsClosed() bool {
 }
 
 func (c *DefaultDialerClient) OpenStream(ctx context.Context, url string, sessionId string, body io.Reader, uploadOnly bool) (wrc io.ReadCloser, remoteAddr, localAddr net.Addr, err error) {
-	gotConn := done.New()
-	stopContextCancel := func() bool {
-		return false
+	type openStreamResult struct {
+		conn       net.Conn
+		remoteAddr net.Addr
+		localAddr  net.Addr
+		err        error
 	}
-	var traceCtx context.Context
-	traceCtx = httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
+	var publishOnce sync.Once
+	result := make(chan openStreamResult, 1)
+	publish := func(resultValue openStreamResult) {
+		publishOnce.Do(func() {
+			result <- resultValue
+		})
+	}
+	traceCtx := httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
 		GotConn: func(connInfo httptrace.GotConnInfo) {
-			remoteAddr = connInfo.Conn.RemoteAddr()
-			localAddr = connInfo.Conn.LocalAddr()
-			if hook, ok := vision.HookFromContext(traceCtx); ok {
-				hook(connInfo.Conn)
-			}
-			stopContextCancel()
-			closeSilently(gotConn)
+			publish(openStreamResult{
+				conn:       connInfo.Conn,
+				remoteAddr: connInfo.Conn.RemoteAddr(),
+				localAddr:  connInfo.Conn.LocalAddr(),
+			})
 		},
 	})
 	requestCtx, cancelRequest := context.WithCancel(context.WithoutCancel(traceCtx))
-	stopContextCancel = context.AfterFunc(ctx, cancelRequest)
+	stopContextCancel := context.AfterFunc(ctx, cancelRequest)
 	method := "GET"
 	var bodyReadCloser *readDoneCloser
 	if body != nil {
@@ -201,19 +206,19 @@ func (c *DefaultDialerClient) OpenStream(ctx context.Context, url string, sessio
 	wrc = &WaitReadCloser{Wait: make(chan struct{})}
 	go func() {
 		//nolint:bodyclose // successful stream response bodies are exposed through wrc and closed by the caller.
-		resp, err := c.client.Do(req)
-		if err != nil {
+		resp, requestErr := c.client.Do(req)
+		if requestErr != nil {
 			if !uploadOnly {
 				c.closed.Store(true)
 			}
 			stopContextCancel()
 			cancelRequest()
-			closeSilently(gotConn)
+			publish(openStreamResult{err: requestErr})
 			if bodyReadCloser != nil {
 				closeSilently(bodyReadCloser)
 			}
 			if waitReadCloser, ok := wrc.(*WaitReadCloser); ok {
-				waitReadCloser.SetError(err)
+				waitReadCloser.SetError(requestErr)
 			} else {
 				closeSilently(wrc)
 			}
@@ -261,7 +266,16 @@ func (c *DefaultDialerClient) OpenStream(ctx context.Context, url string, sessio
 			cancel:      cancelRequest,
 		})
 	}()
-	<-gotConn.Wait()
+	resultValue := <-result
+	if resultValue.err != nil {
+		return wrc, nil, nil, resultValue.err
+	}
+	stopContextCancel()
+	if hook, ok := vision.HookFromContext(ctx); ok {
+		hook(resultValue.conn)
+	}
+	remoteAddr = resultValue.remoteAddr
+	localAddr = resultValue.localAddr
 	return
 }
 

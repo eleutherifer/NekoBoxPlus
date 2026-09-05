@@ -231,4 +231,62 @@ class ServiceLifecyclePolicyTest {
         assertEquals(30_000L, ServiceLifecyclePolicy.automaticRetryDelayMillis(5))
         assertEquals(30_000L, ServiceLifecyclePolicy.automaticRetryDelayMillis(Int.MAX_VALUE))
     }
+
+    @Test
+    fun onlyDifferentRunningProfileIsAProfileSwitch() {
+        assertEquals(
+            ServiceRestartCause.ProfileSwitch,
+            ServiceLifecyclePolicy.profileReloadCause(1L, 2L),
+        )
+        assertEquals(
+            ServiceRestartCause.Default,
+            ServiceLifecyclePolicy.profileReloadCause(1L, 1L),
+        )
+        assertEquals(
+            ServiceRestartCause.Default,
+            ServiceLifecyclePolicy.profileReloadCause(null, 2L),
+        )
+    }
+
+    @Test
+    fun tunReuseIsLimitedToSuccessfulEligibleRestarts() {
+        listOf(
+            ServiceRestartCause.ProfileSwitch,
+            ServiceRestartCause.NetworkChange,
+            ServiceRestartCause.WakeReconnect,
+        ).forEach { cause ->
+            assertTrue(ServiceLifecyclePolicy.isTunReuseEligible(cause))
+            assertTrue(
+                ServiceLifecyclePolicy.shouldRetainTun(
+                    restartCause = cause,
+                    cleanupAction = ServiceLifecyclePolicy.StopCleanupAction.Restart,
+                    cleanupSucceeded = true,
+                )
+            )
+        }
+
+        assertFalse(ServiceLifecyclePolicy.isTunReuseEligible(ServiceRestartCause.Default))
+
+        assertFalse(
+            ServiceLifecyclePolicy.shouldRetainTun(
+                restartCause = ServiceRestartCause.Default,
+                cleanupAction = ServiceLifecyclePolicy.StopCleanupAction.Restart,
+                cleanupSucceeded = true,
+            )
+        )
+        assertFalse(
+            ServiceLifecyclePolicy.shouldRetainTun(
+                restartCause = ServiceRestartCause.NetworkChange,
+                cleanupAction = ServiceLifecyclePolicy.StopCleanupAction.Restart,
+                cleanupSucceeded = false,
+            )
+        )
+        assertFalse(
+            ServiceLifecyclePolicy.shouldRetainTun(
+                restartCause = ServiceRestartCause.ProfileSwitch,
+                cleanupAction = ServiceLifecyclePolicy.StopCleanupAction.RecoverProcess,
+                cleanupSucceeded = true,
+            )
+        )
+    }
 }

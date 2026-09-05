@@ -18,7 +18,10 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
@@ -35,10 +38,20 @@ class TvFocusTest {
     @get:Rule
     val composeRule = createComposeRule()
 
+    private lateinit var inputModeManager: InputModeManager
+
+    private fun requestTvFocus(focusRequester: FocusRequester) {
+        composeRule.runOnIdle {
+            assertTrue(inputModeManager.requestInputMode(InputMode.Keyboard))
+            assertTrue(focusRequester.requestFocus())
+        }
+    }
+
     @Test
     fun dpadFocusBringsLazyListTargetsIntoView() {
         val first = FocusRequester()
         composeRule.setContent {
+            inputModeManager = LocalInputModeManager.current
             MaterialTheme {
                 CompositionLocalProvider(LocalTelevisionUiOverride provides true) {
                     LazyColumn(Modifier.height(120.dp)) {
@@ -60,7 +73,7 @@ class TvFocusTest {
             }
         }
 
-        composeRule.runOnIdle { first.requestFocus() }
+        requestTvFocus(first)
         repeat(6) {
             composeRule.onNodeWithTag("item-$it").performKeyInput {
                 pressKey(Key.DirectionDown)
@@ -74,6 +87,7 @@ class TvFocusTest {
     fun dpadFocusBringsScrollColumnTargetsIntoView() {
         val first = FocusRequester()
         composeRule.setContent {
+            inputModeManager = LocalInputModeManager.current
             MaterialTheme {
                 CompositionLocalProvider(LocalTelevisionUiOverride provides true) {
                     Column(Modifier.height(120.dp).verticalScroll(rememberScrollState())) {
@@ -95,7 +109,7 @@ class TvFocusTest {
             }
         }
 
-        composeRule.runOnIdle { first.requestFocus() }
+        requestTvFocus(first)
         repeat(6) {
             composeRule.onNodeWithTag("scroll-item-$it").performKeyInput {
                 pressKey(Key.DirectionDown)
@@ -110,6 +124,7 @@ class TvFocusTest {
         val first = FocusRequester()
         var activated = false
         composeRule.setContent {
+            inputModeManager = LocalInputModeManager.current
             MaterialTheme {
                 CompositionLocalProvider(LocalTelevisionUiOverride provides true) {
                     Column {
@@ -149,7 +164,7 @@ class TvFocusTest {
             }
         }
 
-        composeRule.runOnIdle { first.requestFocus() }
+        requestTvFocus(first)
         composeRule.onNodeWithTag("compound-row").assertIsFocused().performKeyInput {
             pressKey(Key.Enter)
         }

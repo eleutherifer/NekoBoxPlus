@@ -64,7 +64,7 @@ if [ -f "buildScript/lib/core/get_source_env.sh" ]; then
 	source "buildScript/lib/core/get_source_env.sh"
 fi
 
-GO_VERSION="${GO_VERSION:-1.27.0}"
+GO_VERSION="${GO_VERSION:-1.27.1}"
 BOOTSTRAP_GO_VERSION="${BOOTSTRAP_GO_VERSION:-1.26.6}"
 GO_PATCH_DIR="${GO_PATCH_DIR:-buildScript/lib/core/go-runtime-patches}"
 DOCKERFILE="${DOCKERFILE:-buildScript/lib/core/Dockerfile}"
@@ -210,6 +210,7 @@ fi
 docker run --network host "${DOCKER_ARGS[@]}" "$IMAGE_NAME" bash -c '
   set -euo pipefail
   go version
+  git config --global http.version HTTP/1.1
   git config --global --add safe.directory /workspace/project
   git config --global --add safe.directory /workspace/sing-box
   git config --global --add safe.directory /workspace/sing-vmess

@@ -178,7 +178,7 @@ private fun ChainProfileRow(
                         DataStore.globalAllowInsecure,
                         DataStore.dontHighlightInsecureProfiles,
                     ),
-                    borders = false,
+                    borders = DataStore.profileCardBorders,
                     middleRowVisible = false,
                     middleRowReserved = false,
                     statusVisible = showTraffic,

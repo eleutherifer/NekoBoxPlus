@@ -21,6 +21,7 @@ import (
 
 	"github.com/sagernet/quic-go/http3"
 	boxTLS "github.com/sagernet/sing-box/common/tls"
+	"github.com/sagernet/sing-box/common/vision"
 	xbuf "github.com/sagernet/sing-box/common/xray/buf"
 	Xbadoption "github.com/sagernet/sing-box/common/xray/json/badoption"
 	C "github.com/sagernet/sing-box/constant"
@@ -2258,6 +2259,103 @@ func TestDefaultDialerClientOpenStreamCloseWithoutRequestBody(t *testing.T) {
 	if err := readCloser.Close(); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestDefaultDialerClientOpenStreamIgnoresLateGotConn(t *testing.T) {
+	requestErr := errors.New("request failed before connection was reported")
+	releaseGotConn := make(chan struct{})
+	gotConnDone := make(chan struct{})
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		trace := httptrace.ContextClientTrace(req.Context())
+		if trace == nil || trace.GotConn == nil {
+			return nil, errors.New("missing GotConn trace")
+		}
+		go func() {
+			defer close(gotConnDone)
+			<-releaseGotConn
+			clientConn, serverConn := net.Pipe()
+			trace.GotConn(httptrace.GotConnInfo{Conn: clientConn})
+			closeSilently(clientConn)
+			closeSilently(serverConn)
+		}()
+		return nil, requestErr
+	})
+	client := &DefaultDialerClient{
+		options:     &option.V2RayXHTTPBaseOptions{},
+		client:      &http.Client{Transport: transport},
+		httpVersion: "2",
+	}
+	var hookCalls atomic.Int32
+	ctx := vision.WithHook(t.Context(), func(net.Conn) {
+		hookCalls.Add(1)
+	})
+
+	readCloser, remoteAddr, localAddr, err := client.OpenStream(ctx, "https://example.com/download", "session", nil, false)
+	if !errors.Is(err, requestErr) {
+		t.Fatalf("expected request error, got %v", err)
+	}
+	if remoteAddr != nil || localAddr != nil {
+		t.Fatalf("unexpected connection addresses after request failure: remote=%v local=%v", remoteAddr, localAddr)
+	}
+	if readCloser != nil {
+		closeSilently(readCloser)
+	}
+	close(releaseGotConn)
+	<-gotConnDone
+	if hookCalls.Load() != 0 {
+		t.Fatalf("Vision hook called %d times for a late connection", hookCalls.Load())
+	}
+}
+
+func TestDefaultDialerClientOpenStreamPublishesFirstConnection(t *testing.T) {
+	var firstConn net.Conn
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		trace := httptrace.ContextClientTrace(req.Context())
+		if trace == nil || trace.GotConn == nil {
+			return nil, errors.New("missing GotConn trace")
+		}
+		clientConn1, serverConn1 := net.Pipe()
+		clientConn2, serverConn2 := net.Pipe()
+		firstConn = clientConn1
+		trace.GotConn(httptrace.GotConnInfo{Conn: clientConn1})
+		trace.GotConn(httptrace.GotConnInfo{Conn: clientConn2})
+		closeSilently(serverConn1)
+		closeSilently(clientConn2)
+		closeSilently(serverConn2)
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(strings.NewReader("payload")),
+			Header:     make(http.Header),
+			Request:    req,
+		}, nil
+	})
+	client := &DefaultDialerClient{
+		options:     &option.V2RayXHTTPBaseOptions{},
+		client:      &http.Client{Transport: transport},
+		httpVersion: "2",
+	}
+	var hookCalls atomic.Int32
+	var hookedConn net.Conn
+	ctx := vision.WithHook(t.Context(), func(conn net.Conn) {
+		hookedConn = conn
+		hookCalls.Add(1)
+	})
+
+	readCloser, remoteAddr, localAddr, err := client.OpenStream(ctx, "https://example.com/download", "session", nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeSilently(readCloser)
+	if remoteAddr == nil || localAddr == nil {
+		t.Fatalf("missing connection addresses: remote=%v local=%v", remoteAddr, localAddr)
+	}
+	if hookCalls.Load() != 1 {
+		t.Fatalf("Vision hook called %d times, want 1", hookCalls.Load())
+	}
+	if hookedConn != firstConn {
+		t.Fatal("Vision hook did not receive the first published connection")
+	}
+	closeSilently(firstConn)
 }
 
 func TestDefaultDialerClientOpenStreamWrapsNestedHTTP2StreamError(t *testing.T) {

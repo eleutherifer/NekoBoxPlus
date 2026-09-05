@@ -53,6 +53,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
@@ -109,6 +110,14 @@ data class ProfileCardModel(
     val showOverflow: Boolean,
     val minimumHeightDp: Int,
 )
+
+internal fun shouldWrapDoubleProfileFooter(
+    availableWidth: Int,
+    statusWidth: Int,
+    trafficWidth: Int,
+    spacing: Int,
+): Boolean = statusWidth > 0 && trafficWidth > 0 &&
+    statusWidth > availableWidth - trafficWidth - spacing
 
 private class ProfileCardFocusHandles {
     val body = FocusRequester()
@@ -179,8 +188,8 @@ fun ProfileCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .fillMaxHeight()
             .padding(2.dp)
-            .heightIn(min = model.minimumHeightDp.dp)
             .focusGroup()
             .tvFocusTarget()
             .focusRequester(bodyFocusRequester ?: focusHandles.body)
@@ -203,46 +212,59 @@ fun ProfileCard(
         border = border,
         elevation = CardDefaults.cardElevation(defaultElevation = elevation),
     ) {
-        Row(
+        Box(
             Modifier
                 .fillMaxWidth()
-                .height(IntrinsicSize.Min),
+                .fillMaxHeight()
+                .heightIn(min = model.minimumHeightDp.dp),
         ) {
             Box(
                 Modifier
-                    .width(8.dp)
-                    .fillMaxHeight()
-                    .background(
-                        if (model.selected && !model.borders) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            Color.Transparent
-                        },
-                    ),
-            )
-            if (double) {
-                DoubleProfileContent(
-                    model,
-                    onStatusClick,
-                    onEdit,
-                    onUrlTest,
-                    onShare,
-                    onDelete,
-                    onSelectionChange,
-                    focusHandles,
+                    .matchParentSize(),
+            ) {
+                Box(
+                    Modifier
+                        .width(8.dp)
+                        .fillMaxHeight()
+                        .background(
+                            if (model.selected && !model.borders) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                Color.Transparent
+                            },
+                        ),
                 )
-            } else {
-                LinearProfileContent(
-                    model,
-                    compact,
-                    onStatusClick,
-                    onEdit,
-                    onUrlTest,
-                    onShare,
-                    onDelete,
-                    onSelectionChange,
-                    focusHandles,
-                )
+            }
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = 8.dp)
+                    .height(IntrinsicSize.Min),
+            ) {
+                if (double) {
+                    DoubleProfileContent(
+                        model,
+                        onStatusClick,
+                        onEdit,
+                        onUrlTest,
+                        onShare,
+                        onDelete,
+                        onSelectionChange,
+                        focusHandles,
+                    )
+                } else {
+                    LinearProfileContent(
+                        model,
+                        compact,
+                        onStatusClick,
+                        onEdit,
+                        onUrlTest,
+                        onShare,
+                        onDelete,
+                        onSelectionChange,
+                        focusHandles,
+                    )
+                }
             }
         }
     }
@@ -511,34 +533,7 @@ private fun DoubleProfileContent(
                 )
             }
             Spacer(Modifier.height(3.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (model.statusVisible) {
-                    MarqueeText(
-                        text = model.status,
-                        modifier = Modifier
-                            .weight(1f, fill = false)
-                            .focusProperties { canFocus = !televisionUi }
-                            .statusClick(onStatusClick),
-                        color = Color(model.statusColor),
-                        fontSize = 14.sp,
-                        lineHeight = 16.sp,
-                        textAlign = TextAlign.End,
-                    )
-                }
-                if (model.traffic.isNotEmpty()) {
-                    Text(
-                        model.traffic,
-                        modifier = Modifier.padding(start = 8.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 14.sp,
-                        lineHeight = 16.sp,
-                    )
-                }
-            }
+            DoubleProfileFooter(model, televisionUi, onStatusClick)
         }
         if (model.batchSelection) {
             Checkbox(
@@ -559,6 +554,83 @@ private fun DoubleProfileContent(
                 focusRequester = focusHandles.overflow,
                 leftFocusRequester = focusHandles.body,
             )
+        }
+    }
+}
+
+@Composable
+private fun DoubleProfileFooter(
+    model: ProfileCardModel,
+    televisionUi: Boolean,
+    onStatusClick: (() -> Unit)?,
+) {
+    val showStatus = model.statusVisible && model.status.isNotEmpty()
+    val showTraffic = model.traffic.isNotEmpty()
+    val spacing = 8.dp
+    Layout(
+        modifier = Modifier.fillMaxWidth(),
+        content = {
+            if (showStatus) {
+                MarqueeText(
+                    text = model.status,
+                    modifier = Modifier
+                        .focusProperties { canFocus = !televisionUi }
+                        .statusClick(onStatusClick),
+                    color = Color(model.statusColor),
+                    fontSize = 14.sp,
+                    lineHeight = 16.sp,
+                )
+            }
+            if (showTraffic) {
+                Text(
+                    model.traffic,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 14.sp,
+                    lineHeight = 16.sp,
+                    maxLines = 1,
+                )
+            }
+        },
+    ) { measurables, constraints ->
+        val looseConstraints = constraints.copy(minWidth = 0, minHeight = 0)
+        var index = 0
+        val status = if (showStatus) measurables[index++].measure(looseConstraints) else null
+        val traffic = if (showTraffic) measurables[index].measure(looseConstraints) else null
+        val spacingPx = spacing.roundToPx()
+        val naturalWidth = (status?.width ?: 0) + (traffic?.width ?: 0) +
+            if (status != null && traffic != null) spacingPx else 0
+        val width = if (constraints.hasBoundedWidth) {
+            constraints.maxWidth
+        } else {
+            naturalWidth.coerceAtLeast(constraints.minWidth)
+        }
+        val wrap = shouldWrapDoubleProfileFooter(
+            availableWidth = width,
+            statusWidth = status?.width ?: 0,
+            trafficWidth = traffic?.width ?: 0,
+            spacing = spacingPx,
+        )
+        val height = if (wrap) {
+            (traffic?.height ?: 0) + (status?.height ?: 0)
+        } else {
+            maxOf(status?.height ?: 0, traffic?.height ?: 0)
+        }
+        val constrainedHeight = height.coerceIn(constraints.minHeight, constraints.maxHeight)
+        layout(width, constrainedHeight) {
+            if (wrap) {
+                traffic?.placeRelative(width - traffic.width, 0)
+                status?.placeRelative(0, traffic?.height ?: 0)
+            } else {
+                val statusTrailingSpace = if (traffic == null) 0 else traffic.width + spacingPx
+                traffic?.placeRelative(
+                    width - traffic.width,
+                    (height - traffic.height) / 2,
+                )
+                status?.placeRelative(
+                    width - statusTrailingSpace - status.width,
+                    (height - status.height) / 2,
+                )
+            }
         }
     }
 }

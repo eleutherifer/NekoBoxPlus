@@ -1322,9 +1322,12 @@ fun buildConfig(
                                 domainList = rule.domains.listByLineOrComma()
                                 makeSingBoxRule(domainList, false)
                             }
+                            var ipList: List<String>? = null
                             if (rule.ip.isNotBlank()) {
-                                makeSingBoxRule(rule.ip.listByLineOrComma(), true)
+                                ipList = rule.ip.listByLineOrComma()
+                                makeSingBoxRule(ipList, true)
                             }
+                            val rulesetList = rule.ruleset.listByLineOrComma()
 
                             if (rule_set != null) generateRuleSet(rule_set, ruleSets)
 
@@ -1332,9 +1335,8 @@ fun buildConfig(
                             val rulesetTags = mutableListOf<Pair<String, Boolean>>()
 
                             // 处理远程ruleset
-                            if (rule.ruleset.isNotBlank()) {
-                                val rulesetUrls = rule.ruleset.listByLineOrComma()
-                                rulesetUrls.forEach { origUrl ->
+                            if (rulesetList.isNotEmpty()) {
+                                rulesetList.forEach { origUrl ->
                                     val (url, isIPRuleset) = processRulesetUrl(origUrl)
 
                                     val tag = generateRemoteRuleSet(url, ruleSets, DataStore.rulesUpdateInterval, mainProxyTag)
@@ -1398,7 +1400,7 @@ fun buildConfig(
                                 shouldCreateBaseRouteDnsRule(
                                     uidList = uidList,
                                     domainList = domainList,
-                                    hasIpCriteria = rule.ip.isNotBlank() || rulesetTags.any { it.second },
+                                    hasIpCriteria = !ipList.isNullOrEmpty() || rulesetTags.any { it.second },
                                     hasDomainRuleset = rulesetTags.any { !it.second },
                                     hasOtherRouteCriteria =
                                         rule.port.isNotBlank() ||
@@ -1412,6 +1414,7 @@ fun buildConfig(
                             userDNSRuleList +=
                                 buildRouteDnsRules(
                                     createDnsRule = rule.createDnsRule,
+                                    hasGeoIpOrRsipMatcher = hasGeoIpOrRsipMatcher(ipList, rulesetList),
                                     createBaseDnsRule = createBaseDnsRule,
                                     outbound = rule.outbound,
                                     uidList = uidList,

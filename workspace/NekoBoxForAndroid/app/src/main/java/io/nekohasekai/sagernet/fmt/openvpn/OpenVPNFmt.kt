@@ -99,8 +99,12 @@ fun buildSingBoxEndpointOpenVPNBean(bean: OpenVPNBean) =
             server_name = bean.tlsServerName.takeIf(String::isNotBlank)
             server_name_type = bean.tlsServerNameType.takeIf(String::isNotBlank)
             certificate = bean.caCertificates.takeIf(String::isNotBlank)?.let(::listOf)
-            client_certificate = bean.clientCertificate.takeIf(String::isNotBlank)?.let(::listOf)
-            client_key = bean.clientKey.takeIf(String::isNotBlank)?.let(::listOf)
+            val clientCertificate = bean.clientCertificate.takeIf(String::isNotBlank)
+            val clientKey = bean.clientKey.takeIf(String::isNotBlank)
+            if (clientCertificate != null && clientKey != null) {
+                client_certificate = listOf(clientCertificate)
+                client_key = listOf(clientKey)
+            }
             peer_fingerprint = bean.peerFingerprints.listByLineOrComma().takeIf(List<*>::isNotEmpty)
             remote_certificate_ku = bean.remoteCertificateKU.listByLineOrComma().takeIf(List<*>::isNotEmpty)
             remote_certificate_eku = bean.remoteCertificateEKU.takeIf(String::isNotBlank)

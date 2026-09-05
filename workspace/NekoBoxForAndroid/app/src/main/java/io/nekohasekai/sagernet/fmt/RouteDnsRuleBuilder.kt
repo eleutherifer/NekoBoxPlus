@@ -18,8 +18,16 @@ internal fun shouldCreateBaseRouteDnsRule(
             !hasOtherRouteCriteria
 }
 
+internal fun hasGeoIpOrRsipMatcher(
+    ipList: List<String>?,
+    rulesetList: List<String>?,
+): Boolean =
+    ipList.orEmpty().any { it.startsWith("geoip:") } ||
+        rulesetList.orEmpty().any { it.startsWith("rsip:") }
+
 fun buildRouteDnsRules(
     createDnsRule: Boolean,
+    hasGeoIpOrRsipMatcher: Boolean = false,
     createBaseDnsRule: Boolean = true,
     outbound: Long,
     uidList: List<Int>,
@@ -29,7 +37,7 @@ fun buildRouteDnsRules(
     useFakeDns: Boolean,
     clashMode: String = "",
 ): List<DNSRule_DefaultOptions> {
-    if (!createDnsRule) return emptyList()
+    if (!createDnsRule || hasGeoIpOrRsipMatcher) return emptyList()
 
     val dnsRules = mutableListOf<DNSRule_DefaultOptions>()
 
