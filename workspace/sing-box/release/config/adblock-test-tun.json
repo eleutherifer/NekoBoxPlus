@@ -1,0 +1,145 @@
+{
+  "log": {
+    "level": "debug"
+  },
+  "dns": {
+    "final": "dns-remote",
+    "rules": [
+      {
+        "server": "dns-remote",
+        "strategy": "prefer_ipv4"
+      }
+    ],
+    "servers": [
+      {
+        "server": "1.1.1.1",
+        "server_port": 853,
+        "tag": "dns-remote",
+        "type": "tls"
+      }
+    ]
+  },
+  "inbounds": [
+    {
+      "type": "mixed",
+      "tag": "mixed-in",
+      "listen": "127.0.0.1",
+      "listen_port": 18009
+    },
+    {
+      "type": "tun",
+      "tag": "tun-in",
+      "interface_name": "sbtun0",
+      "address": [
+        "172.19.0.1/30"
+      ],
+      "mtu": 9000,
+      "auto_route": false,
+      "auto_redirect": false,
+      "strict_route": false,
+      "stack": "gvisor",
+      "endpoint_independent_nat": true
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "direct",
+      "tag": "direct"
+    }
+  ],
+  "route": {
+    "rules": [
+      {
+        "inbound": [
+          "tun-in"
+        ],
+        "action": "sniff"
+      },
+      {
+        "inbound": [
+          "mixed-in",
+          "tun-in"
+        ],
+        "action": "route",
+        "outbound": "direct"
+      }
+    ],
+    "final": "direct"
+  },
+  "experimental": {
+    "debug": {
+      "listen": "127.0.0.1:32767"
+    },
+    "adblock": {
+      "enabled": true,
+      "database_path": "/tmp/adblock-sing-box.db",
+      "filtering": {
+        "mode": "default",
+        "dns": true,
+        "http": true,
+        "https": true,
+        "quic": true,
+        "cname_uncloaking": true
+      },
+      "tls": {
+        "enabled": true,
+        "certificate": "/tmp/adblock-test-sing-box/tls.crt",
+        "key": "/tmp/adblock-test-sing-box/tls.key",
+        "skip_ev": true,
+        "utls": "chrome",
+        "cronet": false
+      },
+      "filters": {
+        "lists": [
+          "https://easylist.to/easylist/easylist.txt",
+          "https://easylist.to/easylist/easyprivacy.txt",
+          {
+            "url": "https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/filters.txt",
+            "trust": true
+          },
+          {
+            "url": "https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/quick-fixes.txt",
+            "trust": true
+          },
+          {
+            "url": "https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/unbreak.txt",
+            "trust": true
+          },
+          "https://raw.githubusercontent.com/AdguardTeam/FiltersRegistry/master/filters/filter_17_TrackParam/filter.txt",
+          "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=adblockplus&showintro=1&mimetype=plaintext",
+          {
+            "url": "https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/badware.txt",
+            "trust": true
+          },
+          {
+            "url": "https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/privacy.txt",
+            "trust": true
+          },
+          {
+            "url": "https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/resource-abuse.txt",
+            "trust": true
+          },
+          "https://secure.fanboy.co.nz/fanboy-cookiemonster_ubo.txt",
+          {
+            "url": "https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/annoyances-cookies.txt",
+            "trust": true
+          },
+          "https://filters.adtidy.org/extension/ublock/filters/1.txt",
+          {
+            "url": "https://easylist-downloads.adblockplus.org/ruadlist.txt",
+            "download_detour": "direct",
+            "update_interval": "4h"
+          }
+        ],
+        "rules": [
+          "||example.com^",
+          "||pagead2.googlesyndication.com",
+          "||pagead2.googlesyndication.com^",
+          "||analytics.s3.amazonaws.com^",
+          "||ads-api.twitter.com^",
+          "@@||example.com^$document"
+        ]
+      }
+    }
+  }
+}

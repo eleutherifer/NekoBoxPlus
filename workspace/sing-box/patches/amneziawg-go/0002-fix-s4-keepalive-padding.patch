@@ -1,0 +1,61 @@
+From 7b9e4f8ce6623fc78738107abd033ec7e04dbdda Mon Sep 17 00:00:00 2001
+From: Author <author@example.com>
+Date: Tue, 28 Jul 2026 17:45:33 +0300
+Subject: [PATCH 2/3] test: cover S4 padding on transport packets
+
+---
+ device/receive_s4_test.go | 42 +++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 42 insertions(+)
+ create mode 100644 device/receive_s4_test.go
+
+diff --git a/device/receive_s4_test.go b/device/receive_s4_test.go
+new file mode 100644
+index 0000000..bbaafb8
+--- /dev/null
++++ b/device/receive_s4_test.go
+@@ -0,0 +1,42 @@
++package device
++
++import (
++	"encoding/binary"
++	"testing"
++)
++
++func TestDetermineTransportPacketRequiresS4Padding(t *testing.T) {
++	const (
++		padding   = 12
++		header    = 0x10203040
++		packetLen = padding + MessageTransportHeaderSize
++	)
++
++	device := new(Device)
++	var headerRange UintRange
++	headerRange.FromUint32(header, header)
++	device.headers.transport.Store(headerRange)
++	device.paddings.transport.Store(padding)
++
++	padded := make([]byte, packetLen)
++	binary.LittleEndian.PutUint32(padded[padding:], header)
++	packetType, detectedPadding := device.DeterminePacketTypeAndPadding(
++		padded,
++		MessageTransportType,
++		make([]byte, 4),
++	)
++	if packetType != MessageTransportType || detectedPadding != padding {
++		t.Fatalf("padded packet detected as type %d with padding %d", packetType, detectedPadding)
++	}
++
++	unpadded := make([]byte, packetLen)
++	binary.LittleEndian.PutUint32(unpadded, header)
++	packetType, detectedPadding = device.DeterminePacketTypeAndPadding(
++		unpadded,
++		MessageTransportType,
++		make([]byte, 4),
++	)
++	if packetType != MessageUnknownType || detectedPadding != 0 {
++		t.Fatalf("unpadded packet detected as type %d with padding %d", packetType, detectedPadding)
++	}
++}
+-- 
+2.55.0
+
