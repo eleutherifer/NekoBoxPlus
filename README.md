@@ -1,13 +1,13 @@
 # NekoBox+
 
+[Тема на 4pda.to](https://4pda.to/forum/index.php?showtopic=1121122)
+
+![иконка](https://4pda.to/s/Zy0hQiz0uez16wFVR8mVRz13wFaLl2Ls0oiPLV.webp)
+
 **Требуется Android**: 6.0+  
 **Русский интерфейс**: Да  
 **Разработчик**: MrEternal  
 **Имя пакета**: com.nb4a.plus  
-
-[Тема на 4pda.to](https://4pda.to/forum/index.php?showtopic=1121122)
-
-![иконка](https://4pda.to/s/Zy0hQiz0uez16wFVR8mVRz13wFaLl2Ls0oiPLV.webp)
 
 ## Краткое описание:
 Форк клиента NekoBox by Starifly с дополнительными функциями и возможностями
@@ -25,6 +25,20 @@
 • Mieru  
 • Tailscale  
 • Adblock  
+
+## Подробное описание
+<details>
+  <summary>Поддержка протоколов и транспортов</summary>
+  • **XHTTP** — значительно расширенная совместимость (на основе sing-box-extended и Xray-core): поддержка uplinkDataPlacement, sessionPlacement, xPadding* параметров, uplinkDataKey, seqPlacement и многих других. Параметры доступны в GUI. Много оптимизаций и исправлений утечек памяти/соединений.  
+  • **AmneziaWG 3.1** — полноценная поддержка (файлы .conf, self-hosted vpn:// ссылки). Улучшения импорта/экспорта, PersistentKeepAlive, Reserved, MTU=1280 по умолчанию, возможность цепочек (например, VLESS → AmneziaWG).  
+  • **NaiveProxy** — нативная поддержка (плагин больше не нужен).  
+  • **MasterDnsVPN** — полноценная поддержка с отдельными профилями, логами и индикаторами.  
+  • **ByeDPI outbound** — встроенный, работает в цепочках и как front proxy.  
+  • **TrustTunnel** — поддержка с Client Random Prefix, libcronet, uTLS, QUIC.  
+  • **MASQUE** — поддержка.  
+  • **Mieru** — поддержка без плагина.  
+  • **Tailscale** — базовая поддержка.  
+</details>
 
 Разработчик NekoBox+ выкладывает `.apk`-файлы и `patches.tar.gz` в упомянутой теме на `4pda.to` и не планирует переносить разработку на GitHub.
 
