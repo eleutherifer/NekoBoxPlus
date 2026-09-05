@@ -30,7 +30,7 @@
 
 ## Подробное описание
 <details>
-  <summary>Поддержка протоколов и транспортов</summary>
+  <summary><b>Поддержка протоколов и транспортов</b></summary>
   • <b>XHTTP</b> — значительно расширенная совместимость (на основе sing-box-extended и Xray-core): поддержка uplinkDataPlacement, sessionPlacement, xPadding* параметров, uplinkDataKey, seqPlacement и многих других. Параметры доступны в GUI. Много оптимизаций и исправлений утечек памяти/соединений.<br />
   • <b>AmneziaWG</b> 3.1** — полноценная поддержка (файлы .conf, self-hosted vpn:// ссылки). Улучшения импорта/экспорта, PersistentKeepAlive, Reserved, MTU=1280 по умолчанию, возможность цепочек (например, VLESS → AmneziaWG).<br />
   • <b>NaiveProxy</b> — нативная поддержка (плагин больше не нужен).<br />
@@ -42,7 +42,7 @@
   • <b>Tailscale</b> — базовая поддержка.<br />
 </details>
 <details>
-  <summary>Защита от утечек IP и безопасность</summary>
+  <summary><b>Защита от утечек IP и безопасность</b></summary>
   • Убран mixed outbound в режиме VPN.<br />
   • Локальный SOCKS/HTTP прокси с аутентификацией (логин/пароль).<br />
   • По умолчанию включены и автоматически настраиваются базовые правила маршрутизации по стране пользователя.<br />
@@ -54,7 +54,7 @@
   • NekoBox всегда маршрутизируется через прокси.<br />
 </details>
 <details>
-  <summary>Маршрутизация и правила</summary>
+  <summary><b>Маршрутизация и правила</b></summary>
   • Интегрированы Throne Rule Sets с автодополнением в редакторе.<br />
   • Встроенная поддержка Rule Sets и geoip.dat от ITDog.<br />
   • Поддержка ресурсов V2Ray .dat.<br />
@@ -67,7 +67,7 @@
   • Улучшенная обработка package_name_exclude и правил по приложениям.<br />
 </details>
 <details>
-  <summary>UI/UX и дизайн</summary>
+  <summary><b>UI/UX и дизайн</b></summary>
   • Material You дизайн.<br />
   • AMOLED-тема.<br />
   • Пользовательская тема (Android 11+).<br />
@@ -81,7 +81,7 @@
   • Выбор хранилища сертификатов<br />
 </details>
 <details>
-  <summary>Производительность и оптимизации</summary>
+  <summary><b>Производительность и оптимизации</b></summary>
   • Много оптимизаций XHTTP (память, очередь, packet-up/stream-up, особенно заметно снижение жора).<br />
   • Мягкий ограничитель памяти sing-box.<br />
   • Watchdog контроля перегрева CPU.<br />
