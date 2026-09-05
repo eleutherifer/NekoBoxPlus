@@ -29,15 +29,15 @@
 ## Подробное описание
 <details>
   <summary>Поддержка протоколов и транспортов</summary>
-  • **XHTTP** — значительно расширенная совместимость (на основе sing-box-extended и Xray-core): поддержка uplinkDataPlacement, sessionPlacement, xPadding* параметров, uplinkDataKey, seqPlacement и многих других. Параметры доступны в GUI. Много оптимизаций и исправлений утечек памяти/соединений.  
-  • **AmneziaWG 3.1** — полноценная поддержка (файлы .conf, self-hosted vpn:// ссылки). Улучшения импорта/экспорта, PersistentKeepAlive, Reserved, MTU=1280 по умолчанию, возможность цепочек (например, VLESS → AmneziaWG).  
-  • **NaiveProxy** — нативная поддержка (плагин больше не нужен).  
-  • **MasterDnsVPN** — полноценная поддержка с отдельными профилями, логами и индикаторами.  
-  • **ByeDPI outbound** — встроенный, работает в цепочках и как front proxy.  
-  • **TrustTunnel** — поддержка с Client Random Prefix, libcronet, uTLS, QUIC.  
-  • **MASQUE** — поддержка.  
-  • **Mieru** — поддержка без плагина.  
-  • **Tailscale** — базовая поддержка.  
+  • <b>XHTTP</b> — значительно расширенная совместимость (на основе sing-box-extended и Xray-core): поддержка uplinkDataPlacement, sessionPlacement, xPadding* параметров, uplinkDataKey, seqPlacement и многих других. Параметры доступны в GUI. Много оптимизаций и исправлений утечек памяти/соединений.<br />
+  • <b>AmneziaWG</b> 3.1** — полноценная поддержка (файлы .conf, self-hosted vpn:// ссылки). Улучшения импорта/экспорта, PersistentKeepAlive, Reserved, MTU=1280 по умолчанию, возможность цепочек (например, VLESS → AmneziaWG).<br />
+  • <b>NaiveProxy</b> — нативная поддержка (плагин больше не нужен).<br />
+  • <b>MasterDnsVPN</b> — полноценная поддержка с отдельными профилями, логами и индикаторами.<br />
+  • <b>ByeDPI outbound</b> — встроенный, работает в цепочках и как front proxy.<br />
+  • <b>TrustTunnel</b> — поддержка с Client Random Prefix, libcronet, uTLS, QUIC.<br />
+  • <b>MASQUE</b> — поддержка.<br />
+  • <b>Mieru</b> — поддержка без плагина.<br />
+  • <b>Tailscale</b> — базовая поддержка.<br />
 </details>
 
 Разработчик NekoBox+ выкладывает `.apk`-файлы и `patches.tar.gz` в упомянутой теме на `4pda.to` и не планирует переносить разработку на GitHub.
