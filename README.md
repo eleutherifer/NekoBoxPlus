@@ -4,6 +4,8 @@
 
 ![иконка](https://4pda.to/s/Zy0hQiz0uez16wFVR8mVRz13wFaLl2Ls0oiPLV.webp)
 
+Разработчик NekoBox+ выкладывает `.apk`-файлы и `patches.tar.gz` в упомянутой теме на `4pda.to` и не планирует переносить разработку на GitHub.  
+
 **Требуется Android**: 6.0+  
 **Русский интерфейс**: Да  
 **Разработчик**: MrEternal  
@@ -39,8 +41,43 @@
   • <b>Mieru</b> — поддержка без плагина.<br />
   • <b>Tailscale</b> — базовая поддержка.<br />
 </details>
+<details>
+  <summary>Защита от утечек IP и безопасность</summary>
+  • Убран mixed outbound в режиме VPN.<br />
+  • Локальный SOCKS/HTTP прокси с аутентификацией (логин/пароль).<br />
+  • По умолчанию включены и автоматически настраиваются базовые правила маршрутизации по стране пользователя.<br />
+  • Автоматический выбор приложений для проксирования по стране.<br />
+  Изменённая логика обработки трафика с неопределённым package name (больше не раскрывает реальный IP).<br />
+  • Конфигурируемые белые списки DNS для TUN-трафика.<br />
+  • Предупреждения о возможных утечках.<br />
+  • Скрытие Clash API (по умолчанию включено) — панель sing-box доступна только внутри приложения.<br />
+  • NekoBox всегда маршрутизируется через прокси.<br />
+</details>
+<details>
+  <summary></summary>
+</details>
+<details>
+  <summary></summary>
+</details>
+<details>
+  <summary></summary>
+</details>
+<details>
+  <summary></summary>
+</details>
+<details>
+  <summary></summary>
+</details>
+<details>
+  <summary></summary>
+</details>
+<details>
+  <summary></summary>
+</details>
+<details>
+  <summary></summary>
+</details>
 
-Разработчик NekoBox+ выкладывает `.apk`-файлы и `patches.tar.gz` в упомянутой теме на `4pda.to` и не планирует переносить разработку на GitHub.
 
 # Скрипты в этом репозитории
 
