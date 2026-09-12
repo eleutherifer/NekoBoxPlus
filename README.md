@@ -3,7 +3,7 @@
 [Тема на 4pda.to](https://4pda.to/forum/index.php?showtopic=1121122)
 
 <!--![иконка c 4pda.to](https://4pda.to/s/Zy0hQiz0uez16wFVR8mVRz13wFaLl2Ls0oiPLV.webp)-->  
-![ic_launcher_foreground.webp](workspace/NekoBoxForAndroid/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.webp)
+![ic_launcher_light.webp](workspace/NekoBoxForAndroid/app/src/main/res/mipmap-xxxhdpi/ic_launcher_light.webp)
 
 Разработчик NekoBox+ выкладывает `.apk`-файлы и `patches.tar.gz` в упомянутой теме на `4pda.to` и не планирует переносить разработку на GitHub.  
 
