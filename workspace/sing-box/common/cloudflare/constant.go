@@ -1,7 +1,7 @@
 package cloudflare
 
 const (
-	ApiUrl     = "https://api.cloudflareclient.com"
+	ApiUrl     = "https://api.devices.cloudflare.com"
 	ApiVersion = "v0a4471"
 	ConnectSNI = "consumer-masque.cloudflareclient.com"
 	// unused for now
