@@ -93,6 +93,10 @@ func (c *ClientBind) connect() (*wireConn, error) {
 
 	c.connAccess.Lock()
 	defer c.connAccess.Unlock()
+	if c.bindCtx != bindCtx {
+		_ = newConn.Close()
+		return nil, net.ErrClosed
+	}
 	select {
 	case <-c.done:
 		_ = newConn.Close()

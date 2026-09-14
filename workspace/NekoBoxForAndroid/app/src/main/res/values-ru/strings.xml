@@ -222,6 +222,7 @@
     <string name="check_update_release">Проверить релизные обновления</string>
     <string name="circular_reference">Циклическая ссылка</string>
     <string name="circular_reference_sum">Маршрут не может содержать сам себя.</string>
+    <string name="profile_reference_cycle">Циклическая ссылка между профилями: %1$s</string>
     <string name="clear_logcat">Очистить журнал</string>
     <string name="pause_logcat">Приостановить журнал</string>
     <string name="resume_logcat">Продолжить журнал</string>
@@ -935,7 +936,7 @@
     <string name="automatic_connection_check_summary">Проверять подключение автоматически после соединения. Для повторной проверки по-прежнему можно нажать на панель статистики.</string>
     <string name="vpn_permission_denied">Нет разрешения на VPN</string>
     <string name="wake_reconnect">Переподключать после сна</string>
-    <string name="wake_reset_connections">Сбрасывать соединения после выхода из сна</string>
+    <string name="wake_reset_connections">Сбрасывать исходящие соединения после выхода из сна</string>
     <string name="warp_generate">Создать конфигурацию</string>
     <string name="warp_license">Cloudflare Warp — бесплатный WireGuard VPN. Используя его, вы принимаете условия сервиса.</string>
     <string name="wireguard_local_address">Локальный адрес</string>
@@ -1979,4 +1980,7 @@
     <string name="profile_country">Страна профиля: %1$s</string>
     <string name="ruleset">Набор правил (.srs)</string>
     <string name="change_icon_android_tv_summary">Не работает на Android TV</string>
+    <string name="subscription_xray_balancers">Балансировщики Xray в подписках</string>
+    <string name="subscription_xray_balancers_convert">Преобразовать в набор прокси</string>
+    <string name="subscription_xray_balancers_split">Разделить на отдельные профили</string>
 </resources>

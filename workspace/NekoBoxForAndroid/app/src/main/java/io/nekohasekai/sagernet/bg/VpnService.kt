@@ -325,10 +325,9 @@ class VpnService :
 
     fun updateUnderlyingNetwork(builder: Builder? = null) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
-            SagerNet.underlyingNetwork?.let {
-                builder?.setUnderlyingNetworks(arrayOf(SagerNet.underlyingNetwork))
-                    ?: setUnderlyingNetworks(arrayOf(SagerNet.underlyingNetwork))
-            }
+            val networks = SagerNet.underlyingNetwork?.let { arrayOf(it) } ?: emptyArray()
+            if (builder != null) builder.setUnderlyingNetworks(networks)
+            else setUnderlyingNetworks(networks)
         }
     }
 

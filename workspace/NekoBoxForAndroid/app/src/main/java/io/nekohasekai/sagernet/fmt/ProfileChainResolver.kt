@@ -19,12 +19,20 @@ internal class ProfileChainResolver(
     private var nextEmbeddedProfileId = -1L
     private val embeddedProxySetMembers = IdentityHashMap<ProxyEntity, List<ProxyEntity>>()
 
-    fun resolve(profile: ProxyEntity): MutableList<ProxyEntity> = resolveInternal(profile).apply {
-        frontProxy?.let { addAll(it.resolveInternal()) }
-        landingProxy?.let { addAll(0, it.resolveInternal()) }
-    }
+    fun resolveGraph(profile: ProxyEntity, includeGroupProxies: Boolean = true): List<ResolvedProfileHop> =
+        resolveHops(profile).toMutableList().apply {
+            if (includeGroupProxies) {
+                frontProxy?.let { addAll(resolveHops(it)) }
+                landingProxy?.let { addAll(0, resolveHops(it)) }
+            }
+        }
 
-    fun ProxyEntity.resolveInternal(): MutableList<ProxyEntity> = resolveInternal(this)
+    fun resolve(profile: ProxyEntity): MutableList<ProxyEntity> = resolveGraph(profile).flattenProfiles()
+
+    fun ProxyEntity.resolveInternal(): MutableList<ProxyEntity> = resolveHops(this).flattenProfiles()
+
+    private fun List<ResolvedProfileHop>.flattenProfiles(): MutableList<ProxyEntity> =
+        flatMap { hop -> hop.members.flatMap { it.hops.flattenProfiles() } + hop.profile }.toMutableList()
 
     fun selectedGroupProfileIds(group: ProxyGroup?): Set<Long> {
         if (group == null) return emptySet()
@@ -43,57 +51,79 @@ internal class ProfileChainResolver(
 
     fun startsWithByeDpi(profile: ProxyEntity): Boolean = startsWithByeDpi(profile, linkedSetOf())
 
-    private fun resolveInternal(
+    private fun resolveHops(
         profile: ProxyEntity,
-        visiting: MutableSet<Long> = linkedSetOf(),
-    ): MutableList<ProxyEntity> {
-        val bean = profile.requireBean()
-        if (bean is ChainBean) {
-            check(visiting.add(profile.id)) { "Profile chain cycle detected at ${profile.displayName()}" }
-            try {
-                val byId = profiles.getEntities(bean.proxies).associateBy(ProxyEntity::id)
-                val result = ArrayList<ProxyEntity>()
-                for (profileId in bean.proxies) {
-                    val child = byId[profileId] ?: continue
-                    require(child.type != ProxyEntity.TYPE_MASTERDNSVPN) {
-                        "MasterDnsVPN is not allowed in proxy chains"
-                    }
-                    result += resolveInternal(child, visiting)
-                }
-                return result.asReversed()
-            } finally {
-                visiting.remove(profile.id)
-            }
+        visiting: MutableList<ProxyEntity> = mutableListOf(),
+    ): List<ResolvedProfileHop> {
+        if (visiting.any { it.id == profile.id }) {
+            throw ProfileReferenceCycleException((visiting + profile).map { it.displayName() })
         }
-        if (bean is ProxySetBean) {
-            val candidates = resolveProxySetCandidates(profile, bean)
-            val byId = candidates.associateBy(ProxyEntity::id)
-            val regex = bean.groupFilterNotRegex.takeIf(String::isNotBlank)?.toRegex()
-            val ids = when {
-                bean.hasEmbeddedProfiles() -> candidates.map(ProxyEntity::id)
-                bean.type == ProxySetBean.TYPE_LIST -> bean.proxies
-                else -> candidates.map(ProxyEntity::id)
-            }
-            val result = ArrayList<ProxyEntity>()
-            val filtered = ids.mapNotNull(byId::get).let {
-                bean.filterInsecureProfiles(it, allowInsecure)
-            }
-            for (candidate in filtered) {
-                if (candidate.id == profile.id || candidate.type == ProxyEntity.TYPE_MASTERDNSVPN) continue
-                if (regex != null && !regex.containsMatchIn(candidate.displayName())) continue
-                if (containsByeDpi(candidate)) continue
-                when (candidate.type) {
-                    ProxyEntity.TYPE_PROXY_SET -> error("Nested proxy set are not supported")
-                    ProxyEntity.TYPE_CHAIN -> if (bean.type == ProxySetBean.TYPE_GROUP) {
-                        error("Chain is incompatible with group bean")
-                    }
+        visiting.add(profile)
+        try {
+            return when (val bean = profile.requireBean()) {
+                is ChainBean -> {
+                    val byId = profiles.getEntities(bean.proxies).associateBy(ProxyEntity::id)
+                    bean.proxies.flatMap { id ->
+                        val child = byId[id] ?: return@flatMap emptyList()
+                        require(child.type != ProxyEntity.TYPE_MASTERDNSVPN) {
+                            "MasterDnsVPN is not allowed in proxy chains"
+                        }
+                        resolveHops(child, visiting)
+                    }.asReversed()
                 }
-                result += candidate
+                is ProxySetBean -> {
+                    val members = eligibleProxySetCandidates(profile, bean).map { candidate ->
+                        require(candidate.type != ProxyEntity.TYPE_CHAIN || bean.type != ProxySetBean.TYPE_GROUP) {
+                            "Chain is incompatible with group bean"
+                        }
+                        ResolvedProfileMember(candidate.id, resolveHops(candidate, visiting))
+                    }
+                    require(members.isNotEmpty()) { "Proxy set has no eligible profiles: ${profile.displayName()}" }
+                    listOf(ResolvedProfileHop(profile, members))
+                }
+                else -> listOf(ResolvedProfileHop(profile))
             }
-            result += profile
-            return result
+        } finally {
+            visiting.removeAt(visiting.lastIndex)
         }
-        return mutableListOf(profile)
+    }
+
+    fun eligibleProxySetCandidates(profile: ProxyEntity, bean: ProxySetBean): List<ProxyEntity> {
+        val candidates = resolveProxySetCandidates(profile, bean)
+        val byId = candidates.associateBy(ProxyEntity::id)
+        val regex = bean.groupFilterNotRegex.takeIf(String::isNotBlank)?.toRegex()
+        val ids = if (!bean.hasEmbeddedProfiles() && bean.type == ProxySetBean.TYPE_LIST) {
+            bean.proxies
+        } else {
+            candidates.map(ProxyEntity::id)
+        }
+        return bean.filterInsecureProfiles(ids.distinct().mapNotNull(byId::get), allowInsecure).filter {
+            // A group normally contains the set collecting it. Explicit self references are errors.
+            !(bean.type == ProxySetBean.TYPE_GROUP && it.id == profile.id) &&
+                it.type != ProxyEntity.TYPE_MASTERDNSVPN &&
+                (regex == null || regex.containsMatchIn(it.displayName())) &&
+                !containsByeDpi(it) && !containsMasterDnsVPN(it)
+        }
+    }
+
+    fun containsMasterDnsVPN(profile: ProxyEntity): Boolean =
+        references(profile) { it.type == ProxyEntity.TYPE_MASTERDNSVPN }
+
+    fun referencesProfile(profile: ProxyEntity, id: Long): Boolean = references(profile) { it.id == id }
+
+    private fun references(
+        profile: ProxyEntity,
+        visiting: MutableSet<Long> = mutableSetOf(),
+        predicate: (ProxyEntity) -> Boolean,
+    ): Boolean {
+        if (predicate(profile)) return true
+        if (!visiting.add(profile.id)) return false
+        return when (val bean = profile.requireBean()) {
+            is ChainBean -> profiles.getEntities(bean.proxies).any { references(it, visiting, predicate) }
+            is ProxySetBean -> resolveProxySetCandidates(profile, bean)
+                .any { it.id != profile.id && references(it, visiting, predicate) }
+            else -> false
+        }
     }
 
     private fun resolveProxySetCandidates(
@@ -143,30 +173,13 @@ internal class ProfileChainResolver(
         }
     }
 
-    private fun containsByeDpi(profile: ProxyEntity, visiting: MutableSet<Long>): Boolean {
-        if (profile.isByeDPI()) return true
-        check(visiting.add(profile.id)) { "Profile chain cycle detected at ${profile.displayName()}" }
-        return try {
-            when (val bean = profile.requireBean()) {
-                is ChainBean -> {
-                    val byId = profiles.getEntities(bean.proxies).associateBy(ProxyEntity::id)
-                    bean.proxies.any { byId[it]?.let { child -> containsByeDpi(child, visiting) } == true }
-                }
-
-                is ProxySetBean -> resolveProxySetCandidates(profile, bean)
-                    .any { it.id != profile.id && containsByeDpi(it, visiting) }
-
-                else -> false
-            }
-        } finally {
-            visiting.remove(profile.id)
-        }
-    }
+    private fun containsByeDpi(profile: ProxyEntity, visiting: MutableSet<Long>): Boolean =
+        references(profile, visiting, ProxyEntity::isByeDPI)
 
     private fun startsWithByeDpi(profile: ProxyEntity, visiting: MutableSet<Long>): Boolean {
         if (profile.isByeDPI()) return true
         val bean = profile.requireBean() as? ChainBean ?: return false
-        check(visiting.add(profile.id)) { "Profile chain cycle detected at ${profile.displayName()}" }
+        if (!visiting.add(profile.id)) return false
         return try {
             val first = bean.proxies.firstOrNull()?.let(profiles::getById) ?: return false
             startsWithByeDpi(first, visiting)

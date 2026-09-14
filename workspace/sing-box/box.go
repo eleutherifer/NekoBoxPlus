@@ -217,7 +217,7 @@ func New(options Options) (*Box, error) {
 	if needAdblock && experimentalOptions.Adblock.Constraints.HasProcessRules() {
 		routeOptions.FindProcess = true
 	}
-	endpointManager := endpoint.NewManager(logFactory.NewLogger("endpoint"), endpointRegistry)
+	endpointManager := endpoint.NewManager(ctx, logFactory.NewLogger("endpoint"), endpointRegistry)
 	inboundManager := inbound.NewManager(logFactory.NewLogger("inbound"), inboundRegistry, endpointManager)
 	outboundManager := outbound.NewManager(logFactory.NewLogger("outbound"), outboundRegistry, endpointManager, routeOptions.Final)
 	dnsTransportManager := dns.NewTransportManager(logFactory.NewLogger("dns/transport"), dnsTransportRegistry, outboundManager, dnsOptions.Final)

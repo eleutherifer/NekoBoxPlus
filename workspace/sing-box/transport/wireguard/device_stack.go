@@ -182,7 +182,7 @@ func (w *stackDevice) Start() error {
 			return err
 		}
 	}
-	w.events <- wgTun.EventUp
+	// The endpoint lifecycle controller owns Up/Down, including initial startup.
 	return nil
 }
 

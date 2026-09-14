@@ -184,7 +184,7 @@ func (w *Endpoint) InterfaceUpdated(ctx context.Context) {
 	if !w.started.Load() || w.detoured {
 		return
 	}
-	go w.updateBind(ctx)
+	w.updateBind(ctx)
 }
 
 func (w *Endpoint) updateBind(ctx context.Context) {

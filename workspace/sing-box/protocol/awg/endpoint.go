@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/hex"
-	"fmt"
 	"net"
 	"net/netip"
 	"strconv"
@@ -27,6 +26,8 @@ import (
 
 	"go4.org/netipx"
 )
+
+var _ adapter.InterfaceUpdateListener = (*Endpoint)(nil)
 
 func RegisterEndpoint(registry *endpoint.Registry) {
 	endpoint.Register(registry, constant.TypeAwg, NewEndpoint)
@@ -114,11 +115,14 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 			resolvePeer,
 		)
 	}
-	if remoteIsDomain && options.Detour != "" {
+	if remoteIsDomain {
+		// DNS transports and the platform network are not ready during construction.
+		// In particular, the system resolver may still route into a retained Android
+		// VPN. Resolve at post-start through the configured, protected DNS transport.
 		result.deferredDevice = func() (*awg.Device, error) {
 			resolveDialer, loaded := dial.(dialer.ResolveDialer)
-			if !loaded {
-				return nil, E.New("missing resolver for detoured AmneziaWG domain peer")
+			if !loaded || result.dnsRouter == nil {
+				return nil, E.New("missing resolver for AmneziaWG domain peer")
 			}
 			queryOptions, resolveErr := dialer.PeerDomainQueryOptions(
 				service.FromContext[adapter.DNSTransportManager](ctx),
@@ -143,23 +147,7 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 		return result, nil
 	}
 
-	var resolvePeer func(domain string) (netip.Addr, error)
-	if remoteIsDomain {
-		resolvePeer = cachedPeerResolver(func(domain string) (netip.Addr, error) {
-			addrs, lookupErr := net.DefaultResolver.LookupNetIP(ctx, "ip4", domain)
-			if lookupErr != nil || len(addrs) == 0 {
-				addrs, lookupErr = net.DefaultResolver.LookupNetIP(ctx, "ip6", domain)
-			}
-			if lookupErr != nil {
-				return netip.Addr{}, lookupErr
-			}
-			if len(addrs) == 0 {
-				return netip.Addr{}, fmt.Errorf("could not resolve peer: %s", domain)
-			}
-			return addrs[0], nil
-		})
-	}
-	result.device, err = buildDevice(resolvePeer)
+	result.device, err = buildDevice(nil)
 	if err != nil {
 		return nil, err
 	}
@@ -537,12 +525,11 @@ func (e *Endpoint) Close() error {
 	return device.Close()
 }
 
-func (e *Endpoint) InterfaceUpdated() {
+func (e *Endpoint) InterfaceUpdated(ctx context.Context) {
 	e.deviceAccess.RLock()
-	device := e.device
-	e.deviceAccess.RUnlock()
-	if device != nil {
-		device.InterfaceUpdated()
+	defer e.deviceAccess.RUnlock()
+	if ctx.Err() == nil && e.device != nil {
+		e.device.InterfaceUpdated(ctx)
 	}
 }
 

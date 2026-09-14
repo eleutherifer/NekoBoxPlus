@@ -17,7 +17,7 @@ internal class NetworkChangeRecoveryPolicy {
     private var observedInitialState = false
     private var currentInterfaceName: String? = null
     private var currentNetworkHandle: Long? = null
-    private var pendingReconnectAfterLoss = false
+    private var pendingRecoveryAfterLoss = false
 
     fun onNetworkChanged(
         interfaceName: String?,
@@ -43,7 +43,7 @@ internal class NetworkChangeRecoveryPolicy {
         val lostKnownInterface = oldInterfaceName != null && interfaceName == null
         val recoveredAfterLoss = oldInterfaceName == null &&
             interfaceName != null &&
-            pendingReconnectAfterLoss
+            pendingRecoveryAfterLoss
         val switchedKnownInterface = oldInterfaceName != null && interfaceName != null
         val reconnectCandidate = recoveredAfterLoss || switchedKnownInterface
         val reconnect = reconnectEnabled && reconnectCandidate && !isVpnNetwork
@@ -53,9 +53,9 @@ internal class NetworkChangeRecoveryPolicy {
         currentInterfaceName = interfaceName
         currentNetworkHandle = networkHandle
         if (lostKnownInterface) {
-            pendingReconnectAfterLoss = reconnectEnabled
+            pendingRecoveryAfterLoss = true
         } else if (interfaceName != null && !isVpnNetwork) {
-            pendingReconnectAfterLoss = false
+            pendingRecoveryAfterLoss = false
         }
 
         return Decision(

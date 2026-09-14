@@ -121,7 +121,7 @@ func (w *systemDevice) Start() error {
 	if isBatchTUN && batchTUN.BatchSize() > 1 {
 		w.batchDevice = batchTUN
 	}
-	w.events <- wgTun.EventUp
+	// The endpoint lifecycle controller owns Up/Down, including initial startup.
 	return nil
 }
 

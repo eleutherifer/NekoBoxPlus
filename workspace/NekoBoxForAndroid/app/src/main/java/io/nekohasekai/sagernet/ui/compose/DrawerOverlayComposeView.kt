@@ -8,6 +8,8 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.ComposeView
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import io.nekohasekai.sagernet.ktx.dp2pxf
 import kotlin.math.ceil
 import kotlin.math.min
@@ -24,10 +26,13 @@ internal fun drawerGestureExclusionBounds(
     height: Int,
     edgeWidthPx: Int,
     maxHeightPx: Int,
+    minTopPx: Int = 0,
 ): DrawerGestureExclusionBounds? {
     if (width <= 0 || height <= 0 || edgeWidthPx <= 0 || maxHeightPx <= 0) return null
-    val exclusionHeight = min(height, maxHeightPx)
-    val top = (height - exclusionHeight) / 2
+    val availableHeight = height - minTopPx
+    if (availableHeight <= 0) return null
+    val exclusionHeight = min(availableHeight, maxHeightPx)
+    val top = maxOf(minTopPx, (height - exclusionHeight) / 2)
     return DrawerGestureExclusionBounds(
         left = 0,
         top = top,
@@ -41,9 +46,15 @@ internal class DrawerOverlayTouchPolicy(
 ) {
     private var trackingEdgeGesture = false
 
-    fun shouldDispatch(action: Int, x: Float, drawerActive: Boolean): Boolean {
+    fun shouldDispatch(
+        action: Int,
+        x: Float,
+        drawerActive: Boolean,
+        y: Float,
+        edgeTopPx: Float,
+    ): Boolean {
         if (action == MotionEvent.ACTION_DOWN) {
-            trackingEdgeGesture = drawerActive || x <= edgeWidthPx
+            trackingEdgeGesture = drawerActive || (x <= edgeWidthPx && y >= edgeTopPx)
         }
         val dispatch = drawerActive || trackingEdgeGesture
         if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
@@ -67,6 +78,20 @@ internal class DrawerOverlayComposeView(context: Context) : FrameLayout(context)
         )
     }
 
+    // Material 3 top app bars are 64dp tall, excluding system insets.
+    private val toolbarHeightPx = ceil(dp2pxf(64)).toInt()
+    private val edgeTopPx: Int
+        get() = toolbarHeightPx + (ViewCompat.getRootWindowInsets(this)
+            ?.getInsets(WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.displayCutout())
+            ?.top ?: 0)
+
+    init {
+        ViewCompat.setOnApplyWindowInsetsListener(this) { _, insets ->
+            updateGestureExclusion()
+            insets
+        }
+    }
+
     var drawerActive: () -> Boolean = { false }
     private var exclusionEnabled = true
 
@@ -85,7 +110,7 @@ internal class DrawerOverlayComposeView(context: Context) : FrameLayout(context)
     private fun updateGestureExclusion() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
         val bounds = if (exclusionEnabled) {
-            drawerGestureExclusionBounds(width, height, edgeWidthPx, maxExclusionHeightPx)
+            drawerGestureExclusionBounds(width, height, edgeWidthPx, maxExclusionHeightPx, edgeTopPx)
         } else null
         systemGestureExclusionRects = if (bounds == null) emptyList() else listOf(
             Rect(bounds.left, bounds.top, bounds.right, bounds.bottom),
@@ -93,7 +118,10 @@ internal class DrawerOverlayComposeView(context: Context) : FrameLayout(context)
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-        if (!touchPolicy.shouldDispatch(event.actionMasked, event.x, drawerActive())) return false
+        if (!touchPolicy.shouldDispatch(
+                event.actionMasked, event.x, drawerActive(), event.y, edgeTopPx.toFloat(),
+            )
+        ) return false
         return super.dispatchTouchEvent(event)
     }
 }

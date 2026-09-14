@@ -247,3 +247,65 @@ func TestClientBindUsesPeerEndpointForReceivedPacket(t *testing.T) {
 		t.Fatalf("received source mismatch: got %v, want %v", sourceEndpoint, peerEndpoint)
 	}
 }
+
+// Simulate a dialer that completes despite cancellation. An old socket must
+// never become the live socket of a reopened bind.
+type latePacketDialer struct {
+	packetDialer
+	called  chan struct{}
+	release chan struct{}
+}
+
+func (d *latePacketDialer) ListenPacket(context.Context, M.Socksaddr) (net.PacketConn, error) {
+	close(d.called)
+	<-d.release
+	return d.conn, nil
+}
+
+func TestClientBindRejectsSocketFromPreviousGeneration(t *testing.T) {
+	packetConn, err := net.ListenPacket("udp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer packetConn.Close()
+	d := &latePacketDialer{
+		packetDialer: packetDialer{conn: packetConn},
+		called:       make(chan struct{}),
+		release:      make(chan struct{}),
+	}
+	bind := NewClientBind(t.Context(), logger.NOP(), d, false, netip.AddrPort{}, [3]uint8{})
+	if _, _, err = bind.Open(0); err != nil {
+		t.Fatal(err)
+	}
+	defer bind.Close()
+	done := make(chan error, 1)
+	go func() {
+		_, err := bind.connect()
+		done <- err
+	}()
+	<-d.called
+	if err = bind.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err = bind.Open(0); err != nil {
+		t.Fatal(err)
+	}
+	close(d.release)
+	select {
+	case err = <-done:
+		if !errors.Is(err, net.ErrClosed) {
+			t.Fatalf("got %v, want closed", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("old dial did not return")
+	}
+	bind.connAccess.Lock()
+	installed := bind.conn != nil
+	bind.connAccess.Unlock()
+	if installed {
+		t.Fatal("installed a socket from the previous bind")
+	}
+	if _, err = packetConn.WriteTo([]byte("x"), packetConn.LocalAddr()); !errors.Is(err, net.ErrClosed) {
+		t.Fatalf("discarded socket was not closed: %v", err)
+	}
+}

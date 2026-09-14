@@ -40,7 +40,6 @@ import moe.matsuri.nb4a.utils.JavaUtil
 import moe.matsuri.nb4a.utils.Util
 import java.net.UnknownHostException
 
-private const val NETWORK_RECOVERY_DEBOUNCE_MS = 1_000L
 private const val SING_BOX_CLOSE_TIMEOUT = "sing-box did not close in time"
 private const val SERVICE_CLOSE_TIMEOUT_MS = 5_000L
 private const val CONNECTING_CANCEL_TIMEOUT_MS = 5_000L
@@ -92,7 +91,8 @@ class BaseService {
         var state = State.Stopped
         var proxy: ProxyInstance? = null
         var notification: ServiceNotification? = null
-        var networkRecoveryJob: Job? = null
+        @Volatile
+        internal var connectionRecovery: ConnectionRecoveryQueue? = null
         internal var overloadWatchdog: CoreOverloadWatchdog? = null
         var coreRecoveryConnection: ServiceConnection? = null
         var pendingRestart = false
@@ -125,16 +125,11 @@ class BaseService {
                 // Action.SWITCH_WAKE_LOCK -> runOnDefaultDispatcher { service.switchWakeLock() }
                 PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED -> {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        if (SagerNet.power.isDeviceIdleMode) {
-                            proxy?.box?.sleep()
-                        } else {
-                            proxy?.box?.wake()
-                            service.handleConnectionRecovery(
-                                reconnect = DataStore.wakeReconnect,
-                                reset = DataStore.wakeResetConnections,
-                                restartCause = ServiceRestartCause.WakeReconnect,
-                            )
-                        }
+                        connectionRecovery?.idle(
+                            SagerNet.power.isDeviceIdleMode,
+                            DataStore.wakeReconnect,
+                            DataStore.wakeResetConnections,
+                        )
                     }
                 }
 
@@ -260,6 +255,8 @@ class BaseService {
                 }
             } catch (e: Exception) {
                 error(e.readableMessage)
+            } finally {
+                data.connectionRecovery?.urlTestFinished()
             }
         }
 
@@ -811,8 +808,8 @@ class BaseService {
         fun killProcesses() {
             Logs.d("Service cleanup started")
             stopCoreRecovery()
-            data.networkRecoveryJob?.cancel()
-            data.networkRecoveryJob = null
+            data.connectionRecovery?.close()
+            data.connectionRecovery = null
             SagerNet.application.nativeInterface.unregisterWifiStateListener()
             SagerNet.application.nativeInterface.setWifiRuleMonitoringEnabled(false)
             var closeError: Throwable? = null
@@ -1098,29 +1095,6 @@ class BaseService {
             // TODO NEW save app stats?
         }
 
-        fun handleConnectionRecovery(
-            reconnect: Boolean,
-            reset: Boolean,
-            restartCause: ServiceRestartCause = ServiceRestartCause.Default,
-        ) {
-            val effectiveReset = shouldResetConnections(reset, data.urlTestTracker.isRunning)
-            if (reset && !effectiveReset) {
-                Logs.d("Skip automatic connection reset while URL Test is running")
-            }
-            if (reconnect && data.state.canStop) {
-                DataStore.pendingResetConnectionsAfterReconnect = effectiveReset
-                stopRunner(
-                    restart = true,
-                    restartOrigin = ServiceRestartOrigin.Automatic,
-                    restartCause = restartCause,
-                )
-                return
-            }
-            if (effectiveReset) {
-                resetCoreNetwork()
-            }
-        }
-
         fun isVpnNetwork(network: Network?): Boolean {
             if (network == null) return false
             val capabilities = SagerNet.connectivity.getNetworkCapabilities(network)
@@ -1135,8 +1109,10 @@ class BaseService {
 
         suspend fun preInit() {
             val networkChangeRecoveryPolicy = NetworkChangeRecoveryPolicy()
+            val recovery = data.connectionRecovery
 
             fun handleNetworkUpdate(network: Network?) {
+                recovery?.network(network != null)
                 SagerNet.underlyingNetwork = network
                 SagerNet.application.nativeInterface.syncNetworkState(network)
                 DataStore.vpnService?.updateUnderlyingNetwork()
@@ -1155,16 +1131,11 @@ class BaseService {
                         "Network changed: ${decision.oldInterfaceName}/${decision.oldNetworkHandle} -> " +
                             "${decision.newInterfaceName}/${decision.newNetworkHandle}"
                     )
-                    data.networkRecoveryJob?.cancel()
-                    data.networkRecoveryJob = runOnDefaultDispatcher {
-                        delay(NETWORK_RECOVERY_DEBOUNCE_MS)
-                        if (!data.state.started) return@runOnDefaultDispatcher
-                        handleConnectionRecovery(
-                            reconnect = decision.reconnect,
-                            reset = decision.reset,
-                            restartCause = ServiceRestartCause.NetworkChange,
-                        )
-                    }
+                    recovery?.request(
+                        decision.reconnect,
+                        decision.reset,
+                        ServiceRestartCause.NetworkChange,
+                    )
                 }
                 if (decision.ignoredReconnectForVpn) {
                     Logs.d(
@@ -1263,6 +1234,34 @@ class BaseService {
 
             val proxy = ProxyInstance(profile, this)
             data.proxy = proxy
+            data.connectionRecovery?.close()
+            data.connectionRecovery = ConnectionRecoveryQueue(
+                urlTestRunning = { data.urlTestTracker.isRunning },
+                pause = { idle ->
+                    if (data.proxy === proxy && data.state.started) {
+                        if (idle) proxy.box.sleep() else proxy.box.wake()
+                    }
+                },
+                recover = { reconnect, reset, cause ->
+                    if (data.proxy === proxy && data.state.started) {
+                        if (reconnect) {
+                            DataStore.pendingResetConnectionsAfterReconnect = reset
+                            stopRunner(
+                                restart = true,
+                                restartOrigin = ServiceRestartOrigin.Automatic,
+                                restartCause = cause,
+                            )
+                        } else if (reset) {
+                            proxy.box.resetNetwork()
+                        }
+                    }
+                },
+            )
+            data.connectionRecovery?.idle(
+                SagerNet.power.isDeviceIdleMode,
+                DataStore.wakeReconnect,
+                DataStore.wakeResetConnections,
+            )
             runOnDefaultDispatcher {
                 SubscriptionUpdater.syncBootReceiverEnabled()
             }
@@ -1364,6 +1363,7 @@ class BaseService {
                             Libcore.startCoreProfiling(DataStore.coreProfilerMode)
                         }
                         data.changeState(State.Connected)
+                        data.connectionRecovery?.ready()
                         data.pendingRestartOrigin = ServiceRestartOrigin.Manual
                         CoreRecoveryService.updateStopWatchdog(
                             context = this@Interface as Context,

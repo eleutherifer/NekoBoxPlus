@@ -30,7 +30,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
@@ -60,7 +59,7 @@ fun SubscriptionBannerCard(
             .fillMaxWidth()
             .padding(2.dp)
             .then(if (canOpenLinks) Modifier.clickable(onClick = onOpenLinks) else Modifier),
-        shape = RectangleShape,
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),

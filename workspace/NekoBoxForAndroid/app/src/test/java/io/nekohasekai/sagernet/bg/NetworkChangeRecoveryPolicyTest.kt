@@ -5,6 +5,16 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class NetworkChangeRecoveryPolicyTest {
+    @Test
+    fun resetsAfterLossWithoutReconnectEnabled() {
+        val policy = NetworkChangeRecoveryPolicy()
+        policy.onNetworkChanged("wlan0", 1, false, false, true)
+        assertTrue(policy.onNetworkChanged(null, null, false, false, true).reset)
+        val recovery = policy.onNetworkChanged("wlan0", 1, false, false, true)
+        assertTrue(recovery.reset)
+        assertFalse(recovery.reconnect)
+    }
+
 
     @Test
     fun initialNetworkDoesNotRecover() {

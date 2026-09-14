@@ -12,8 +12,6 @@ import io.nekohasekai.sagernet.fmt.http.toUri
 import io.nekohasekai.sagernet.fmt.hysteria.*
 import io.nekohasekai.sagernet.fmt.internal.ChainBean
 import io.nekohasekai.sagernet.fmt.internal.ProxySetBean
-import io.nekohasekai.sagernet.fmt.internal.decodeEmbeddedProfiles
-import io.nekohasekai.sagernet.fmt.internal.hasEmbeddedProfiles
 import io.nekohasekai.sagernet.fmt.masterdns.MasterDnsVPNBean
 import io.nekohasekai.sagernet.fmt.masque.MasqueBean
 import io.nekohasekai.sagernet.fmt.mieru.MieruBean
@@ -450,64 +448,14 @@ data class ProxyEntity(
 
     fun isByeDPI(): Boolean = type == TYPE_BYEDPI
 
-    fun containsByeDPI(): Boolean {
-        if (isByeDPI()) return true
-        return when (val bean = requireBean()) {
-            is ChainBean -> {
-                val profiles = SagerDatabase.proxyDao.getEntities(bean.proxies).associateBy { it.id }
-                bean.proxies.any { proxyId -> profiles[proxyId]?.containsByeDPI() == true }
-            }
+    fun containsByeDPI(): Boolean =
+        ProfileChainResolver(AppData.profiles, false, null, null).containsByeDpi(this)
 
-            is ProxySetBean -> {
-                val profiles = if (bean.hasEmbeddedProfiles()) {
-                    bean.decodeEmbeddedProfiles()
-                } else {
-                    when (bean.type) {
-                        ProxySetBean.TYPE_LIST -> SagerDatabase.proxyDao.getEntities(bean.proxies)
-                        ProxySetBean.TYPE_GROUP -> SagerDatabase.proxyDao.getByGroup(bean.groupId)
-                        else -> emptyList()
-                    }
-                }
-                profiles.any { it.id != id && it.containsByeDPI() }
-            }
+    fun containsMasterDnsVPN(): Boolean =
+        ProfileChainResolver(AppData.profiles, false, null, null).containsMasterDnsVPN(this)
 
-            else -> false
-        }
-    }
-
-    fun containsMasterDnsVPN(): Boolean {
-        if (type == TYPE_MASTERDNSVPN) return true
-        return when (val bean = requireBean()) {
-            is ChainBean -> {
-                val profiles = SagerDatabase.proxyDao.getEntities(bean.proxies).associateBy { it.id }
-                bean.proxies.any { proxyId -> profiles[proxyId]?.containsMasterDnsVPN() == true }
-            }
-
-            is ProxySetBean -> {
-                val profiles = if (bean.hasEmbeddedProfiles()) {
-                    bean.decodeEmbeddedProfiles()
-                } else {
-                    when (bean.type) {
-                        ProxySetBean.TYPE_LIST -> SagerDatabase.proxyDao.getEntities(bean.proxies)
-                        ProxySetBean.TYPE_GROUP -> SagerDatabase.proxyDao.getByGroup(bean.groupId)
-                        else -> emptyList()
-                    }
-                }
-                profiles.any { it.id != id && it.containsMasterDnsVPN() }
-            }
-
-            else -> false
-        }
-    }
-
-    fun startsWithByeDPI(): Boolean {
-        if (isByeDPI()) return true
-        val bean = requireBean()
-        if (bean !is ChainBean) return false
-        val firstProfileId = bean.proxies.firstOrNull() ?: return false
-        val firstProfile = SagerDatabase.proxyDao.getById(firstProfileId) ?: return false
-        return firstProfile.startsWithByeDPI()
-    }
+    fun startsWithByeDPI(): Boolean =
+        ProfileChainResolver(AppData.profiles, false, null, null).startsWithByeDpi(this)
 
     fun singMux(): MultiplexOptions? {
         return when (type) {

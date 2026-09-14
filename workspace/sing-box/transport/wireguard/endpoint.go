@@ -12,13 +12,13 @@ import (
 	"strings"
 
 	"github.com/sagernet/sing-box/common/dialer"
+	"github.com/sagernet/sing-box/common/pausecontrol"
 	"github.com/sagernet/sing-box/service/powerreport"
 	"github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	F "github.com/sagernet/sing/common/format"
 	M "github.com/sagernet/sing/common/metadata"
-	"github.com/sagernet/sing/common/x/list"
 	"github.com/sagernet/sing/service"
 	"github.com/sagernet/sing/service/pause"
 	"github.com/sagernet/wireguard-go/conn"
@@ -37,8 +37,7 @@ type Endpoint struct {
 	device         *device.Device
 	allowedIPs     *device.AllowedIPs
 	egressPool     *tun.UDPEgressPool
-	pause          pause.Manager
-	pauseCallback  *list.Element[pause.Callback]
+	lifecycle      *pausecontrol.Controller
 }
 
 func NewEndpoint(options EndpointOptions) (*Endpoint, error) {
@@ -245,10 +244,9 @@ func (e *Endpoint) Start(postStart bool) error {
 		})
 	}
 	e.device = wgDevice
-	e.pause = service.FromContext[pause.Manager](e.options.Context)
-	if e.pause != nil {
-		e.pauseCallback = e.pause.RegisterCallback(e.onPauseUpdated)
-	}
+	e.lifecycle = pausecontrol.New(service.FromContext[pause.Manager](e.options.Context), wgDevice, nil, func(err error) {
+		e.options.Logger.Error(E.Cause(err, "reconcile WireGuard transport"))
+	})
 	e.allowedIPs = wgDevice.AllowedIPs()
 	return nil
 }
@@ -268,17 +266,17 @@ func (e *Endpoint) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 }
 
 func (e *Endpoint) Close() error {
-	if e.pauseCallback != nil {
-		e.pause.UnregisterCallback(e.pauseCallback)
-		e.pauseCallback = nil
+	if e.lifecycle != nil {
+		e.lifecycle.Close()
 	}
 	if e.egressPool != nil {
 		e.egressPool.Close()
 		e.egressPool = nil
 	}
 	if e.device != nil {
-		e.device.Down()
-		e.device.Close()
+		if e.lifecycle == nil {
+			e.device.Close()
+		}
 		e.device = nil
 		return nil
 	}
@@ -286,14 +284,9 @@ func (e *Endpoint) Close() error {
 }
 
 func (e *Endpoint) InterfaceUpdated() {
-	if e.device == nil {
-		return
+	if e.lifecycle != nil {
+		e.lifecycle.Rebind()
 	}
-	if err := e.device.BindUpdate(); err != nil {
-		e.options.Logger.Error(E.Cause(err, "update WireGuard bind after interface change"))
-		return
-	}
-	e.device.SendKeepalivesToPeersWithCurrentKeypair()
 }
 
 func (e *Endpoint) Lookup(address netip.Addr) *device.Peer {
@@ -304,10 +297,10 @@ func (e *Endpoint) Lookup(address netip.Addr) *device.Peer {
 }
 
 func (e *Endpoint) BindUpdate() error {
-	if e.device == nil {
-		return nil
+	if e.lifecycle != nil {
+		e.lifecycle.Rebind()
 	}
-	return e.device.BindUpdate()
+	return nil
 }
 
 func wireGuardDeviceContext(ctx context.Context) context.Context {
@@ -315,15 +308,6 @@ func wireGuardDeviceContext(ctx context.Context) context.Context {
 	// The endpoint owns pause transitions. Letting wireguard-go observe the same
 	// manager can deadlock DevicePause when Down waits for a paused timer callback.
 	return service.ContextWith[pause.Manager](deviceContext, nil)
-}
-
-func (e *Endpoint) onPauseUpdated(event int) {
-	switch event {
-	case pause.EventDevicePaused, pause.EventNetworkPause:
-		e.device.Down()
-	case pause.EventDeviceWake, pause.EventNetworkWake:
-		e.device.Up()
-	}
 }
 
 type peerConfig struct {

@@ -1,5 +1,6 @@
 package io.nekohasekai.sagernet.group
 
+import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.fmt.AbstractBean
 import io.nekohasekai.sagernet.fmt.openconnect.parseOpenConnectConfig
 import io.nekohasekai.sagernet.fmt.openconnect.parseOpenConnectServerList
@@ -35,7 +36,12 @@ internal object DefaultSubscriptionContentParser : SubscriptionContentParser {
             return listOf(parseOpenConnectConfig(text, importedName))
         }
 
-        XrayParser.parse(text)?.takeIf { it.isNotEmpty() }?.let { return it }
+        XrayParser.parse(text) {
+            XrayParser.BalancerOptions(
+                convert = DataStore.subscriptionXrayBalancers != 1,
+                fallbackTestURL = DataStore.connectionTestURL,
+            )
+        }?.takeIf { it.isNotEmpty() }?.let { return it }
         ClashParser.parse(text)?.takeIf { it.isNotEmpty() }?.let { return it }
 
         if (WireGuardConfParser.looksLikeWireGuardConf(text)) {

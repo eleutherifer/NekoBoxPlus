@@ -494,6 +494,7 @@
     <string name="config_editor_format">Format JSON</string>
     <string name="circular_reference">Circular reference</string>
     <string name="circular_reference_sum">The route cannot contain itself.</string>
+    <string name="profile_reference_cycle">Circular profile reference: %1$s</string>
     <string name="invalid_profile">Invalid profile</string>
     <string name="action_byedpi" translatable="false">ByeDPI</string>
     <string name="action_direct">Direct</string>
@@ -1255,7 +1256,7 @@
     <string name="network_change_reconnect">Reconnect when network changes</string>
     <string name="network_change_reset_connections">Reset outbound connections when network changes</string>
     <string name="wake_reconnect">Reconnect when device wake from sleep</string>
-    <string name="wake_reset_connections">Reset outbound connections when device wake from sleep</string>
+    <string name="wake_reset_connections">Reset upstream connections after sleep</string>
     <string name="backup_in_progress">Backup is already in progress</string>
     <string name="backup_creating">Creating backup…</string>
     <string name="restore_in_progress">Restore is already in progress</string>
@@ -2014,4 +2015,7 @@
     <string name="profile_country">Profile country: %1$s</string>
     <string name="ruleset">RuleSet (.srs)</string>
     <string name="change_icon_android_tv_summary">Does not work on Android TV</string>
+    <string name="subscription_xray_balancers">Subscription Xray Balancers</string>
+    <string name="subscription_xray_balancers_convert">Convert to the Proxy Set</string>
+    <string name="subscription_xray_balancers_split">Split into separate profiles</string>
 </resources>

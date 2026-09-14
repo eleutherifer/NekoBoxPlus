@@ -71,7 +71,7 @@ class XrayParserTest {
 
     @Test
     fun convertsAllSupportedBalancerStrategiesIncludingDefaultRandom() {
-        listOf(null, "random", "round-robin", "least-load", "leastPing").forEach { strategy ->
+        listOf(null, "random", "round-robin", "least-load", "leastPing", "unknown").forEach { strategy ->
             val strategyJson = strategy?.let { "\"strategy\":{\"type\":\"$it\"}," }.orEmpty()
             val parsed = XrayParser.parse(
                 """
@@ -125,7 +125,7 @@ class XrayParserTest {
     }
 
     @Test
-    fun keepsFlatProfilesForFallbackAndMixedUnsafeBalancerMembers() {
+    fun convertsOverlappingBalancersAndIgnoresMissingFallback() {
         val parsed = XrayParser.parse(
             """
             {"outbounds":[
@@ -141,12 +141,13 @@ class XrayParserTest {
         )!!
 
         assertEquals(3, parsed.size)
-        assertTrue(parsed.first() is ProxySetBean)
-        assertEquals(listOf("b.example", "c.example"), parsed.drop(1).map { it.serverAddress })
+        assertTrue(parsed.all { it is ProxySetBean })
+        assertEquals(listOf(listOf("a.example", "b.example"), listOf("b.example"), listOf("c.example")),
+            parsed.map { (it as ProxySetBean).decodeEmbeddedProfiles().map { member -> member.requireBean().serverAddress } })
     }
 
     @Test
-    fun conflictingObservatoriesLeaveUrlTestDefaults() {
+    fun prefersStandardObservatoryForDefaultStrategy() {
         val parsed = XrayParser.parse(
             """
             {"outbounds":[
@@ -158,8 +159,129 @@ class XrayParserTest {
             """.trimIndent(),
         )!!.single() as ProxySetBean
 
-        assertEquals("https://www.gstatic.com/generate_204", parsed.testURL)
-        assertEquals("3m", parsed.testInterval)
+        assertEquals("https://one.example/", parsed.testURL)
+        assertEquals("10s", parsed.testInterval)
+    }
+
+    private fun balancerConfig(strategy: String = "leastPing", extra: String = ""): String = """
+        {"outbounds":[
+          {"protocol":"socks","tag":"proxy-a","settings":{"address":"a.example","port":1080}},
+          {"protocol":"socks","tag":"proxy-b","settings":{"address":"b.example","port":1080}},
+          {"protocol":"socks","tag":"other","settings":{"address":"other.example","port":1080}}
+        ],"routing":{"balancers":[{"tag":"set","selector":["proxy-"],"strategy":{"type":"$strategy"}}]}$extra}
+    """.trimIndent()
+
+    @Test
+    fun splitModePreservesAllOutboundCardsWithoutDuplicatingSharedMembers() {
+        val config = JSONObject(balancerConfig())
+        val balancers = config.getJSONObject("routing").getJSONArray("balancers")
+        balancers.put(JSONObject(balancers.getJSONObject(0).toString()))
+        val parsed = XrayParser.parse(config.toString()) { XrayParser.BalancerOptions(convert = false) }!!
+        assertTrue(parsed.none { it is ProxySetBean })
+        assertEquals(listOf("a.example", "b.example", "other.example"), parsed.map { it.serverAddress })
+        assertEquals(listOf("¹ Xray Socks", "² Xray Socks", "³ Xray Socks"), parsed.map { it.name })
+    }
+
+    @Test
+    fun usesNekoBoxDefaultsAndConfiguredGroupTestUrlForEveryStrategy() {
+        listOf("random", "leastPing", "leastLoad", "roundRobin", "unknown").forEach { strategy ->
+            val parsed = XrayParser.parse(balancerConfig(strategy)) {
+                XrayParser.BalancerOptions(fallbackTestURL = "https://group.example/check")
+            }!!.first() as ProxySetBean
+            assertEquals("https://group.example/check", parsed.testURL)
+            assertEquals("3m", parsed.testInterval)
+            assertEquals("3m", parsed.testIdleTimeout)
+            assertEquals(50, parsed.testTolerance)
+            assertFalse(parsed.interruptExistConnections)
+        }
+    }
+
+    @Test
+    fun convertsUsableMembersDespiteInvalidMembersDuplicateTagsAndMalformedStrategy() {
+        val config = JSONObject(balancerConfig())
+        config.getJSONArray("outbounds")
+            .put(JSONObject("""{"protocol":"freedom","tag":"proxy-direct"}"""))
+            .put(JSONObject("""{"protocol":"socks","tag":"proxy-invalid","settings":{}}"""))
+            .put(JSONObject("""{"protocol":"socks","tag":"proxy-a","settings":{"address":"duplicate.example","port":1080}}"""))
+        val balancers = config.getJSONObject("routing").getJSONArray("balancers")
+        balancers.getJSONObject(0).remove("tag")
+        balancers.getJSONObject(0).put("strategy", "malformed").put("fallbackTag", "proxy-direct")
+        balancers.put(JSONObject("""{"tag":"duplicate","selector":["proxy-b"]}"""))
+        balancers.put(JSONObject("""{"tag":"duplicate","selector":["proxy-b"]}"""))
+        balancers.put(JSONObject("""{"tag":"empty","selector":["missing"]}"""))
+        val parsed = XrayParser.parse(config.toString())!!
+        assertEquals(4, parsed.size)
+        val first = parsed.first() as ProxySetBean
+        assertEquals("Xray balancer 1", first.name)
+        assertEquals(listOf("a.example", "duplicate.example", "b.example"),
+            first.decodeEmbeddedProfiles().map { it.requireBean().serverAddress })
+        assertEquals("other.example", parsed.last().serverAddress)
+    }
+
+    @Test
+    fun emptySelectorsDoNotInventMembersButUsableFallbackCanBecomeSingleMemberSet() {
+        val config = JSONObject(balancerConfig())
+        val balancer = config.getJSONObject("routing").getJSONArray("balancers").getJSONObject(0)
+        balancer.remove("selector")
+        assertTrue(XrayParser.parse(config.toString())!!.none { it is ProxySetBean })
+        balancer.put("fallbackTag", "proxy-b")
+        val parsed = XrayParser.parse(config.toString())!!
+        assertEquals(3, parsed.size)
+        assertEquals("b.example", (parsed.first() as ProxySetBean).decodeEmbeddedProfiles().single().requireBean().serverAddress)
+    }
+
+    @Test
+    fun probeFieldsUseStrategyPrecedenceIndependentlyAndKeepIdleTimeoutValid() {
+        val extra = """,
+          "observatory":{"subjectSelector":["proxy-"],"probeURL":"https://standard.example/","probeInterval":"10s"},
+          "burstObservatory":{"subjectSelector":["proxy-"],"pingConfig":{"destination":"invalid","interval":"5m"}}
+        """.trimIndent()
+        val load = XrayParser.parse(balancerConfig("leastLoad", extra))!!.first() as ProxySetBean
+        assertEquals("https://standard.example/", load.testURL)
+        assertEquals("5m", load.testInterval)
+        assertEquals("5m", load.testIdleTimeout)
+        assertEquals(50, load.testTolerance)
+        val ping = XrayParser.parse(balancerConfig("leastPing", extra))!!.first() as ProxySetBean
+        assertEquals("10s", ping.testInterval)
+        assertEquals("3m", ping.testIdleTimeout)
+        assertEquals(50, ping.testTolerance)
+    }
+
+    @Test
+    fun invalidOrUnrepresentableProbeIntervalsUseAppDefaults() {
+        listOf("0s", "-1s", "invalid", "999999999999999999999h", "0.1ns").forEach { interval ->
+            val extra = """, "observatory":{"subjectSelector":["proxy-"],"probeURL":"invalid","probeInterval":"$interval"}"""
+            val parsed = XrayParser.parse(balancerConfig(extra = extra)) {
+                XrayParser.BalancerOptions(fallbackTestURL = "https://group.example/")
+            }!!.first() as ProxySetBean
+            assertEquals("https://group.example/", parsed.testURL)
+            assertEquals("3m", parsed.testInterval)
+            assertEquals("3m", parsed.testIdleTimeout)
+        }
+    }
+
+    @Test
+    fun acceptsCompoundProbeDurationsAndIgnoresUnrelatedObservatory() {
+        val extra = """,
+          "observatory":{"subjectSelector":["unrelated"],"probeURL":"https://unrelated.example/","probeInterval":"1s"},
+          "burstObservatory":{"subjectSelector":["proxy-"],"pingConfig":{"destination":"https://burst.example/","interval":"3m0.5s"}}
+        """.trimIndent()
+        val parsed = XrayParser.parse(balancerConfig(extra = extra))!!.first() as ProxySetBean
+        assertEquals("https://burst.example/", parsed.testURL)
+        assertEquals("3m0.5s", parsed.testInterval)
+        assertEquals("3m0.5s", parsed.testIdleTimeout)
+    }
+
+    @Test
+    fun splitModeAppliesToEveryConfigInArrayAndNonXrayDoesNotReadOptions() {
+        val parsed = XrayParser.parse("[${balancerConfig()},${balancerConfig()}]") {
+            XrayParser.BalancerOptions(convert = false)
+        }!!
+        assertEquals(6, parsed.size)
+        assertTrue(parsed.none { it is ProxySetBean })
+        assertNull(XrayParser.parse("""{"outbounds":[{"type":"socks"}]}""") {
+            error("Non-Xray imports must not resolve Xray options")
+        })
     }
 
     @Test

@@ -534,19 +534,22 @@ func (b *BoxInstance) resetConnectionsLocked() error {
 			trafficManager.CloseAllConnections()
 		}
 	}
-	b.Box.Router().ResetNetwork()
+	b.Box.Network().ResetNetwork(b.ctx)
 	log.Println("Reset network done")
 	return nil
 }
 
 func (b *BoxInstance) Sleep() {
+	b.access.Lock()
+	defer b.access.Unlock()
 	if b.pauseManager != nil {
 		b.pauseManager.DevicePause()
 	}
-	// _ = b.Box.Router().ResetNetwork()
 }
 
 func (b *BoxInstance) Wake() {
+	b.access.Lock()
+	defer b.access.Unlock()
 	if b.pauseManager != nil {
 		b.pauseManager.DeviceWake()
 	}

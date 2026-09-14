@@ -15,6 +15,7 @@ type networkTun struct {
 	tun.Device
 	conn        *netstack.Net
 	connections *interrupt.Group
+	events      chan tun.Event
 }
 
 func newNetworkTun(address []netip.Prefix, mtu uint32) (tunAdapter, error) {
@@ -23,17 +24,22 @@ func newNetworkTun(address []netip.Prefix, mtu uint32) (tunAdapter, error) {
 		localAddresses = append(localAddresses, prefix.Addr())
 	}
 
-	tun, conn, err := netstack.CreateNetTUN(localAddresses, []netip.Addr{}, int(mtu))
+	tunDevice, conn, err := netstack.CreateNetTUN(localAddresses, []netip.Addr{}, int(mtu))
 	if err != nil {
 		return nil, err
 	}
 
 	return &networkTun{
-		Device:      tun,
+		Device:      tunDevice,
 		conn:        conn,
 		connections: interrupt.NewGroup(),
+		events:      make(chan tun.Event),
 	}, nil
 }
+
+// Hide the netstack constructor's synthetic EventUp. Only the lifecycle
+// controller may bring the device up, particularly when starting in Doze.
+func (t *networkTun) Events() <-chan tun.Event { return t.events }
 
 func (t *networkTun) Start() error {
 	return nil
@@ -60,6 +66,7 @@ func (t *networkTun) ResetConnections() {
 }
 
 func (t *networkTun) Close() error {
+	close(t.events)
 	t.ResetConnections()
 	return t.Device.Close()
 }

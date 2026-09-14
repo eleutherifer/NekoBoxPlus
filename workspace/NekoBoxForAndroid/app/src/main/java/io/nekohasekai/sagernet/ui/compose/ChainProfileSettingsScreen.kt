@@ -2,6 +2,7 @@ package io.nekohasekai.sagernet.ui.compose
 
 import android.text.format.Formatter
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -22,7 +23,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -133,7 +133,7 @@ private fun ChainProfileRow(
                         } else {
                             Modifier.background(
                                 color = MaterialTheme.colorScheme.errorContainer,
-                                shape = RectangleShape,
+                                shape = RoundedCornerShape(12.dp),
                             )
                         },
                     )

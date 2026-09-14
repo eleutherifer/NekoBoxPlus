@@ -2,6 +2,7 @@ package io.nekohasekai.sagernet.ui.compose
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -24,7 +25,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -217,7 +217,7 @@ private fun ProxySetProfileRow(
         enableDismissFromEndToStart = !embedded,
         backgroundContent = {
             Box(Modifier.fillMaxSize().padding(2.dp).background(
-                MaterialTheme.colorScheme.errorContainer, RectangleShape,
+                MaterialTheme.colorScheme.errorContainer, RoundedCornerShape(12.dp),
             ).padding(horizontal = 24.dp), contentAlignment = Alignment.CenterEnd) {
                 Icon(painterResource(R.drawable.ic_action_delete), stringResource(R.string.delete),
                     tint = MaterialTheme.colorScheme.onErrorContainer)
