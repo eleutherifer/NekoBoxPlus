@@ -10,18 +10,30 @@ public struct GroupListView: View {
         VStack {
             if viewModel.isLoading {
                 Text("Loading...")
-            } else if !viewModel.groups.isEmpty {
-                ScrollView {
-                    VStack {
-                        ForEach($viewModel.groups, id: \.tag) { $group in
-                            GroupView($group)
-                        }
-                    }.padding()
-                }
             } else {
-                Text("Empty groups")
+                ScrollView {
+                    LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
+                        ForEach(viewModel.groups, id: \.tag) { group in
+                            if group.isExpand {
+                                Section {
+                                    GroupContentView(group: group)
+                                        .padding(.bottom, 14)
+                                } header: {
+                                    GroupHeaderView(group: group)
+                                }
+                            } else {
+                                GroupHeaderView(group: group)
+                                GroupContentView(group: group)
+                                    .padding(.bottom, 14)
+                            }
+                        }
+                    }.padding(16)
+                }
             }
         }
+        #if os(iOS)
+        .background(Color(uiColor: .systemGroupedBackground))
+        #endif
         .environmentObject(viewModel)
         .alert($viewModel.alert)
         .onAppear {

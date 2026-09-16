@@ -15,11 +15,18 @@ sealed class UiEvent {
 
     data class EditProfile(val profileId: Long) : UiEvent()
 
+    data class Navigate(val route: String) : UiEvent()
+
     object RequestStartService : UiEvent()
 
     object RequestReconnectService : UiEvent()
 
-    object RestartToTakeEffect : UiEvent()
+    data class ApplyServiceChange(val mode: Mode) : UiEvent() {
+        enum class Mode {
+            Reload,
+            Restart,
+        }
+    }
 }
 
 /**

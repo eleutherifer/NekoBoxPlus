@@ -22,10 +22,6 @@ import Foundation
 public enum SharedPreferences {
     public static let selectedProfileID = Preference<Int64>("selected_profile_id", defaultValue: -1)
 
-    #if !os(macOS)
-        public static let ignoreMemoryLimit = Preference<Bool>("ignore_memory_limit", defaultValue: false)
-    #endif
-
     #if os(iOS)
         private static let excludeLocalNetworksByDefault = true
     #elseif os(macOS)
@@ -43,7 +39,7 @@ public enum SharedPreferences {
     #endif
 
     public static func resetPacketTunnel() async {
-        #if os(macOS)
+        #if !os(tvOS)
             let names = [
                 includeAllNetworks.name,
                 excludeAPNs.name,
@@ -52,29 +48,26 @@ public enum SharedPreferences {
                 enforceRoutes.name,
                 excludeDeviceCommunication.name,
             ]
-        #elseif os(tvOS)
-            let names = [ignoreMemoryLimit.name]
-        #else
-            let names = [
-                ignoreMemoryLimit.name,
-                includeAllNetworks.name,
-                excludeAPNs.name,
-                excludeLocalNetworks.name,
-                excludeCellularServices.name,
-                enforceRoutes.name,
-                excludeDeviceCommunication.name,
-            ]
+            try? await batchDelete(names)
         #endif
-        try? await batchDelete(names)
     }
 
     public static let maxLogLines = Preference<Int>("max_log_lines", defaultValue: 300)
+
+    public static let powerReportEnabled = Preference<Bool>("power_report_enabled", defaultValue: false)
+
+    #if os(macOS)
+        public static let oomKillerEnabled = Preference<Bool>("oom_killer_enabled", defaultValue: false)
+        public static let oomMemoryLimitMB = Preference<Int>("oom_memory_limit_mb", defaultValue: 50)
+        public static let oomKillerKillConnections = Preference<Bool>("oom_killer_kill_connections", defaultValue: false)
+    #endif
 
     #if os(macOS)
         public static let showMenuBarExtra = Preference<Bool>("show_menu_bar_extra", defaultValue: true)
         public static let menuBarExtraInBackground = Preference<Bool>("menu_bar_extra_in_background", defaultValue: false)
         public static let menuBarExtraSpeedMode = Preference<Int>("menu_bar_extra_speed_mode_1", defaultValue: MenuBarExtraSpeedMode.enabled.rawValue)
         public static let startedByUser = Preference<Bool>("started_by_user", defaultValue: false)
+        public static let rootHelperPromptPending = Preference<Bool>("root_helper_prompt_pending", defaultValue: false)
 
         public static func resetMacOS() async {
             try? await batchDelete([
@@ -111,6 +104,10 @@ public enum SharedPreferences {
     public static let connectionStateFilter = Preference<Int>("connection_state_filter", defaultValue: 0)
     public static let connectionSort = Preference<Int>("connection_sort", defaultValue: 0)
 
+    // Remote Control
+
+    public static let activeRemoteServerID = Preference<Int64>("active_remote_server_id", defaultValue: 0)
+
     // On Demand Rules
 
     public static let alwaysOn = Preference<Bool>("always_on", defaultValue: false)
@@ -127,6 +124,7 @@ public enum SharedPreferences {
         public static let checkUpdateEnabled = Preference<Bool>("check_update_enabled", defaultValue: false)
         public static let updateCheckPrompted = Preference<Bool>("update_check_prompted", defaultValue: false)
         public static let updateTrack = Preference<String>("update_track", defaultValue: "")
+        public static let githubToken = Preference<String>("github_token", defaultValue: "")
         public static let cachedUpdateInfo = Preference<String>("cached_update_info", defaultValue: "")
         public static let lastShownUpdateVersion = Preference<String>("last_shown_update_version", defaultValue: "")
     #endif
@@ -134,6 +132,31 @@ public enum SharedPreferences {
     // Core
 
     public static let disableDeprecatedWarnings = Preference<Bool>("disable_deprecated_warnings", defaultValue: false)
+
+    // Tools
+
+    public static let nqConfigURL = Preference<String>("nq_config_url", defaultValue: "")
+    public static let nqSerial = Preference<Bool>("nq_serial", defaultValue: false)
+    public static let nqHttp3 = Preference<Bool>("nq_http3", defaultValue: false)
+    public static let nqMaxRuntime = Preference<Int>("nq_max_runtime", defaultValue: 30)
+    public static let stunServer = Preference<String>("stun_server", defaultValue: "")
+    public static let tailscaleSSHRememberedUsernames = Preference<[String: String]>("tailscale_ssh_remembered_usernames", defaultValue: [:])
+    public static let tailscaleSSHRememberedTerminalTypes = Preference<[String: String]>("tailscale_ssh_remembered_terminal_types", defaultValue: [:])
+    public static let tailscaleSSHQuickConnectPeers = Preference<Set<String>>("tailscale_ssh_quick_connect_peers", defaultValue: [])
+    #if os(macOS)
+        public static let tailscaleSSHForwardAgent = Preference<Bool>("tailscale_ssh_forward_agent", defaultValue: false)
+    #endif
+    public static let tailscaleSSHGhosttyLightTheme = Preference<String>("tailscale_ssh_ghostty_light_theme", defaultValue: "Alabaster")
+    public static let tailscaleSSHGhosttyDarkTheme = Preference<String>("tailscale_ssh_ghostty_dark_theme", defaultValue: "Afterglow")
+    public static let tailscaleSSHGhosttyLightConfig = Preference<String>("tailscale_ssh_ghostty_light_config", defaultValue: "")
+    public static let tailscaleSSHGhosttyDarkConfig = Preference<String>("tailscale_ssh_ghostty_dark_config", defaultValue: "")
+    public static let tailscaleSSHTerminalFontFollowTheme = Preference<Bool>("tailscale_ssh_terminal_font_follow_theme", defaultValue: true)
+    public static let tailscaleSSHTerminalFontFamily = Preference<String>("tailscale_ssh_terminal_font_family", defaultValue: "")
+    #if os(macOS)
+        public static let tailscaleSSHTerminalFontSize = Preference<Double>("tailscale_ssh_terminal_font_size", defaultValue: 13)
+    #else
+        public static let tailscaleSSHTerminalFontSize = Preference<Double>("tailscale_ssh_terminal_font_size", defaultValue: 10)
+    #endif
 
     // Dashboard
 

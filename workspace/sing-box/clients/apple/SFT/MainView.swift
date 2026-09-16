@@ -28,7 +28,17 @@ struct MainView: View {
                         .focusSection()
                 }
                 .tag(page)
-                .tabItem { page.label }
+                .tabItem {
+                    if page == .tools, environments.totalUnreadReportCount > 0 {
+                        Label {
+                            Text(verbatim: "\(page.title) (\(environments.totalUnreadReportCount))")
+                        } icon: {
+                            Image(systemName: "terminal.fill")
+                        }
+                    } else {
+                        page.label
+                    }
+                }
             }
         }
         .onAppear {

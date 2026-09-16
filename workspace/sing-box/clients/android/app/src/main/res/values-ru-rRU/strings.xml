@@ -23,6 +23,8 @@
     <string name="action">Действие</string>
     <string name="action_start">Начать</string>
     <string name="action_deselect">Отменить выбор</string>
+    <string name="action_reload">Перезагрузить</string>
+    <string name="action_restart">Перезапустить</string>
     <string name="expand">Развернуть</string>
     <string name="collapse">Свернуть</string>
     <string name="expand_all">Развернуть все</string>
@@ -82,7 +84,6 @@
     <string name="reset_order">Сбросить порядок</string>
 
     <!-- Connections -->
-    <string name="empty_connections">Нет подключений</string>
     <string name="search_connections">Поиск подключений...</string>
     <string name="close_connections_confirm">Закрыть все соединения?</string>
     <string name="connection_state_all">Все</string>
@@ -200,6 +201,8 @@
     <string name="working_directory">Рабочая директория</string>
     <string name="beta_settings">Бета-настройки</string>
     <string name="disable_deprecated_warnings">Отключить предупреждения об устаревании</string>
+    <string name="cache_size">Размер кэша</string>
+    <string name="clear_cache">Очистить кэш</string>
     <string name="notification_settings">Уведомления</string>
     <string name="enable_notification">Включить уведомления</string>
     <string name="dynamic_notification">Отображать скорость в реальном времени в уведомлении</string>
@@ -279,6 +282,24 @@
     <string name="new_version_available">Доступна новая версия: %s</string>
     <string name="auto_update">Автообновление</string>
     <string name="auto_update_description">Автоматически загружать и устанавливать обновления в фоне</string>
+    <string name="update_source">Источник обновлений</string>
+    <string name="update_source_github">GitHub</string>
+    <string name="update_source_fdroid">F-Droid</string>
+    <string name="github_token">Токен GitHub</string>
+    <string name="github_token_description">Получите более высокие лимиты запросов GitHub API</string>
+    <string name="fdroid_mirror">Зеркало F-Droid</string>
+    <string name="fdroid_mirror_test_all">Автовыбор по задержке</string>
+    <string name="fdroid_mirror_testing">Тестирование…</string>
+    <string name="fdroid_mirror_latency">%d мс</string>
+    <string name="fdroid_mirror_failed">Ошибка</string>
+    <string name="fdroid_mirror_untested">—</string>
+    <string name="fdroid_mirror_add">Добавить зеркало</string>
+    <string name="fdroid_mirror_name_hint">Имя</string>
+    <string name="fdroid_mirror_url_hint">URL</string>
+    <string name="fdroid_mirror_custom">Пользовательское</string>
+    <string name="fdroid_mirror_invalid_url">Недопустимый URL</string>
+    <string name="fdroid_mirror_add_action">Добавить</string>
+    <string name="fdroid_mirror_delete">Удалить</string>
 
     <!-- Silent Install -->
     <string name="silent_install">Тихая установка</string>
@@ -411,7 +432,167 @@
     <string name="content_description_pause_logs">Приостановить лог</string>
     <string name="content_description_collapse_search">Свернуть поиск</string>
     <string name="content_description_search_logs">Поиск в логе</string>
+    <string name="content_description_more_options">Дополнительные параметры</string>
     
+    <!-- Tools -->
+    <string name="title_tools">Инструменты</string>
+    <string name="title_network">Сеть</string>
+    <string name="network_quality">Качество сети</string>
+    <string name="network_quality_url">URL</string>
+    <string name="network_quality_serial">Последовательно</string>
+    <string name="network_quality_http3">HTTP/3</string>
+    <string name="network_quality_max_runtime">Макс. время</string>
+    <string name="network_quality_max_runtime_30s">30s</string>
+    <string name="network_quality_max_runtime_60s">60s</string>
+    <string name="network_quality_start">Начать тест</string>
+    <string name="network_quality_cancel">Остановить тест</string>
+    <string name="network_quality_idle_latency">Задержка в простое</string>
+    <string name="network_quality_download">Загрузка</string>
+    <string name="network_quality_upload">Отправка</string>
+    <string name="network_quality_download_rpm">Загрузка RPM</string>
+    <string name="network_quality_upload_rpm">Отправка RPM</string>
+    <string name="network_quality_confidence_high">Высокая уверенность</string>
+    <string name="network_quality_confidence_medium">Средняя уверенность</string>
+    <string name="network_quality_confidence_low">Низкая уверенность</string>
+    <string name="network_quality_metered_title">Лимитное подключение</string>
+    <string name="network_quality_metered_message">Вы используете лимитное подключение. Этот тест потребует значительного объёма трафика.</string>
+    <string name="network_quality_metered_continue">Продолжить</string>
+    <string name="tool_configuration">Конфигурация</string>
+    <string name="tool_results">Результаты</string>
+    <string name="tool_outbound">Исходящий</string>
+    <string name="tool_default_outbound">По умолчанию</string>
+
+    <!-- STUN Test -->
+    <!-- Tailscale -->
+    <string name="tailscale_endpoints">Точки подключения</string>
+    <string name="title_services">Службы</string>
+
+    <string name="tailscale_status">Статус</string>
+    <string name="tailscale_state">Состояние</string>
+    <string name="tailscale_network">Сеть</string>
+    <string name="tailscale_hostname">Имя хоста</string>
+    <string name="tailscale_open_auth_url">Открыть URL авторизации</string>
+    <string name="tailscale_open_auth_url_qr_code">Показать QR-код авторизации</string>
+    <string name="tailscale_this_device">Это устройство</string>
+    <string name="tailscale_logout">Выйти</string>
+    <string name="tailscale_connected">Подключено</string>
+    <string name="tailscale_not_connected">Не подключено</string>
+    <string name="tailscale_addresses">Адреса Tailscale</string>
+    <string name="tailscale_details">Подробности</string>
+    <string name="tailscale_key_expiry">Срок действия ключа</string>
+    <string name="tailscale_exit_node">Выходной узел</string>
+    <string name="tailscale_active">Активен</string>
+    <string name="tailscale_ping">Пинг</string>
+    <string name="tailscale_ping_start">Начать</string>
+    <string name="tailscale_ping_stop">Остановить</string>
+    <string name="tailscale_ping_direct">Прямое соединение</string>
+    <string name="tailscale_ping_derp">Соединение через DERP</string>
+    <string name="tailscale_ping_peer_relay">Соединение через одноранговый ретранслятор</string>
+    <string name="tailscale_ping_endpoint">Конечная точка</string>
+    <string name="tailscale_ping_derp_region">Регион DERP</string>
+    <string name="tailscale_ping_peer_relay_address">Одноранговый ретранслятор</string>
+    <string name="tailscale_ping_connecting">Подключение…</string>
+    <string name="tailscale_ping_no_data">Нет данных</string>
+    <string name="tailscale_shared_in">Поделено</string>
+    <string name="tailscale_expired">Истёк</string>
+    <string name="tailscale_expires_relative">Истекает %1$s</string>
+    <string name="tailscale_key_expiry_disabled">Срок действия ключа отключён</string>
+    <string name="tailscale_last_seen">Был(а) в сети</string>
+    <string name="tailscale_available">Доступно</string>
+    <string name="tailscale_yes">Да</string>
+
+    <!-- Tailscale SSH -->
+    <string name="tailscale_ssh_connect">Подключение по SSH</string>
+    <string name="tailscale_ssh_options">Параметры SSH</string>
+    <string name="tailscale_ssh_username">Имя пользователя</string>
+    <string name="tailscale_ssh_terminal_type">Тип терминала</string>
+    <string name="tailscale_ssh_remember_options">Запомнить параметры SSH</string>
+    <string name="tailscale_ssh_quick_connect">Быстрое подключение</string>
+    <string name="tailscale_ssh_quick_connect_description">Если включено, вы можете быстро подключиться к этому узлу через контекстное меню (долгое нажатие) записи Tailscale в инструментах и записей узлов в списке узлов.\n\nЭтот узел также появится в меню «Новая сессия» при подключении к другим узлам по SSH.</string>
+    <string name="tailscale_ssh_terminal_hint">Вы можете настроить внешний вид терминала в разделе Параметры → Конфигурация Ghostty.</string>
+    <string name="tailscale_ssh_connect_button">Подключение</string>
+    <string name="tailscale_ssh_connecting">Подключение…</string>
+    <string name="tailscale_ssh_no_sessions">Нет активных сессий</string>
+    <string name="terminal_session_ended">Сеанс завершён</string>
+    <string name="terminal_press_any_key">нажмите любую клавишу</string>
+    <string name="tailscale_ssh_new_session">Новая сессия</string>
+
+    <!-- Terminal Configuration -->
+    <string name="tailscale_terminal_config">Конфигурация Ghostty</string>
+    <string name="tailscale_terminal_light_theme">Светлая тема</string>
+    <string name="tailscale_terminal_dark_theme">Тёмная тема</string>
+    <string name="tailscale_terminal_font_config">Шрифт</string>
+    <string name="tailscale_terminal_font">Семейство шрифтов</string>
+    <string name="tailscale_terminal_font_size">Размер шрифта</string>
+    <string name="tailscale_terminal_font_system">Системные шрифты</string>
+    <string name="tailscale_terminal_font_imported">Импортированные шрифты</string>
+    <string name="tailscale_terminal_import_font">Импорт из файла</string>
+    <string name="tailscale_terminal_manage_fonts">Управление импортированными шрифтами</string>
+    <string name="tailscale_terminal_manage_fonts_done">Готово</string>
+    <string name="tailscale_terminal_search_themes">Поиск тем</string>
+    <string name="tailscale_terminal_light_config">Светлая конфигурация</string>
+    <string name="tailscale_terminal_dark_config">Тёмная конфигурация</string>
+    <string name="tailscale_terminal_theme">Тема</string>
+    <string name="tailscale_terminal_custom_config">Пользовательская конфигурация</string>
+    <string name="tailscale_terminal_edit_custom_config">Изменить пользовательскую конфигурацию</string>
+    <string name="tailscale_terminal_light_custom_config">Светлая пользовательская конфигурация</string>
+    <string name="tailscale_terminal_dark_custom_config">Тёмная пользовательская конфигурация</string>
+    <string name="tailscale_terminal_font_follow_theme">Следовать теме</string>
+    <string name="tailscale_terminal_import_config">Импорт из файла</string>
+
+    <string name="stun_test">STUN-тест</string>
+    <string name="stun_server">Сервер</string>
+    <string name="stun_start">Начать тест</string>
+    <string name="stun_cancel">Остановить тест</string>
+    <string name="stun_external_address">Внешний адрес</string>
+    <string name="stun_latency">Задержка</string>
+    <string name="stun_nat_mapping">NAT-отображение</string>
+    <string name="stun_nat_filtering">NAT-фильтрация</string>
+    <string name="stun_nat_type_detection">Определение типа NAT</string>
+    <string name="stun_nat_not_supported">Не поддерживается сервером</string>
+
+    <!-- Shared Report -->
+    <string name="report_empty">Пусто</string>
+    <string name="report_section_reports">Отчёты</string>
+    <string name="report_section_files">Файлы</string>
+    <string name="report_delete_all">Удалить все</string>
+    <string name="report_delete">Удалить</string>
+    <string name="report_share">Поделиться</string>
+    <string name="report_share_with_config">Поделиться с конфигурацией</string>
+    <string name="report_with_config">С конфигурацией</string>
+    <string name="report_with_log">С журналом</string>
+    <string name="report_share_privacy_warning">Журналы и файлы конфигурации могут содержать личные данные и не должны публиковаться.</string>
+    <string name="report_share_privacy_warning_config">Файлы конфигурации могут содержать личные данные и не должны публиковаться.</string>
+    <string name="report_with_age_encryption">Зашифровать с помощью age для Project S</string>
+    <string name="report_age_encryption_description">[age](https://github.com/filosottile/age) — современный и безопасный инструмент асимметричного шифрования. При включении ZIP-файл шифруется открытым ключом этого проекта, поэтому его можно публиковать в открытом доступе, например в GitHub issues.</string>
+    <string name="report_metadata">Метаданные</string>
+    <string name="report_configuration">Конфигурация</string>
+    <string name="report_origin_local">Локальный</string>
+    <string name="service_not_started">Служба не запущена</string>
+    <string name="service_reload_required">Для применения изменений необходимо перезагрузить сервис</string>
+    <string name="service_restart_required">Для применения изменений необходимо перезапустить сервис</string>
+
+    <!-- Crash Report -->
+    <string name="crash_report">Отчёт о сбое</string>
+    <string name="crash_report_go_log">Go Crash Log</string>
+    <string name="crash_report_jvm_log">JVM Crash Log</string>
+    <string name="crash_report_description">Вы получите отчёт при возникновении сбоя.</string>
+
+    <!-- OOM Report -->
+    <string name="oom_report">Отчёт о нехватке памяти</string>
+    <string name="oom_report_description">При включённом ограничении памяти вы получите отчёт, если память сервиса превысит лимит. Вы также можете вручную запросить сбор отчёта.</string>
+    <string name="oom_report_fetch">Получить отчёт о памяти</string>
+    <string name="oom_report_enable_memory_limit">Включить ограничение памяти</string>
+    <string name="oom_report_enable_memory_limit_description">Задайте мягкое ограничение памяти для сервиса. Сервис будет выполнять различные процессы, чтобы оставаться в пределах этого ограничения.</string>
+    <string name="oom_report_memory_limit">Ограничение памяти</string>
+    <string name="oom_report_kill_connections">Завершить соединения</string>
+    <string name="oom_report_kill_connections_description">Завершить все соединения для освобождения памяти при превышении лимита памяти сервиса.</string>
+
+    <!-- Power Report -->
+    <string name="power_report">Отчёт об энергопотреблении</string>
+    <string name="power_report_enable">Включить отчёт об энергопотреблении</string>
+    <string name="power_report_enable_description">Записывать статистику процессорного времени, пробуждений и трафика сервиса. Отчёт сохраняется для каждого запуска сервиса.</string>
+
     <!-- Xposed Module -->
     <string name="xposed_description">Привилегированное расширение для sing-box</string>
 
@@ -448,4 +629,49 @@
     <string name="privilege_module_restart_notification_title">Требуется перезагрузка</string>
     <string name="privilege_module_restart_notification_message">Модуль LSPosed обновлён. Перезагрузите устройство, чтобы применить изменения.</string>
     <string name="privilege_module_restart_channel">Модуль LSPosed</string>
+
+    <!-- Remote Control -->
+    <string name="remote_control">Удаленное управление</string>
+    <string name="remote_servers">Серверы</string>
+    <string name="remote_no_servers">Нет серверов</string>
+    <string name="remote_new_server">Новый сервер</string>
+    <string name="remote_edit_server">Изменить сервер</string>
+    <string name="remote_local_device">Локальное устройство</string>
+    <string name="remote_manage_servers">Управление серверами…</string>
+    <string name="remote_secret">Секрет</string>
+    <string name="remote_optional">Необязательно</string>
+    <string name="remote_connecting">Подключение…</string>
+    <string name="remote_disconnect">Отключить</string>
+    <string name="remote_invalid_url">Неверный URL сервера: %1$s, ожидается host:port, http://host:port или https://host:port</string>
+    <string name="remote_connect_failed">Не удалось подключиться к удаленному серверу %1$s</string>
+    <string name="remote_disconnected_from">Отключено от удаленного сервера %1$s</string>
+    <string name="remote_checking">Проверка…</string>
+    <string name="remote_available">Доступно</string>
+    <string name="remote_unavailable">Недоступно</string>
+    <string name="endpoint_globalprotect_sso_unsupported_android">Браузерная аутентификация GlobalProtect SAML не поддерживается на Android.</string>
+    <string name="endpoint_browser_cookie_missing">Аутентификация в браузере завершена, но необходимый VPN cookie не получен.</string>
+
+    <!-- Taildrop -->
+    <plurals name="taildrop_file_count">
+        <item quantity="one">%1$d файл</item>
+        <item quantity="few">%1$d файла</item>
+        <item quantity="many">%1$d файлов</item>
+        <item quantity="other">%1$d файла</item>
+    </plurals>
+    <string name="taildrop_send">Отправка</string>
+    <string name="taildrop_receive">Получение</string>
+    <string name="taildrop_files">Файлы</string>
+    <string name="taildrop_from">от %1$s</string>
+    <string name="taildrop_to">кому %1$s</string>
+    <string name="taildrop_save">Сохранить</string>
+    <string name="taildrop_share">Поделиться</string>
+    <string name="taildrop_delete">Удалить</string>
+    <string name="taildrop_drop_zone">Перетащите файлы сюда, чтобы отправить, или коснитесь, чтобы выбрать</string>
+    <string name="taildrop_done">Готово</string>
+    <string name="taildrop_no_targets">Нет устройств, способных принимать файлы</string>
+    <string name="taildrop_no_files_selected">Файлы не выбраны</string>
+    <string name="taildrop_connecting">Подключение…</string>
+    <string name="taildrop_dismiss">Закрыть</string>
+    <string name="taildrop_open_app">Открыть sing-box</string>
+    <string name="taildrop_notification_title">Отправка файлов</string>
 </resources>

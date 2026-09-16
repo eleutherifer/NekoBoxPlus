@@ -5,16 +5,25 @@ import Libbox
 import Library
 import UserNotifications
 
+@MainActor
 open class ApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+    public let applicationState = MacApplicationState()
+
     public func applicationDidFinishLaunching(_: Notification) {
+        LibboxPrepareCrashSignalHandlers()
+        NativeCrashReporter.installForCurrentProcess()
+        LibboxReinstallCrashSignalHandlers()
         NSLog("Here I stand")
-        let options = LibboxSetupOptions()
-        options.basePath = FilePath.sharedDirectory.relativePath
-        options.workingPath = FilePath.workingDirectory.relativePath
-        options.tempPath = FilePath.cacheDirectory.relativePath
-        var error: NSError?
-        LibboxSetup(options, &error)
-        LibboxSetLocale(Locale.current.identifier)
+        do {
+            try ServiceSetup.apply(crashReportSource: "Application")
+        } catch {
+            NSLog("setup service error: \(error.localizedDescription)")
+        }
+        do {
+            try ApplicationLocale.apply()
+        } catch {
+            NSLog("failed to set locale: \(error)")
+        }
         let notificationCenter = UNUserNotificationCenter.current()
         notificationCenter.setNotificationCategories([
             UNNotificationCategory(
@@ -43,6 +52,7 @@ open class ApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNotificat
             NSApp.windows.first?.close()
         }
         Task {
+            await applicationState.initialize()
             do {
                 try await ProfileUpdateTask.configure()
                 if launchedAsLogInItem {

@@ -1,0 +1,812 @@
+package io.nekohasekai.sfa.compose.screen.tools
+
+import android.net.Uri
+import android.text.format.DateUtils
+import androidx.activity.compose.LocalActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.UploadFile
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
+import androidx.compose.ui.draganddrop.mimeTypes
+import androidx.compose.ui.draganddrop.toAndroidDragEvent
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import io.nekohasekai.libbox.Libbox
+import io.nekohasekai.sfa.R
+import io.nekohasekai.sfa.compose.LineChart
+import io.nekohasekai.sfa.compose.base.GlobalEventBus
+import io.nekohasekai.sfa.compose.base.UiEvent
+import io.nekohasekai.sfa.compose.topbar.LocalScaffoldPadding
+import io.nekohasekai.sfa.compose.topbar.OverrideTopBar
+import io.nekohasekai.sfa.ktx.clipboardText
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@Composable
+fun TailscalePeerScreen(
+    navController: NavController,
+    viewModel: TailscaleStatusViewModel,
+    endpointTag: String,
+    peerId: String,
+) {
+    val state by viewModel.uiState.collectAsState()
+    val peer = viewModel.peer(endpointTag, peerId)
+    val endpoint = viewModel.endpoint(endpointTag)
+    val isSelf = endpoint?.selfPeer?.id == peerId
+    val pingViewModel: TailscalePingViewModel = viewModel()
+    val pingState by pingViewModel.uiState.collectAsState()
+
+    DisposableEffect(Unit) {
+        onDispose {
+            if (pingState.isRunning) {
+                pingViewModel.stopPing()
+            }
+        }
+    }
+
+    OverrideTopBar {
+        TopAppBar(
+            title = {
+                Column {
+                    Text(
+                        peer?.displayName ?: "",
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (peer?.online == true) Color(0xFF4CAF50) else Color.Gray,
+                                ),
+                        )
+                        Text(
+                            if (peer?.online == true) {
+                                stringResource(R.string.tailscale_connected)
+                            } else {
+                                stringResource(R.string.tailscale_not_connected)
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            },
+            navigationIcon = {
+                IconButton(onClick = { navController.navigateUp() }) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_description_back))
+                }
+            },
+        )
+    }
+
+    if (peer == null) {
+        LaunchedEffect(Unit) {
+            navController.navigateUp()
+        }
+        return
+    }
+
+    var copiedAddress by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+
+    fun sendFiles(uris: List<Uri>, releasePermissions: () -> Unit = {}) {
+        if (uris.isEmpty()) {
+            releasePermissions()
+            return
+        }
+        scope.launch {
+            try {
+                val files = try {
+                    withContext(Dispatchers.IO) { TaildropSendManager.openURIs(uris) }
+                } finally {
+                    releasePermissions()
+                }
+                TaildropSendManager.send(endpointTag, peer.stableID, peer.displayName, files)
+                navController.navigate("tools/tailscale/${Uri.encode(endpointTag)}/taildrop")
+            } catch (e: Exception) {
+                GlobalEventBus.emit(UiEvent.ErrorMessage(e.message ?: e.toString()))
+            }
+        }
+    }
+
+    val sendFilesLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments(),
+    ) { uris ->
+        sendFiles(uris)
+    }
+    val scaffoldPadding = LocalScaffoldPadding.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface)
+            .verticalScroll(rememberScrollState())
+            .padding(scaffoldPadding)
+            .padding(vertical = 8.dp),
+    ) {
+        // Network section (self peer only): network name + logout
+        val networkName = endpoint?.networkName
+        val showLogout = isSelf && endpoint?.backendState == "Running" && endpoint?.keyAuth == false
+        if (isSelf && (!networkName.isNullOrEmpty() || showLogout)) {
+            SectionHeader(stringResource(R.string.tailscale_network))
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                ),
+            ) {
+                Column {
+                    if (!networkName.isNullOrEmpty()) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            AddressRow(
+                                address = networkName,
+                                label = stringResource(R.string.tailscale_network),
+                                copied = copiedAddress,
+                                onCopy = { copiedAddress = it },
+                            )
+                        }
+                    }
+                    if (showLogout) {
+                        ListItem(
+                            headlineContent = {
+                                Text(
+                                    stringResource(R.string.tailscale_logout),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            },
+                            leadingContent = {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Logout,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
+                            },
+                            modifier = Modifier.clickable {
+                                viewModel.logout(endpointTag)
+                            },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        // Tailscale Addresses section
+        SectionHeader(stringResource(R.string.tailscale_addresses))
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+            ),
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                if (peer.dnsName.isNotEmpty()) {
+                    AddressRow(
+                        address = Libbox.formatFQDN(peer.dnsName),
+                        label = stringResource(R.string.tailscale_magic_dns),
+                        copied = copiedAddress,
+                        onCopy = { copiedAddress = it },
+                    )
+                }
+                if (peer.hostName.isNotEmpty()) {
+                    AddressRow(
+                        address = peer.hostName,
+                        label = stringResource(R.string.tailscale_hostname),
+                        copied = copiedAddress,
+                        onCopy = { copiedAddress = it },
+                    )
+                }
+                for (ip in peer.tailscaleIPs) {
+                    AddressRow(
+                        address = ip,
+                        label = if (ip.contains(":")) {
+                            stringResource(R.string.tailscale_ipv6)
+                        } else {
+                            stringResource(R.string.tailscale_ipv4)
+                        },
+                        copied = copiedAddress,
+                        onCopy = { copiedAddress = it },
+                    )
+                }
+            }
+        }
+
+        // Ping section (not for self peer)
+        if (!isSelf && peer.online && peer.tailscaleIPs.isNotEmpty()) {
+            val peerIP = peer.tailscaleIPs.first()
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 32.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.tailscale_ping),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Surface(
+                    onClick = {
+                        if (pingState.isRunning) {
+                            pingViewModel.stopPing()
+                        } else {
+                            pingViewModel.startPing(endpointTag, peerIP)
+                        }
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isSystemInDarkTheme()) {
+                        lerp(
+                            MaterialTheme.colorScheme.surfaceContainerHighest,
+                            MaterialTheme.colorScheme.surfaceContainerHigh,
+                            0.5f,
+                        )
+                    } else {
+                        MaterialTheme.colorScheme.surfaceDim
+                    },
+                    modifier = Modifier.size(width = 44.dp, height = 32.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = if (pingState.isRunning) Icons.Default.Stop else Icons.Default.PlayArrow,
+                            contentDescription = if (pingState.isRunning) {
+                                stringResource(R.string.tailscale_ping_stop)
+                            } else {
+                                stringResource(R.string.tailscale_ping_start)
+                            },
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                ),
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                ) {
+                    if (pingState.hasResult) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            if (pingState.isDirect) {
+                                Text(
+                                    text = "\u2192 ",
+                                    color = Color(0xFF4CAF50),
+                                )
+                                Text(
+                                    text = stringResource(R.string.tailscale_ping_direct),
+                                    color = Color(0xFF4CAF50),
+                                )
+                            } else if (pingState.peerRelay.isNotEmpty()) {
+                                Text(
+                                    text = "\u21BB ",
+                                    color = Color(0xFF2196F3),
+                                )
+                                Text(
+                                    text = stringResource(R.string.tailscale_ping_peer_relay),
+                                    color = Color(0xFF2196F3),
+                                )
+                            } else {
+                                Text(
+                                    text = "\u21BB ",
+                                    color = Color(0xFFFF9800),
+                                )
+                                Text(
+                                    text = stringResource(R.string.tailscale_ping_derp),
+                                    color = Color(0xFFFF9800),
+                                )
+                            }
+                            Spacer(modifier = Modifier.weight(1f))
+                            Text(
+                                text = "${pingState.latencyMs.toInt()} ms",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                        if (pingState.isDirect && pingState.endpoint.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            DetailRow(
+                                label = stringResource(R.string.tailscale_ping_endpoint),
+                                value = pingState.endpoint,
+                            )
+                        }
+                        if (!pingState.isDirect && pingState.peerRelay.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            DetailRow(
+                                label = stringResource(R.string.tailscale_ping_peer_relay_address),
+                                value = pingState.peerRelay,
+                            )
+                        }
+                        if (!pingState.isDirect && pingState.peerRelay.isEmpty() &&
+                            pingState.derpRegionCode.isNotEmpty()
+                        ) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            DetailRow(
+                                label = stringResource(R.string.tailscale_ping_derp_region),
+                                value = pingState.derpRegionCode,
+                            )
+                        }
+                        if (pingState.isRunning && pingState.latencyHistory.size > 1) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                LineChart(
+                                    data = pingState.latencyHistory,
+                                    lineColor = if (pingState.isDirect) {
+                                        Color(0xFF4CAF50)
+                                    } else {
+                                        Color(0xFF2196F3)
+                                    },
+                                    animate = false,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                val maxMs = (
+                                    (
+                                        pingState.latencyHistory.maxOrNull()
+                                            ?: 1f
+                                        ) * 1.2f
+                                    ).toInt().coerceAtLeast(1)
+                                Column(
+                                    modifier = Modifier.height(80.dp),
+                                    verticalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Text(
+                                        text = "${maxMs}ms",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Text(
+                                        text = "${maxMs * 2 / 3}ms",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Text(
+                                        text = "${maxMs / 3}ms",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Text(
+                                        text = "0ms",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    if (pingState.error.isNotEmpty()) {
+                        if (pingState.hasResult) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                        Text(
+                            text = pingState.error,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    } else if (pingState.isRunning && !pingState.hasResult) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(R.string.tailscale_ping_connecting),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    } else if (!pingState.hasResult) {
+                        Text(
+                            text = stringResource(R.string.tailscale_ping_no_data),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
+
+        // Taildrop send zone (not for self peer)
+        val canSendFiles = peer.online && peer.canReceiveFiles && endpoint?.canShareFiles == true && !isSelf
+        if (canSendFiles) {
+            val activity = LocalActivity.current
+            var dropTargeted by remember { mutableStateOf(false) }
+            val dropTarget = remember {
+                object : DragAndDropTarget {
+                    override fun onEntered(event: DragAndDropEvent) {
+                        dropTargeted = true
+                    }
+
+                    override fun onExited(event: DragAndDropEvent) {
+                        dropTargeted = false
+                    }
+
+                    override fun onEnded(event: DragAndDropEvent) {
+                        dropTargeted = false
+                    }
+
+                    override fun onDrop(event: DragAndDropEvent): Boolean {
+                        dropTargeted = false
+                        val dragEvent = event.toAndroidDragEvent()
+                        val clipData = dragEvent.clipData ?: return false
+                        val uris = (0 until clipData.itemCount).mapNotNull { clipData.getItemAt(it).uri }
+                        if (uris.isEmpty()) {
+                            return false
+                        }
+                        val permissions = activity?.let {
+                            ActivityCompat.requestDragAndDropPermissions(it, dragEvent)
+                        }
+                        sendFiles(uris) { permissions?.release() }
+                        return true
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            SectionHeader(stringResource(R.string.taildrop))
+            TaildropSendZone(
+                targeted = dropTargeted,
+                onClick = { sendFilesLauncher.launch(arrayOf("*/*")) },
+                modifier = Modifier.dragAndDropTarget(
+                    shouldStartDragAndDrop = { event ->
+                        event.mimeTypes().isNotEmpty()
+                    },
+                    target = dropTarget,
+                ),
+            )
+        }
+
+        // Details section
+        Spacer(modifier = Modifier.height(16.dp))
+        SectionHeader(stringResource(R.string.tailscale_details))
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+            ),
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                when {
+                    peer.expired -> {
+                        DetailRow(
+                            label = stringResource(R.string.tailscale_key_expiry),
+                            value = stringResource(R.string.tailscale_expired),
+                            valueColor = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                    peer.keyExpiry > 0 -> {
+                        val expiryText = DateUtils.getRelativeTimeSpanString(
+                            peer.keyExpiry * 1000,
+                            System.currentTimeMillis(),
+                            DateUtils.MINUTE_IN_MILLIS,
+                            0,
+                        ).toString()
+                        DetailRow(
+                            label = stringResource(R.string.tailscale_key_expiry),
+                            value = expiryText,
+                        )
+                    }
+                    else -> {
+                        DetailRow(
+                            label = stringResource(R.string.tailscale_key_expiry),
+                            value = stringResource(R.string.disabled),
+                            valueColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                if (peer.os.isNotEmpty()) {
+                    DetailRow(
+                        label = stringResource(R.string.tailscale_os),
+                        value = peer.os,
+                    )
+                }
+                if (!peer.online && peer.lastSeen > 0) {
+                    val lastSeenText = DateUtils.getRelativeTimeSpanString(
+                        peer.lastSeen * 1000,
+                        System.currentTimeMillis(),
+                        DateUtils.MINUTE_IN_MILLIS,
+                        0,
+                    ).toString()
+                    DetailRow(
+                        label = stringResource(R.string.tailscale_last_seen),
+                        value = lastSeenText,
+                    )
+                }
+                if (peer.exitNode) {
+                    DetailRow(
+                        label = stringResource(R.string.tailscale_exit_node),
+                        value = stringResource(R.string.tailscale_active),
+                    )
+                } else if (peer.exitNodeOption) {
+                    DetailRow(
+                        label = stringResource(R.string.tailscale_exit_node),
+                        value = stringResource(R.string.tailscale_available),
+                    )
+                }
+                if (peer.shareeNode) {
+                    DetailRow(
+                        label = stringResource(R.string.tailscale_shared_in),
+                        value = stringResource(R.string.tailscale_yes),
+                    )
+                }
+                if (peer.sshHostKeys.isNotEmpty()) {
+                    if (!peer.online || isSelf || peer.tailscaleIPs.isEmpty()) {
+                        DetailRow(
+                            label = stringResource(R.string.tailscale_ssh),
+                            value = stringResource(R.string.tailscale_available),
+                        )
+                    }
+                }
+            }
+        }
+
+        val canSSH = peer.sshHostKeys.isNotEmpty() && peer.online && !isSelf && peer.tailscaleIPs.isNotEmpty()
+        if (canSSH) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                ),
+            ) {
+                ListItem(
+                    headlineContent = {
+                        Text(
+                            stringResource(R.string.tailscale_ssh_connect),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    },
+                    leadingContent = {
+                        Icon(
+                            imageVector = Icons.Default.Terminal,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    },
+                    trailingContent = {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    },
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable {
+                            navController.navigate(
+                                "tools/tailscale/${Uri.encode(endpointTag)}/peer/${Uri.encode(peerId)}/ssh",
+                            )
+                        },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+
+    LaunchedEffect(copiedAddress) {
+        if (copiedAddress != null) {
+            delay(2000)
+            copiedAddress = null
+        }
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp),
+    )
+}
+
+@Composable
+private fun DetailRow(label: String, value: String, valueColor: Color? = null) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(end = 16.dp),
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+            color = valueColor ?: MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.End,
+        )
+    }
+}
+
+@Composable
+private fun AddressRow(
+    address: String,
+    label: String,
+    copied: String?,
+    onCopy: (String) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                address,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                label,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        IconButton(onClick = {
+            clipboardText = address
+            onCopy(address)
+        }) {
+            if (copied == address) {
+                Icon(
+                    Icons.Default.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                Icon(
+                    Icons.Outlined.ContentCopy,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TaildropSendZone(
+    targeted: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val color = if (targeted) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                if (targeted) {
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                },
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(
+            imageVector = Icons.Default.UploadFile,
+            contentDescription = null,
+            tint = color,
+        )
+        Text(
+            text = stringResource(R.string.taildrop_drop_zone),
+            style = MaterialTheme.typography.bodyMedium,
+            color = color,
+            textAlign = TextAlign.Center,
+        )
+    }
+}

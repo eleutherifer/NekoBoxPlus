@@ -12,19 +12,16 @@ import (
 
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/experimental/cachefile"
+	"github.com/sagernet/sing-box/experimental/clashmode"
 	"github.com/sagernet/sing/service"
 	"github.com/sagernet/sing/service/filemanager"
 )
 
-type clashModeSetter interface {
-	SetMode(newMode string)
-}
-
-func clashServerFromInstance(b *BoxInstance) adapter.ClashServer {
+func clashModeFromInstance(b *BoxInstance) *clashmode.Manager {
 	if b == nil || b.ctx == nil {
 		return nil
 	}
-	return service.FromContext[adapter.ClashServer](b.ctx)
+	return service.PtrFromContext[clashmode.Manager](b.ctx)
 }
 
 func CurrentClashMode(b *BoxInstance) (mode string, err error) {
@@ -36,7 +33,7 @@ func CurrentClashMode(b *BoxInstance) (mode string, err error) {
 	b.access.Lock()
 	defer b.access.Unlock()
 
-	clashServer := clashServerFromInstance(b)
+	clashServer := clashModeFromInstance(b)
 	if clashServer == nil {
 		return "", nil
 	}
@@ -52,7 +49,7 @@ func ClashModeList(b *BoxInstance) (modeListJson string, err error) {
 	b.access.Lock()
 	defer b.access.Unlock()
 
-	clashServer := clashServerFromInstance(b)
+	clashServer := clashModeFromInstance(b)
 	if clashServer == nil {
 		return "[]", nil
 	}
@@ -87,18 +84,14 @@ func SetClashMode(b *BoxInstance, newMode string) (err error) {
 	b.access.Lock()
 	defer b.access.Unlock()
 
-	clashServer := clashServerFromInstance(b)
+	clashServer := clashModeFromInstance(b)
 	if clashServer == nil {
 		return nil
-	}
-	modeSetter, ok := clashServer.(clashModeSetter)
-	if !ok {
-		return fmt.Errorf("clash mode switching is not supported")
 	}
 	mode, ok := canonicalClashMode(clashServer.ModeList(), newMode)
 	if ok {
 		oldMode := clashServer.Mode()
-		modeSetter.SetMode(mode)
+		clashServer.SetMode(mode)
 		if !strings.EqualFold(oldMode, clashServer.Mode()) {
 			return b.resetConnectionsLocked()
 		}

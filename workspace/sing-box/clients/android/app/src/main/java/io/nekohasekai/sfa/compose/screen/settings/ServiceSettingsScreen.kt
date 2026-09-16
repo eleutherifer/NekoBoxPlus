@@ -57,15 +57,24 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import io.nekohasekai.sfa.R
 import io.nekohasekai.sfa.bg.ServiceConnection
+import io.nekohasekai.sfa.compose.base.UiEvent
+import io.nekohasekai.sfa.compose.base.rememberApplyServiceChangeNotifier
+import io.nekohasekai.sfa.compose.topbar.LocalScaffoldPadding
 import io.nekohasekai.sfa.compose.topbar.OverrideTopBar
+import io.nekohasekai.sfa.constant.Status
 import io.nekohasekai.sfa.database.Settings
 import io.nekohasekai.sfa.ktx.launchCustomTab
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ServiceSettingsScreen(navController: NavController, serviceConnection: ServiceConnection? = null) {
+fun ServiceSettingsScreen(
+    navController: NavController,
+    serviceConnection: ServiceConnection? = null,
+    serviceStatus: Status = Status.Stopped,
+) {
     OverrideTopBar {
         TopAppBar(
             title = { Text(stringResource(R.string.service)) },
@@ -84,6 +93,7 @@ fun ServiceSettingsScreen(navController: NavController, serviceConnection: Servi
     val scope = rememberCoroutineScope()
     var isBatteryOptimizationIgnored by remember { mutableStateOf(false) }
     var allowBypass by remember { mutableStateOf(Settings.allowBypass) }
+    val notifyApplyChange = rememberApplyServiceChangeNotifier(serviceStatus)
     val requestBatteryOptimizationLauncher =
         rememberLauncherForActivityResult(
             ActivityResultContracts.StartActivityForResult(),
@@ -105,13 +115,18 @@ fun ServiceSettingsScreen(navController: NavController, serviceConnection: Servi
         }
     }
 
+    val scaffoldPadding = LocalScaffoldPadding.current
+
     Column(
         modifier =
         Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface)
             .verticalScroll(rememberScrollState())
-            .padding(vertical = 8.dp),
+            .padding(
+                top = scaffoldPadding.calculateTopPadding() + 8.dp,
+                bottom = scaffoldPadding.calculateBottomPadding() + 8.dp,
+            ),
     ) {
         if (!isBatteryOptimizationIgnored && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             Card(
@@ -255,6 +270,9 @@ fun ServiceSettingsScreen(navController: NavController, serviceConnection: Servi
                             allowBypass = checked
                             scope.launch(Dispatchers.IO) {
                                 Settings.allowBypass = checked
+                                withContext(Dispatchers.Main) {
+                                    notifyApplyChange(UiEvent.ApplyServiceChange.Mode.Reload)
+                                }
                             }
                         },
                     )

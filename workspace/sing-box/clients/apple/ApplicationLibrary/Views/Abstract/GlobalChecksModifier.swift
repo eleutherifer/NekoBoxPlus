@@ -65,6 +65,9 @@ public struct GlobalChecksModifier: ViewModifier {
             .onAppear {
                 handleImportProfile()
                 handleImportRemoteProfile()
+                #if os(macOS)
+                    Task { @MainActor in await checkRootHelperPrompt() }
+                #endif
             }
             .onChangeCompat(of: importProfile.wrappedValue) { _ in
                 Task { @MainActor in handleImportProfile() }
@@ -72,8 +75,17 @@ public struct GlobalChecksModifier: ViewModifier {
             .onChangeCompat(of: importRemoteProfile.wrappedValue) { _ in
                 Task { @MainActor in handleImportRemoteProfile() }
             }
-            .onChangeCompat(of: environments.extensionProfile?.status) { status in
-                handleStatusChange(status)
+            .onReceive(environments.$remoteControlAlert) { alertState in
+                guard let alertState else { return }
+                Task { @MainActor in
+                    environments.remoteControlAlert = nil
+                    alert = alertState
+                }
+            }
+            .background {
+                if let profile = environments.extensionProfile {
+                    ProfileStatusObserver(profile: profile, onChange: handleStatusChange)
+                }
             }
     }
 
@@ -86,6 +98,9 @@ public struct GlobalChecksModifier: ViewModifier {
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .extensionRequiresHelperService)) { _ in
                     Task { @MainActor in handleHelperServiceNotification() }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .systemExtensionInstalled)) { _ in
+                    Task { @MainActor in await checkRootHelperPrompt() }
                 }
         #else
             content
@@ -165,16 +180,10 @@ public struct GlobalChecksModifier: ViewModifier {
         let disableWarnings = await SharedPreferences.disableDeprecatedWarnings.get()
         guard !disableWarnings else { return }
 
-        do {
-            let reports = try LibboxNewStandaloneCommandClient()!.getDeprecatedNotes()
-            if reports.hasNext() {
-                await MainActor.run {
-                    showNextDeprecatedNote(reports)
-                }
-            }
-        } catch {
+        guard let reports = try? LibboxNewStandaloneCommandClient()!.getDeprecatedNotes() else { return }
+        if reports.hasNext() {
             await MainActor.run {
-                alert = AlertState(action: "check deprecated notes", error: error)
+                showNextDeprecatedNote(reports)
             }
         }
     }
@@ -235,6 +244,34 @@ public struct GlobalChecksModifier: ViewModifier {
             wifiLocationManager.requestAuthorizationAndShowWarning()
         }
 
+        private func checkRootHelperPrompt() async {
+            guard Variant.useSystemExtension else { return }
+            guard await SharedPreferences.rootHelperPromptPending.get() else { return }
+            guard await SystemExtension.isInstalled() else { return }
+            await SharedPreferences.rootHelperPromptPending.set(false)
+            guard HelperServiceManager.rootHelperStatus != .enabled else { return }
+            alert = AlertState(
+                title: String(localized: "Install Helper Service"),
+                message: String(localized: "The Helper Service provides process lookup, the Bridge outbound, and many other basic features."),
+                primaryButton: .default(String(localized: "Install")) {
+                    installRootHelper()
+                },
+                secondaryButton: .cancel(String(localized: "No, thanks"))
+            )
+        }
+
+        private func installRootHelper() {
+            do {
+                try HelperServiceManager.registerRootHelper()
+            } catch {
+                if HelperServiceManager.rootHelperStatus == .requiresApproval {
+                    HelperServiceManager.openApprovalSettings()
+                } else {
+                    alert = AlertState(action: "install helper service", error: error)
+                }
+            }
+        }
+
         private func handleHelperServiceNotification() {
             guard Variant.useSystemExtension, HelperServiceManager.rootHelperStatus != .enabled else { return }
             alert = AlertState(
@@ -247,6 +284,19 @@ public struct GlobalChecksModifier: ViewModifier {
             )
         }
     #endif
+}
+
+@MainActor
+private struct ProfileStatusObserver: View {
+    @ObservedObject var profile: ExtensionProfile
+    let onChange: (NEVPNStatus?) -> Void
+
+    var body: some View {
+        Color.clear
+            .onChangeCompat(of: profile.status) { status in
+                onChange(status)
+            }
+    }
 }
 
 public extension View {

@@ -6,7 +6,9 @@ import SwiftUI
 struct Application: App {
     @NSApplicationDelegateAdaptor private var appDelegate: StandaloneApplicationDelegate
 
+    init() {}
+
     var body: some Scene {
-        MacApplication()
+        MacApplication(applicationState: appDelegate.applicationState)
     }
 }

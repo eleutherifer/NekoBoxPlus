@@ -81,10 +81,6 @@ func ResetAllConnections(system bool) {
 	}
 }
 
-type clashTrafficManagerProvider interface {
-	TrafficManager() *trafficcontrol.Manager
-}
-
 type BoxInstance struct {
 	access sync.Mutex
 
@@ -528,11 +524,8 @@ func (b *BoxInstance) resetConnectionsLocked() error {
 		return nil
 	}
 	b.urlTestReady.invalidate()
-	clashServer := clashServerFromInstance(b)
-	if trafficManagerProvider, ok := clashServer.(clashTrafficManagerProvider); ok {
-		if trafficManager := trafficManagerProvider.TrafficManager(); trafficManager != nil {
-			trafficManager.CloseAllConnections()
-		}
+	if trafficManager := service.PtrFromContext[trafficcontrol.Manager](b.ctx); trafficManager != nil {
+		trafficManager.CloseAllConnections()
 	}
 	b.Box.Network().ResetNetwork(b.ctx)
 	log.Println("Reset network done")

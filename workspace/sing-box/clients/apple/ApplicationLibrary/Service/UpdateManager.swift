@@ -5,6 +5,7 @@
     import Libbox
     import Library
     import os
+    import Security
     import SwiftUI
 
     private let logger = Logger(category: "UpdateManager")
@@ -17,6 +18,7 @@
         @Published public var isUpdateSheetPresented = false
         @Published public var isChecking = false
         @Published public var isDownloading = false
+        @Published public var isInstalling = false
         @Published public var downloadProgress: Double = 0
         @Published public var alert: AlertState?
 
@@ -82,6 +84,7 @@
             guard let updateInfo else { return }
 
             isDownloading = true
+            isInstalling = false
             downloadProgress = 0
             alert = nil
 
@@ -92,7 +95,22 @@
                     }
                 }
 
-                let authRef = try PKGInstaller.authorize()
+                let helperAvailable = await Task.detached { () -> Bool in
+                    guard HelperServiceManager.rootHelperStatus == .enabled else {
+                        return false
+                    }
+                    guard let helperVersion = try? ShellHelperClient.shared.getVersion() else {
+                        return false
+                    }
+                    return helperVersion == Bundle.main.version
+                }.value
+
+                isInstalling = true
+
+                var authRef: AuthorizationRef?
+                if !helperAvailable {
+                    authRef = try PKGInstaller.authorize()
+                }
 
                 var profile = environments.extensionProfile
                 if profile == nil {
@@ -108,9 +126,16 @@
                     }
                 }
 
-                try await Task.detached {
-                    try PKGInstaller.install(pkgPath: pkgURL.path, authorization: authRef)
-                }.value
+                if helperAvailable {
+                    try await Task.detached {
+                        try RootHelperClient.shared.installUpdatePackage(pkgPath: pkgURL.path)
+                    }.value
+                } else {
+                    let authorization = authRef!
+                    try await Task.detached {
+                        try PKGInstaller.install(pkgPath: pkgURL.path, authorization: authorization)
+                    }.value
+                }
 
                 do {
                     try PKGInstaller.scheduleInstalledApplicationRelaunch()
@@ -120,8 +145,10 @@
                 exit(0)
             } catch PKGInstallerError.authorizationCancelled {
                 isDownloading = false
+                isInstalling = false
             } catch {
                 isDownloading = false
+                isInstalling = false
                 logger.error("update failed: \(error.localizedDescription)")
                 alert = AlertState(action: "install update", error: error)
             }
@@ -139,7 +166,8 @@
 
             do {
                 let track = await currentTrack()
-                let info = try await GitHubUpdateChecker.checkAsync(track: track, force: force)
+                let githubToken = await SharedPreferences.githubToken.get()
+                let info = try await GitHubUpdateChecker.checkAsync(track: track, githubToken: githubToken, force: force)
                 let currentTrack = await currentTrack()
                 guard track == currentTrack else {
                     throw CancellationError()

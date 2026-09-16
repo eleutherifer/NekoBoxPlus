@@ -14,12 +14,14 @@ import SwiftUI
     }
 #endif
 
-#if os(macOS)
-    public enum SettingsPage: Hashable {
-        case app
-        case core, packetTunnel, onDemandRules, profileOverride, sponsors
-    }
-#endif
+public extension Notification.Name {
+    static let navigateToSettingsPage = Notification.Name("navigateToSettingsPage")
+}
+
+public enum SettingsPage: Hashable {
+    case app
+    case core, packetTunnel, onDemandRules, profileOverride, remoteControl, sponsors
+}
 
 public struct SettingView: View {
     private enum Tabs: Int, CaseIterable, Identifiable {
@@ -27,7 +29,7 @@ public struct SettingView: View {
             self
         }
 
-        case app, core, packetTunnel, onDemandRules, profileOverride, sponsors
+        case app, core, packetTunnel, onDemandRules, profileOverride, remoteControl, sponsors
 
         #if os(macOS)
             var page: SettingsPage {
@@ -42,6 +44,8 @@ public struct SettingView: View {
                     return .onDemandRules
                 case .profileOverride:
                     return .profileOverride
+                case .remoteControl:
+                    return .remoteControl
                 case .sponsors:
                     return .sponsors
                 }
@@ -64,6 +68,8 @@ public struct SettingView: View {
                 return String(localized: "On Demand Rules")
             case .profileOverride:
                 return String(localized: "Profile Override")
+            case .remoteControl:
+                return String(localized: "Remote Control")
             case .sponsors:
                 return String(localized: "Sponsors")
             }
@@ -81,6 +87,8 @@ public struct SettingView: View {
                 return "filemenu.and.selection"
             case .profileOverride:
                 return "square.dashed.inset.filled"
+            case .remoteControl:
+                return "antenna.radiowaves.left.and.right"
             case .sponsors:
                 return "heart.fill"
             }
@@ -100,6 +108,8 @@ public struct SettingView: View {
                     OnDemandRulesView()
                 case .profileOverride:
                     ProfileOverrideView()
+                case .remoteControl:
+                    RemoteControlView()
                 case .sponsors:
                     SponsorsView()
                 }
@@ -141,6 +151,8 @@ public struct SettingView: View {
                     OnDemandRulesView()
                 case .profileOverride:
                     ProfileOverrideView()
+                case .remoteControl:
+                    RemoteControlView()
                 case .sponsors:
                     SponsorsView()
                 }
@@ -149,14 +161,31 @@ public struct SettingView: View {
         }
     #endif
 
-    @StateObject private var viewModel = SettingViewModel()
+    #if os(iOS)
+        @State private var showRemoteControl = false
+    #endif
+
     public init() {}
     public var body: some View {
         FormView {
             Section {
-                ForEach([Tabs.app, Tabs.core, Tabs.packetTunnel, Tabs.onDemandRules, Tabs.profileOverride]) { it in
-                    it.navigationLink
-                }
+                Tabs.app.navigationLink
+                Tabs.core.navigationLink
+                #if !os(tvOS)
+                    Tabs.packetTunnel.navigationLink
+                #endif
+                Tabs.onDemandRules.navigationLink
+                Tabs.profileOverride.navigationLink
+                #if !os(tvOS)
+                    remoteControlLink
+                #endif
+                #if JAILBREAK
+                    FormNavigationLink {
+                        JailbreakView()
+                    } label: {
+                        Label("Jailbreak", systemImage: "lock.shield.fill")
+                    }
+                #endif
             }
             #if !os(tvOS)
                 Section("About") {
@@ -193,25 +222,6 @@ public struct SettingView: View {
                     #endif
                 }
             #endif
-            Section("Debug") {
-                FormNavigationLink {
-                    ServiceLogView()
-                } label: {
-                    Label("Service Log", systemImage: "doc.on.clipboard")
-                }
-                FormTextItem("Taiwan Flag Available", "touchid") {
-                    if viewModel.isLoading {
-                        Text("Loading...")
-                            .onAppear {
-                                Task.detached {
-                                    await viewModel.checkTaiwanFlagAvailability()
-                                }
-                            }
-                    } else {
-                        Text(viewModel.taiwanFlagAvailable.toString())
-                    }
-                }
-            }
         }
         #if os(macOS)
         .formNavigationDestination(for: SettingsPage.self) { page in
@@ -219,4 +229,26 @@ public struct SettingView: View {
         }
         #endif
     }
+
+    #if !os(tvOS)
+        private var remoteControlLink: some View {
+            #if os(iOS)
+                NavigationLink(isActive: $showRemoteControl) {
+                    Tabs.remoteControl.contentView
+                } label: {
+                    Tabs.remoteControl.label
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .navigateToSettingsPage)) { notification in
+                    guard let page = notification.object as? SettingsPage, page == .remoteControl else { return }
+                    Task {
+                        // Wait for the tab switch to install this view before pushing.
+                        try? await Task.sleep(nanoseconds: NSEC_PER_MSEC * 300)
+                        showRemoteControl = true
+                    }
+                }
+            #else
+                Tabs.remoteControl.navigationLink
+            #endif
+        }
+    #endif
 }

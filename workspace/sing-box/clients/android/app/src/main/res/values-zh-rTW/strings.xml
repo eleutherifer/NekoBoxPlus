@@ -23,6 +23,8 @@
     <string name="action">操作</string>
     <string name="action_start">啟動</string>
     <string name="action_deselect">取消選擇</string>
+    <string name="action_reload">重新載入</string>
+    <string name="action_restart">重新啟動</string>
     <string name="expand">展開</string>
     <string name="collapse">收合</string>
     <string name="expand_all">全部展開</string>
@@ -45,7 +47,7 @@
     <string name="default_text">預設</string>
 
     <!-- Navigation Titles -->
-    <string name="title_dashboard">儀表板</string>
+    <string name="title_dashboard">儀表</string>
     <string name="title_configuration">設定檔</string>
     <string name="title_log">日誌</string>
     <string name="title_settings">設定</string>
@@ -66,7 +68,7 @@
     <string name="status_started">已啟動</string>
 
     <!-- Dashboard -->
-    <string name="dashboard_items">儀表板項目</string>
+    <string name="dashboard_items">儀表項</string>
     <string name="memory">記憶體</string>
     <string name="goroutines">協程</string>
     <string name="upload">上傳</string>
@@ -82,11 +84,10 @@
     <string name="reset_order">重設順序</string>
 
     <!-- Connections -->
-    <string name="empty_connections">無連線</string>
     <string name="search_connections">搜尋連線…</string>
     <string name="close_connections_confirm">關閉所有連線？</string>
     <string name="connection_state_all">全部</string>
-    <string name="connection_state_active">活躍</string>
+    <string name="connection_state_active">活動</string>
     <string name="connection_state_closed">已關閉</string>
     <string name="connection_sort_date">日期</string>
     <string name="connection_sort_traffic">流量</string>
@@ -260,6 +261,8 @@
     <string name="location_permission_title">位置權限</string>
     <string name="location_permission_description">您的設定檔包含 &lt;strong&gt;&lt;tt&gt;wifi_ssid&lt;/tt&gt; 或 &lt;tt&gt;wifi_bssid&lt;/tt&gt; 路由規則&lt;/strong&gt;。為了使它們正常工作，sing-box 在&lt;strong&gt;背景&lt;/strong&gt;使用 &lt;strong&gt;位置&lt;/strong&gt; 權限來取得已連線 Wi-Fi 網路資訊。這些資訊將&lt;strong&gt;僅用於路由&lt;/strong&gt;。</string>
     <string name="location_permission_background_description">在 Android 10 及更高版本中，需要&lt;strong&gt;背景位置&lt;/strong&gt;權限。選擇&lt;strong&gt;始終允許&lt;/strong&gt;以授予權限。</string>
+    <string name="local_network_permission_title">區域網路權限</string>
+    <string name="local_network_permission_description">Android 17 及更高版本要求區域網路權限才能存取你的 Wi-Fi 或乙太網路。Android 以附近的裝置的名義請求該權限。</string>
     <string name="notification_permission_title">通知權限</string>
     <string name="notification_permission_required_description">若未授予通知權限，sing-box 無法顯示即時網速。請先授權，或關閉即時網速通知後再啟動服務。</string>
     <string name="root_access_required">需要 Root 權限</string>
@@ -284,6 +287,8 @@
     <string name="update_source">更新來源</string>
     <string name="update_source_github">GitHub</string>
     <string name="update_source_fdroid">F-Droid</string>
+    <string name="github_token">GitHub Token</string>
+    <string name="github_token_description">取得更高的 GitHub API 速率限制</string>
     <string name="fdroid_mirror">F-Droid 鏡像</string>
     <string name="fdroid_mirror_test_all">依延遲自動選擇</string>
     <string name="fdroid_mirror_testing">測試中…</string>
@@ -423,6 +428,168 @@
     <string name="content_description_pause_logs">暫停日誌</string>
     <string name="content_description_collapse_search">收合搜尋</string>
     <string name="content_description_search_logs">搜尋日誌</string>
+    <string name="content_description_more_options">更多選項</string>
+
+    <!-- Tools -->
+    <string name="title_tools">工具</string>
+    <string name="title_network">網路</string>
+    <string name="network_quality">網路品質</string>
+    <string name="network_quality_url">URL</string>
+    <string name="network_quality_serial">序列</string>
+    <string name="network_quality_http3">HTTP/3</string>
+    <string name="network_quality_max_runtime">最大執行時間</string>
+    <string name="network_quality_max_runtime_30s">30s</string>
+    <string name="network_quality_max_runtime_60s">60s</string>
+    <string name="network_quality_start">開始測試</string>
+    <string name="network_quality_cancel">取消測試</string>
+    <string name="network_quality_idle_latency">閒置延遲</string>
+    <string name="network_quality_download">下載</string>
+    <string name="network_quality_upload">上傳</string>
+    <string name="network_quality_download_rpm">下載 RPM</string>
+    <string name="network_quality_upload_rpm">上傳 RPM</string>
+    <string name="network_quality_confidence_high">置信度高</string>
+    <string name="network_quality_confidence_medium">置信度中</string>
+    <string name="network_quality_confidence_low">置信度低</string>
+    <string name="network_quality_metered_title">按流量計費連線</string>
+    <string name="network_quality_metered_message">您正在使用按流量計費的連線。此測試將消耗大量數據。</string>
+    <string name="network_quality_metered_continue">繼續</string>
+    <string name="tool_configuration">配置</string>
+    <string name="tool_results">結果</string>
+    <string name="tool_outbound">出站</string>
+    <string name="tool_default_outbound">默認</string>
+
+    <!-- STUN Test -->
+    <!-- Tailscale -->
+    <string name="tailscale_endpoints">端點</string>
+    <string name="title_services">服務</string>
+
+    <string name="tailscale_status">狀態</string>
+    <string name="tailscale_state">狀態</string>
+    <string name="tailscale_network">網路</string>
+    <string name="tailscale_hostname">主機名</string>
+    <string name="tailscale_open_auth_url">開啟認證連結</string>
+    <string name="tailscale_open_auth_url_qr_code">顯示認證連結 QR 碼</string>
+    <string name="tailscale_this_device">此裝置</string>
+    <string name="tailscale_logout">登出</string>
+    <string name="tailscale_connected">已連線</string>
+    <string name="tailscale_not_connected">未連線</string>
+    <string name="tailscale_addresses">Tailscale 位址</string>
+    <string name="tailscale_details">詳情</string>
+    <string name="tailscale_key_expiry">金鑰到期</string>
+    <string name="tailscale_exit_node">出口節點</string>
+    <string name="tailscale_active">活躍</string>
+    <string name="tailscale_ping">Ping</string>
+    <string name="tailscale_ping_start">啟動</string>
+    <string name="tailscale_ping_stop">停止</string>
+    <string name="tailscale_ping_direct">直接連線</string>
+    <string name="tailscale_ping_derp">DERP 中繼連線</string>
+    <string name="tailscale_ping_peer_relay">對等中繼連線</string>
+    <string name="tailscale_ping_endpoint">端點</string>
+    <string name="tailscale_ping_derp_region">DERP 區域</string>
+    <string name="tailscale_ping_peer_relay_address">對等中繼</string>
+    <string name="tailscale_ping_connecting">連線中…</string>
+    <string name="tailscale_ping_no_data">無資料</string>
+    <string name="tailscale_shared_in">共享至此</string>
+    <string name="tailscale_expired">已過期</string>
+    <string name="tailscale_expires_relative">%1$s過期</string>
+    <string name="tailscale_key_expiry_disabled">金鑰到期已停用</string>
+    <string name="tailscale_last_seen">最後上線</string>
+    <string name="tailscale_available">可用</string>
+    <string name="tailscale_yes">是</string>
+
+    <!-- Tailscale SSH -->
+    <string name="tailscale_ssh_connect">透過 SSH 連接</string>
+    <string name="tailscale_ssh_options">SSH 選項</string>
+    <string name="tailscale_ssh_username">使用者名稱</string>
+    <string name="tailscale_ssh_terminal_type">終端機類型</string>
+    <string name="tailscale_ssh_remember_options">記住 SSH 選項</string>
+    <string name="tailscale_ssh_quick_connect">快速連接</string>
+    <string name="tailscale_ssh_quick_connect_description">啟用後，你可以透過工具中 Tailscale 條目和節點列表中節點條目的上下文選單（長按）快速連接到此節點。\n\n當透過 SSH 連接到其他節點時，此節點也會出現在新建工作階段選單中。</string>
+    <string name="tailscale_ssh_terminal_hint">你可以在設定 → Ghostty 配置中自定義終端外觀。</string>
+    <string name="tailscale_ssh_connect_button">連接</string>
+    <string name="tailscale_ssh_connecting">連接中…</string>
+    <string name="tailscale_ssh_no_sessions">無活動工作階段</string>
+    <string name="terminal_session_ended">工作階段已結束</string>
+    <string name="terminal_press_any_key">按任意鍵</string>
+    <string name="tailscale_ssh_new_session">新建工作階段</string>
+    <string name="tailscale_ssh_close_session">關閉工作階段</string>
+    <string name="terminal_notification_channel">終端機通知</string>
+
+    <!-- Terminal Configuration -->
+    <string name="tailscale_terminal_config">Ghostty 配置</string>
+    <string name="tailscale_terminal_light_theme">淺色主題</string>
+    <string name="tailscale_terminal_dark_theme">深色主題</string>
+    <string name="tailscale_terminal_font_config">字體</string>
+    <string name="tailscale_terminal_font">字型</string>
+    <string name="tailscale_terminal_font_size">字體大小</string>
+    <string name="tailscale_terminal_font_system">系統字型</string>
+    <string name="tailscale_terminal_font_imported">已匯入的字型</string>
+    <string name="tailscale_terminal_import_font">從檔案匯入</string>
+    <string name="tailscale_terminal_manage_fonts">管理已匯入的字型</string>
+    <string name="tailscale_terminal_manage_fonts_done">完成</string>
+    <string name="tailscale_terminal_search_themes">搜索主題</string>
+    <string name="tailscale_terminal_light_config">淺色配置</string>
+    <string name="tailscale_terminal_dark_config">深色配置</string>
+    <string name="tailscale_terminal_theme">主題</string>
+    <string name="tailscale_terminal_custom_config">自訂配置</string>
+    <string name="tailscale_terminal_edit_custom_config">編輯自訂配置</string>
+    <string name="tailscale_terminal_light_custom_config">淺色自訂配置</string>
+    <string name="tailscale_terminal_dark_custom_config">深色自訂配置</string>
+    <string name="tailscale_terminal_font_follow_theme">跟隨主題</string>
+    <string name="tailscale_terminal_import_config">從檔案匯入</string>
+
+    <string name="stun_test">STUN 測試</string>
+    <string name="stun_server">伺服器</string>
+    <string name="stun_start">開始測試</string>
+    <string name="stun_cancel">取消測試</string>
+    <string name="stun_external_address">外部地址</string>
+    <string name="stun_latency">延遲</string>
+    <string name="stun_nat_mapping">NAT 映射</string>
+    <string name="stun_nat_filtering">NAT 過濾</string>
+    <string name="stun_nat_type_detection">NAT 類型偵測</string>
+    <string name="stun_nat_not_supported">伺服器不支援</string>
+
+    <!-- Shared Report -->
+    <string name="report_empty">空</string>
+    <string name="report_section_reports">報告</string>
+    <string name="report_section_files">檔案</string>
+    <string name="report_delete_all">全部刪除</string>
+    <string name="report_delete">刪除</string>
+    <string name="report_share">分享</string>
+    <string name="report_share_with_config">附帶配置分享</string>
+    <string name="report_with_config">附帶配置</string>
+    <string name="report_with_log">附帶日誌</string>
+    <string name="report_share_privacy_warning">日誌和配置檔案可能包含隱私內容，不應該被公開發佈。</string>
+    <string name="report_share_privacy_warning_config">配置檔案可能包含隱私內容，不應該被公開發佈。</string>
+    <string name="report_with_age_encryption">使用 age 加密給 Project S</string>
+    <string name="report_age_encryption_description">[age](https://github.com/filosottile/age) 是一個現代且安全的非對稱加密工具。啟用後，zip 檔案將透過本專案的公鑰加密，以便在 GitHub issues 等公開場合發佈。</string>
+    <string name="report_metadata">元數據</string>
+    <string name="report_configuration">配置</string>
+    <string name="report_origin_local">本地</string>
+    <string name="service_not_started">服務未啟動</string>
+    <string name="service_reload_required">需要重新載入服務以套用變更</string>
+    <string name="service_restart_required">需要重新啟動服務以套用變更</string>
+
+    <!-- Crash Report -->
+    <string name="crash_report">當機報告</string>
+    <string name="crash_report_go_log">Go Crash Log</string>
+    <string name="crash_report_jvm_log">JVM Crash Log</string>
+    <string name="crash_report_description">當發生當機時，您將會收到報告。</string>
+
+    <!-- OOM Report -->
+    <string name="oom_report">記憶體不足報告</string>
+    <string name="oom_report_description">啟用記憶體限制後，當服務記憶體超出限制時，您將會收到報告。您也可以手動觸發收集報告。</string>
+    <string name="oom_report_fetch">取得記憶體報告</string>
+    <string name="oom_report_enable_memory_limit">啟用記憶體限制</string>
+    <string name="oom_report_enable_memory_limit_description">為服務提供軟記憶體限制。服務將執行多個程序以嘗試保持在此記憶體限制範圍內。</string>
+    <string name="oom_report_memory_limit">記憶體限制</string>
+    <string name="oom_report_kill_connections">終止連線</string>
+    <string name="oom_report_kill_connections_description">當服務記憶體超出限制時，終止所有連線以釋放記憶體。</string>
+
+    <!-- Power Report -->
+    <string name="power_report">電源報告</string>
+    <string name="power_report_enable">啟用電源報告</string>
+    <string name="power_report_enable_description">每次執行服務都會儲存一份報告</string>
 
     <!-- Xposed Module -->
     <string name="xposed_description">sing-box 的特權強化</string>
@@ -459,4 +626,49 @@
     <string name="lsposed_module_pending_update">LSPosed 模組待更新</string>
     <string name="lsposed_module_pending_downgrade">LSPosed 模組待降級</string>
     <string name="lsposed_module_not_activated">LSPosed 模組未啟用</string>
+
+    <!-- Remote Control -->
+    <string name="remote_control">遠端控制</string>
+    <string name="remote_servers">伺服器</string>
+    <string name="remote_no_servers">無伺服器</string>
+    <string name="remote_new_server">新建伺服器</string>
+    <string name="remote_edit_server">編輯伺服器</string>
+    <string name="remote_local_device">本機</string>
+    <string name="remote_manage_servers">管理伺服器…</string>
+    <string name="remote_secret">密鑰</string>
+    <string name="remote_optional">可選</string>
+    <string name="remote_connecting">連接中…</string>
+    <string name="remote_disconnect">斷開連接</string>
+    <string name="remote_invalid_url">無效的伺服器 URL: %1$s, 應為 host:port、http://host:port 或 https://host:port</string>
+    <string name="remote_connect_failed">無法連接到遠端伺服器 %1$s</string>
+    <string name="remote_disconnected_from">已斷開與遠端伺服器 %1$s 的連接</string>
+    <string name="remote_checking">檢查中…</string>
+    <string name="remote_available">可用</string>
+    <string name="remote_unavailable">不可用</string>
+    <string name="endpoint_globalprotect_sso_unsupported_android">Android 不支援 GlobalProtect SAML 瀏覽器驗證。</string>
+    <string name="endpoint_browser_cookie_missing">瀏覽器驗證已完成，但未取得所需的 VPN Cookie。</string>
+    <string name="endpoint_browser_navigation_failed">瀏覽器導覽失敗：%1$s</string>
+    <string name="endpoint_browser_too_many_windows">驗證頁面開啟了過多瀏覽器視窗。</string>
+    <string name="endpoint_browser_profile_unavailable">此裝置無法使用瀏覽器驗證。</string>
+
+    <!-- Taildrop -->
+    <plurals name="taildrop_file_count">
+        <item quantity="other">%1$d 個檔案</item>
+    </plurals>
+    <string name="taildrop_send">發送</string>
+    <string name="taildrop_receive">接收</string>
+    <string name="taildrop_files">檔案</string>
+    <string name="taildrop_from">來自 %1$s</string>
+    <string name="taildrop_to">傳送至 %1$s</string>
+    <string name="taildrop_save">儲存</string>
+    <string name="taildrop_share">分享</string>
+    <string name="taildrop_delete">刪除</string>
+    <string name="taildrop_drop_zone">拖放檔案到此處傳送，或點一下選擇</string>
+    <string name="taildrop_done">完成</string>
+    <string name="taildrop_no_targets">沒有可接收檔案的裝置</string>
+    <string name="taildrop_no_files_selected">未選擇檔案</string>
+    <string name="taildrop_connecting">正在連線…</string>
+    <string name="taildrop_dismiss">關閉</string>
+    <string name="taildrop_open_app">開啟 sing-box</string>
+    <string name="taildrop_notification_title">正在傳送檔案</string>
 </resources>

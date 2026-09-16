@@ -1,51 +1,33 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "" : {
+    "[age](https://github.com/filosottile/age) is a modern and secure asymmetric encryption tool. When enabled, the zip file is encrypted with this project's public key so it can be posted publicly, e.g. in GitHub issues." : {
       "localizations" : {
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : ""
+            "value" : "[age](https://github.com/filosottile/age) یک ابزار رمزگذاری نامتقارن مدرن و امن است. هنگام فعال‌سازی، فایل zip با کلید عمومی این پروژه رمزگذاری می‌شود تا بتوان آن را به‌صورت عمومی منتشر کرد، مثلاً در issueهای گیت‌هاب."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : ""
+            "value" : "[age](https://github.com/filosottile/age) — современный и безопасный инструмент асимметричного шифрования. Когда включено, zip-файл шифруется открытым ключом этого проекта, чтобы его можно было опубликовать, например, в issue на GitHub."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "[age](https://github.com/filosottile/age) 是一个现代且安全的非对称加密工具。启用后，zip 文件将使用本项目的公钥加密，因此可以公开发布，例如发布在 GitHub issue 中。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : ""
+            "value" : "[age](https://github.com/filosottile/age) 是一個現代且安全的非對稱加密工具。啟用後，zip 檔案將使用本專案的公鑰加密，因此可以公開發佈，例如發佈在 GitHub issue 中。"
           }
         }
-      },
-      "shouldTranslate" : false
-    },
-    "..." : {
-      "localizations" : {
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "..."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "..."
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "..."
-          }
-        }
-      },
-      "shouldTranslate" : false
+      }
     },
     "**If I’ve defended your modern life, please consider sponsoring me.**" : {
       "localizations" : {
@@ -75,81 +57,6 @@
         }
       }
     },
-    "%@ %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ %2$@"
-          }
-        },
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ %2$@"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ %2$@"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ %2$@"
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
-    "%@/s" : {
-      "localizations" : {
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@/s"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@/s"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@/s"
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
-    "%lld" : {
-      "localizations" : {
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld"
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
     "%lld Profiles" : {
       "localizations" : {
         "fa" : {
@@ -178,212 +85,33 @@
         }
       }
     },
-    "%lld%%" : {
+    "A report is saved for each service run" : {
       "localizations" : {
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld%%"
+            "value" : "برای هر بار اجرای سرویس یک گزارش ذخیره می‌شود"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld%%"
+            "value" : "Отчёт сохраняется при каждом запуске службы"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每次服务运行都会保存一份报告"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld%%"
+            "value" : "每次服務運行都會儲存一份報告"
           }
         }
-      },
-      "shouldTranslate" : false
-    },
-    "↑ %@" : {
-      "localizations" : {
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "↑ %@"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "↑ %@"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "↑ %@"
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
-    "↑ %@/s" : {
-      "localizations" : {
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "↑ %@/s"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "↑ %@/s"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "↑ %@/s"
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
-    "↓ %@" : {
-      "localizations" : {
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "↓ %@"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "↓ %@"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "↓ %@"
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
-    "↓ %@/s" : {
-      "localizations" : {
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "↓ %@/s"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "↓ %@/s"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "↓ %@/s"
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
-    "5.6 GB" : {
-      "localizations" : {
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "5.6 GB"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "5.6 GB"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "5.6 GB"
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
-    "38 B/s" : {
-      "localizations" : {
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "38 B/s"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "38 B/s"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "38 B/s"
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
-    "52 MB" : {
-      "localizations" : {
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "52 MB"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "52 MB"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "52 MB"
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
-    "249 MB/s" : {
-      "localizations" : {
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "249 MB/s"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "249 MB/s"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "249 MB/s"
-          }
-        }
-      },
-      "shouldTranslate" : false
+      }
     },
     "About" : {
       "localizations" : {
@@ -833,6 +561,37 @@
         }
       }
     },
+    "Apple TV" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple TV"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple TV"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple TV"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple TV"
+          }
+        }
+      }
+    },
+    "Application" : {
+      "shouldTranslate" : false
+    },
     "Are you sure to import profile %@?" : {
       "localizations" : {
         "fa" : {
@@ -891,6 +650,90 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "您確定要導入 %1$@ 嗎？將會連接到 %2$@ 下載配置。"
+          }
+        }
+      }
+    },
+    "Attached" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "در حال استفاده"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Используется"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已占用"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已佔用"
+          }
+        }
+      }
+    },
+    "Auth URL" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لینک احراز هویت"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL авторизации"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "认证链接"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "認證連結"
+          }
+        }
+      }
+    },
+    "Authentication" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "احراز هویت"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Аутентификация"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "认证"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "認證"
           }
         }
       }
@@ -1063,6 +906,62 @@
         }
       }
     },
+    "Available" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "در دسترس"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Доступно"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可用"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可用"
+          }
+        }
+      }
+    },
+    "Backend" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بک‌اند"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Бэкенд"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "后端"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "後端"
+          }
+        }
+      }
+    },
     "Beta" : {
       "localizations" : {
         "fa" : {
@@ -1080,13 +979,41 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "测试版"
+            "value" : "Beta 版"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "測試版"
+            "value" : "Beta 版"
+          }
+        }
+      }
+    },
+    "Beta Settings" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تنظیمات بتا"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Настройки беты"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beta 版设置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beta 版設置"
           }
         }
       }
@@ -1115,6 +1042,90 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "瀏覽"
+          }
+        }
+      }
+    },
+    "Browser authentication is not supported on tvOS." : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "احراز هویت مرورگری در tvOS پشتیبانی نمی‌شود."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Аутентификация через браузер не поддерживается в tvOS."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tvOS 不支持浏览器认证。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tvOS 不支援瀏覽器認證。"
+          }
+        }
+      }
+    },
+    "Bus / Device" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "گذرگاه / دستگاه"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Шина / Устройство"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "总线 / 设备"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "匯流排 / 裝置"
+          }
+        }
+      }
+    },
+    "Bus ID" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "شناسه گذرگاه"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ID шины"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "总线 ID"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "匯流排 ID"
           }
         }
       }
@@ -1315,6 +1326,34 @@
         }
       }
     },
+    "Cancel Test" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لغو تست"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Остановить тест"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消测试"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消測試"
+          }
+        }
+      }
+    },
     "Cellular" : {
       "localizations" : {
         "fa" : {
@@ -1483,6 +1522,34 @@
         }
       }
     },
+    "Cipher" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رمز"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Шифр"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加密算法"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加密演算法"
+          }
+        }
+      }
+    },
     "Clash Mode" : {
       "localizations" : {
         "fa" : {
@@ -1507,6 +1574,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Clash 模式"
+          }
+        }
+      }
+    },
+    "Class & Interfaces" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کلاس و رابط‌ها"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Класс и интерфейсы"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "类别与接口"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "類別與介面"
           }
         }
       }
@@ -1708,6 +1803,90 @@
         }
       }
     },
+    "Confidence High" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اطمینان بالا"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Высокая уверенность"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "置信度高"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "置信度高"
+          }
+        }
+      }
+    },
+    "Confidence Low" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اطمینان پایین"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Низкая уверенность"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "置信度低"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "置信度低"
+          }
+        }
+      }
+    },
+    "Confidence Medium" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اطمینان متوسط"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Средняя уверенность"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "置信度中"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "置信度中"
+          }
+        }
+      }
+    },
     "Configuration" : {
       "localizations" : {
         "fa" : {
@@ -1732,6 +1911,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "配置"
+          }
+        }
+      }
+    },
+    "Configuration files may contain private content and should not be made public." : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فایل‌های پیکربندی ممکن است حاوی محتوای خصوصی باشند و نباید عمومی شوند."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Файлы конфигурации могут содержать личные данные и не должны публиковаться."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配置文件可能包含隐私内容，不应该被公开发布。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配置檔案可能包含隱私內容，不應該被公開發佈。"
+          }
+        }
+      }
+    },
+    "Configurations" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "پیکربندی‌ها"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Конфигурации"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "組態"
           }
         }
       }
@@ -1792,6 +2027,34 @@
         }
       }
     },
+    "Connect via SSH" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اتصال از طریق SSH"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подключение по SSH"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通过 SSH 连接"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "透過 SSH 連接"
+          }
+        }
+      }
+    },
     "Connect VPN if the destination is not directly accessible." : {
       "localizations" : {
         "fa" : {
@@ -1816,6 +2079,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "如果目標無法直接訪問，則連接 VPN。"
+          }
+        }
+      }
+    },
+    "Connected" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "متصل"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подключено"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已连接"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已連線"
           }
         }
       }
@@ -1960,6 +2251,35 @@
         }
       }
     },
+    "Content" : {
+      "comment" : "Title for the terminal text selection sheet",
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "محتوا"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Содержимое"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "内容"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "內容"
+          }
+        }
+      }
+    },
     "Context destroyed" : {
       "localizations" : {
         "fa" : {
@@ -1984,6 +2304,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "上下文已銷燬"
+          }
+        }
+      }
+    },
+    "Continue" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ادامه"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Продолжить"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "继续"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "繼續"
           }
         }
       }
@@ -2043,6 +2391,37 @@
           }
         }
       }
+    },
+    "Crash Report" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "گزارش خرابی"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отчёт о сбое"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "崩溃报告"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "當機報告"
+          }
+        }
+      }
+    },
+    "Crash Trigger" : {
+      "shouldTranslate" : false
     },
     "Create" : {
       "localizations" : {
@@ -2152,6 +2531,118 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "創建時間"
+          }
+        }
+      }
+    },
+    "Custom Configuration" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "پیکربندی سفارشی"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Пользовательская конфигурация"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自定义配置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自定義配置"
+          }
+        }
+      }
+    },
+    "Dark Configuration" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "پیکربندی تیره"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тёмная конфигурация"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "深色配置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "深色配置"
+          }
+        }
+      }
+    },
+    "Dark Custom Configuration" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "پیکربندی سفارشی تیره"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тёмная пользовательская конфигурация"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "深色自定义配置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "深色自定義配置"
+          }
+        }
+      }
+    },
+    "Dark Theme" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تم تیره"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тёмная тема"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "深色主题"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "深色主題"
           }
         }
       }
@@ -2325,6 +2816,34 @@
         }
       }
     },
+    "Defined at interface level" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "در سطح رابط تعریف شده"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Определяется на уровне интерфейса"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在接口层级定义"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "於介面層級定義"
+          }
+        }
+      }
+    },
     "Delete" : {
       "localizations" : {
         "fa" : {
@@ -2353,6 +2872,34 @@
         }
       }
     },
+    "Delete All" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حذف همه"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удалить все"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部删除"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部刪除"
+          }
+        }
+      }
+    },
     "Deprecated Warning" : {
       "localizations" : {
         "fa" : {
@@ -2377,6 +2924,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "棄用警告"
+          }
+        }
+      }
+    },
+    "DERP region" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "منطقه DERP"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Регион DERP"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DERP 区域"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DERP 區域"
+          }
+        }
+      }
+    },
+    "DERP-relayed connection" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اتصال رله‌شده DERP"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DERP-ретранслируемое соединение"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DERP 中继连接"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DERP 中繼連接"
           }
         }
       }
@@ -2433,6 +3036,118 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "清理"
+          }
+        }
+      }
+    },
+    "Details" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "جزئیات"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подробности"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "详细信息"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "詳細資訊"
+          }
+        }
+      }
+    },
+    "Device class" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کلاس دستگاه"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Класс устройства"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设备类别"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "裝置類別"
+          }
+        }
+      }
+    },
+    "Devices" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دستگاه‌ها"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Устройства"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设备"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "裝置"
+          }
+        }
+      }
+    },
+    "Direct connection" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اتصال مستقیم"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Прямое соединение"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "直接连接"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "直接連接"
           }
         }
       }
@@ -2520,6 +3235,9 @@
           }
         }
       }
+    },
+    "DNS" : {
+      "shouldTranslate" : false
     },
     "DNS Search Domain" : {
       "localizations" : {
@@ -2629,34 +3347,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "用於解析目標的 DNS 伺服器。如果解析失敗，則啟動 VPN。"
-          }
-        }
-      }
-    },
-    "Do not enforce memory limits on sing-box. Will cause OOM on non-jailbroken devices." : {
-      "localizations" : {
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "برای sing-box محدودیت اجباری حافظه اعمال نکنید. این کار در دستگاه‌های بدون جیلبریک باعث OOM می‌شود."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Не применять к sing-box принудительное ограничение памяти. На невзломанных устройствах это приведет к OOM."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "不要对 sing-box 强制执行内存限制。这将导致未越狱设备出现 OOM。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "不要對 sing-box 強制執行內存限制。這將導致未越獄設備出現 OOM。"
           }
         }
       }
@@ -2913,6 +3603,90 @@
         }
       }
     },
+    "Download RPM" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RPM دانلود"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Загрузка RPM"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下载 RPM"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下載 RPM"
+          }
+        }
+      }
+    },
+    "Drop files here to send, or click to select" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فایل‌ها را برای ارسال اینجا رها کنید، یا برای انتخاب کلیک کنید"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перетащите файлы сюда для отправки или нажмите, чтобы выбрать"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拖放文件到此处发送，或点击选择"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拖放檔案到此處傳送，或點擊選擇"
+          }
+        }
+      }
+    },
+    "Drop files here to send, or tap to select" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فایل‌ها را برای ارسال اینجا رها کنید، یا برای انتخاب ضربه بزنید"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перетащите файлы сюда для отправки или коснитесь, чтобы выбрать"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拖放文件到此处发送，或轻点选择"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拖放檔案到此處傳送，或輕點選擇"
+          }
+        }
+      }
+    },
     "Edit" : {
       "localizations" : {
         "fa" : {
@@ -2965,6 +3739,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "編輯內容"
+          }
+        }
+      }
+    },
+    "Edit Custom Configuration" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ویرایش پیکربندی سفارشی"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Изменить пользовательскую конфигурацию"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "编辑自定义配置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "編輯自定義配置"
           }
         }
       }
@@ -3025,86 +3827,58 @@
         }
       }
     },
-    "Empty connections" : {
+    "Edit Server" : {
       "localizations" : {
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "بدون اتصال"
+            "value" : "ویرایش سرور"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Нет подключений"
+            "value" : "Изменить сервер"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无连接"
+            "value" : "编辑服务器"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "無連接"
+            "value" : "編輯伺服器"
           }
         }
       }
     },
-    "Empty content" : {
+    "Empty" : {
       "localizations" : {
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "بدون محتوا"
+            "value" : "خالی"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Нет содержимого"
+            "value" : "Пусто"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无内容"
+            "value" : "空"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "無內容"
-          }
-        }
-      }
-    },
-    "Empty groups" : {
-      "localizations" : {
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "بدون گروه"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Без группы"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无分组"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "無分組"
+            "value" : "空"
           }
         }
       }
@@ -3221,6 +3995,62 @@
         }
       }
     },
+    "Enable Memory Limit" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فعال‌سازی محدودیت حافظه"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Включить ограничение памяти"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启用内存限制"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "啟用記憶體限制"
+          }
+        }
+      }
+    },
+    "Enable Power Report" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فعال‌سازی گزارش انرژی"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Включить отчёт о питании"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启用电源报告"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "啟用電源報告"
+          }
+        }
+      }
+    },
     "Enabled" : {
       "localizations" : {
         "fa" : {
@@ -3249,27 +4079,91 @@
         }
       }
     },
-    "enforceRoutes" : {
+    "Encrypt with age for Project S" : {
       "localizations" : {
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "enforceRoutes"
+            "value" : "رمزگذاری با age برای Project S"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "enforceRoutes"
+            "value" : "Шифровать с помощью age для Project S"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "为 Project S 使用 age 加密"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "enforceRoutes"
+            "value" : "為 Project S 使用 age 加密"
           }
         }
-      },
+      }
+    },
+    "Endpoint" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نقطه اتصال"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Точка подключения"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "端点"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "端點"
+          }
+        }
+      }
+    },
+    "Endpoints" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نقاط اتصال"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Точки подключения"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "端点"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "端點"
+          }
+        }
+      }
+    },
+    "enforceRoutes" : {
       "shouldTranslate" : false
     },
     "Error" : {
@@ -3413,101 +4307,209 @@
       }
     },
     "excludeAPNs" : {
-      "localizations" : {
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "excludeAPNs"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "excludeAPNs"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "excludeAPNs"
-          }
-        }
-      },
       "shouldTranslate" : false
     },
     "excludeCellularServices" : {
-      "localizations" : {
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "excludeCellularServices"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "excludeCellularServices"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "excludeCellularServices"
-          }
-        }
-      },
       "shouldTranslate" : false
     },
     "excludeDeviceCommunication" : {
       "shouldTranslate" : false
     },
     "excludeLocalNetworks" : {
-      "localizations" : {
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "excludeLocalNetworks"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "excludeLocalNetworks"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "excludeLocalNetworks"
-          }
-        }
-      },
       "shouldTranslate" : false
     },
-    "Export" : {
+    "Exit Node" : {
       "localizations" : {
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "خروجی"
+            "value" : "گره خروجی"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Экспорт"
+            "value" : "Выходной узел"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "导出"
+            "value" : "出口节点"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "導出"
+            "value" : "出口節點"
+          }
+        }
+      }
+    },
+    "Expired" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "منقضی شده"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Истёк"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已过期"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已過期"
+          }
+        }
+      }
+    },
+    "Expires" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "انقضا"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Истекает"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "过期时间"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "過期時間"
+          }
+        }
+      }
+    },
+    "Expires %@" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "انقضا %@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Истекает %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@过期"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@過期"
+          }
+        }
+      }
+    },
+    "Export Complete" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "صادرات کامل شد"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Экспорт завершён"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导出完成"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "匯出完成"
+          }
+        }
+      }
+    },
+    "Export Report" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "صادرات گزارش"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Экспорт отчёта"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导出报告"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "匯出報告"
+          }
+        }
+      }
+    },
+    "External Address" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آدرس خارجی"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Внешний адрес"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "外部地址"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "外部地址"
           }
         }
       }
@@ -3536,6 +4538,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "解碼 QRS 數據失敗"
+          }
+        }
+      }
+    },
+    "Failed to read dropped file" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خواندن فایل رها شده ناموفق بود"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось прочитать перетащенный файл"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "读取拖放文件失败"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "讀取拖放檔案失敗"
           }
         }
       }
@@ -3596,6 +4626,34 @@
         }
       }
     },
+    "Fetch Memory Report" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دریافت گزارش حافظه"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Получить отчёт о памяти"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "获取内存报告"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取得記憶體報告"
+          }
+        }
+      }
+    },
     "File" : {
       "localizations" : {
         "fa" : {
@@ -3620,6 +4678,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "文件"
+          }
+        }
+      }
+    },
+    "File is not valid UTF-8 text" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فایل متن معتبر UTF-8 نیست"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Файл не является допустимым текстом UTF-8"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "文件不是有效的 UTF-8 文本"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "檔案不是有效的 UTF-8 文字"
           }
         }
       }
@@ -3708,30 +4794,170 @@
         }
       }
     },
-    "Filter" : {
+    "Files" : {
       "localizations" : {
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "فیلتر"
+            "value" : "فایل‌ها"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Фильтр"
+            "value" : "Файлы"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "筛选"
+            "value" : "文件"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "篩選"
+            "value" : "檔案"
+          }
+        }
+      }
+    },
+    "Flavor" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نوع پروتکل"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вариант протокола"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "协议类型"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "協議類型"
+          }
+        }
+      }
+    },
+    "Follow Theme" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "پیروی از پوسته"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Следовать теме"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跟随主题"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跟隨主題"
+          }
+        }
+      }
+    },
+    "Font" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فونت"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Шрифт"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "字体"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "字體"
+          }
+        }
+      }
+    },
+    "Font Configuration" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "پیکربندی فونت"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Конфигурация шрифта"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "字体配置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "字體配置"
+          }
+        }
+      }
+    },
+    "Fonts" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فونت‌ها"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Шрифты"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "字体"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "字體"
           }
         }
       }
@@ -3792,6 +5018,34 @@
         }
       }
     },
+    "Forward Agent" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ارسال عامل"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перенаправление агента"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "转发代理"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "轉發代理"
+          }
+        }
+      }
+    },
     "FPS" : {
       "localizations" : {
         "fa" : {
@@ -3814,6 +5068,34 @@
         }
       },
       "shouldTranslate" : false
+    },
+    "from %@" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "از %@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "от %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "来自 %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "來自 %@"
+          }
+        }
+      }
     },
     "From Outbound" : {
       "localizations" : {
@@ -3871,6 +5153,62 @@
         }
       }
     },
+    "Get higher GitHub API rate limits" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دریافت محدودیت نرخ بالاتر برای API گیت‌هاب"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Получите более высокие лимиты запросов GitHub API"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "获取更高的 GitHub API 速率限制"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取得更高的 GitHub API 速率限制"
+          }
+        }
+      }
+    },
+    "Ghostty Configuration" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "پیکربندی Ghostty"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Конфигурация Ghostty"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ghostty 配置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ghostty 配置"
+          }
+        }
+      }
+    },
     "GitHub Sponsors (recommended)" : {
       "localizations" : {
         "fa" : {
@@ -3898,6 +5236,37 @@
           }
         }
       }
+    },
+    "GitHub Token" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "توکن GitHub"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Токен GitHub"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub Token"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub Token"
+          }
+        }
+      }
+    },
+    "Go Crash" : {
+      "shouldTranslate" : false
     },
     "Goroutines" : {
       "localizations" : {
@@ -4090,6 +5459,34 @@
         }
       }
     },
+    "Hostname" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نام میزبان"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Имя хоста"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "主机名"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "主機名稱"
+          }
+        }
+      }
+    },
     "http://..." : {
       "localizations" : {
         "fa" : {
@@ -4111,6 +5508,9 @@
           }
         }
       },
+      "shouldTranslate" : false
+    },
+    "HTTP/3" : {
       "shouldTranslate" : false
     },
     "https://sing-box.sagernet.org/" : {
@@ -4219,6 +5619,146 @@
         }
       },
       "shouldTranslate" : false
+    },
+    "Identity" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "شناسه"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Идентификация"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "标识"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "標識"
+          }
+        }
+      }
+    },
+    "Idle" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بیکار"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Простаивает"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "空闲"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "閒置"
+          }
+        }
+      }
+    },
+    "Idle Latency" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تأخیر بیکاری"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Задержка в простое"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "空闲延迟"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "閒置延遲"
+          }
+        }
+      }
+    },
+    "If enabled, you can quickly connect to this peer via the **context menu** (long press) on the Tailscale entry in Tools and on peer entries in the peer list.\n\nThis peer will also appear in the **New Session** menu when connected to other peers via SSH." : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "در صورت فعال بودن، می‌توانید از طریق **منوی زمینه** (فشار طولانی) روی ورودی Tailscale در ابزارها و ورودی‌های همتا در لیست همتاها به سرعت به این همتا متصل شوید.\n\nاین همتا همچنین در منوی **جلسه جدید** هنگام اتصال به همتاهای دیگر از طریق SSH ظاهر خواهد شد."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Если включено, вы можете быстро подключиться к этому узлу через **контекстное меню** (долгое нажатие) записи Tailscale в инструментах и записей узлов в списке узлов.\n\nЭтот узел также появится в меню **Новая сессия** при подключении к другим узлам по SSH."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启用后，你可以通过工具中 Tailscale 条目和节点列表中节点条目的**上下文菜单**（长按）快速连接到此节点。\n\n当通过 SSH 连接到其他节点时，此节点也会出现在**新建会话**菜单中。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "啟用後，你可以透過工具中 Tailscale 條目和節點列表中節點條目的**上下文選單**（長按）快速連接到此節點。\n\n當透過 SSH 連接到其他節點時，此節點也會出現在**新建工作階段**選單中。"
+          }
+        }
+      }
+    },
+    "If enabled, you can quickly connect to this peer via the **context menu** (long press) on the Tailscale entry in Tools and on peer entries in the peer list.\n\nThis peer will also appear in the **New Window** menu when connected to other peers via SSH." : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "در صورت فعال بودن، می‌توانید از طریق **منوی زمینه** (فشار طولانی) روی ورودی Tailscale در ابزارها و ورودی‌های همتا در لیست همتاها به سرعت به این همتا متصل شوید.\n\nاین همتا همچنین در منوی **پنجره جدید** هنگام اتصال به همتاهای دیگر از طریق SSH ظاهر خواهد شد."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Если включено, вы можете быстро подключиться к этому узлу через **контекстное меню** (долгое нажатие) записи Tailscale в инструментах и записей узлов в списке узлов.\n\nЭтот узел также появится в меню **Новое окно** при подключении к другим узлам по SSH."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启用后，你可以通过工具中 Tailscale 条目和节点列表中节点条目的**上下文菜单**（长按）快速连接到此节点。\n\n当通过 SSH 连接到其他节点时，此节点也会出现在**新建窗口**菜单中。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "啟用後，你可以透過工具中 Tailscale 條目和節點列表中節點條目的**上下文選單**（長按）快速連接到此節點。\n\n當透過 SSH 連接到其他節點時，此節點也會出現在**新建視窗**選單中。"
+          }
+        }
+      }
     },
     "If set, a request is sent to this URL. If it doesn't return HTTP 200, VPN is started." : {
       "localizations" : {
@@ -4391,34 +5931,6 @@
         }
       }
     },
-    "Ignore Memory Limit" : {
-      "localizations" : {
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "نادیده‌گرفتن محدودیت حافظه"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Игнорировать ограничение памяти"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "忽略内存限制"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "忽略內存限制"
-          }
-        }
-      }
-    },
     "Import" : {
       "localizations" : {
         "fa" : {
@@ -4559,6 +6071,34 @@
         }
       }
     },
+    "Imported" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وارد شده"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Импортировано"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已导入"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已匯入"
+          }
+        }
+      }
+    },
     "In Minutes" : {
       "localizations" : {
         "fa" : {
@@ -4672,26 +6212,6 @@
       }
     },
     "includeAllNetworks" : {
-      "localizations" : {
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "includeAllNetworks"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "includeAllNetworks"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "includeAllNetworks"
-          }
-        }
-      },
       "shouldTranslate" : false
     },
     "Install" : {
@@ -4718,6 +6238,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "安裝"
+          }
+        }
+      }
+    },
+    "Install Helper Service" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نصب سرویس کمکی"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Установить вспомогательную службу"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安装辅助服务"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安裝輔助服務"
           }
         }
       }
@@ -4774,6 +6322,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "安裝系統擴展"
+          }
+        }
+      }
+    },
+    "Interface %lld" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رابط %lld"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Интерфейс %lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接口 %lld"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "介面 %lld"
           }
         }
       }
@@ -4862,6 +6438,12 @@
         }
       }
     },
+    "IPv4" : {
+      "shouldTranslate" : false
+    },
+    "IPv6" : {
+      "shouldTranslate" : false
+    },
     "Keep Menu Bar in Background" : {
       "localizations" : {
         "fa" : {
@@ -4886,6 +6468,118 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "將菜單欄保留在後臺"
+          }
+        }
+      }
+    },
+    "Key Expiry" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "انقضای کلید"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Срок действия ключа"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "密钥过期"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "金鑰到期"
+          }
+        }
+      }
+    },
+    "Key expiry disabled" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "انقضای کلید غیرفعال است"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Срок действия ключа отключён"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "密钥过期已禁用"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "金鑰到期已停用"
+          }
+        }
+      }
+    },
+    "Kill all connections to free memory when the service memory exceeds the limit." : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "هنگام تجاوز حافظه سرویس از حد مجاز، تمام اتصالات را برای آزادسازی حافظه قطع کنید."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Завершить все соединения для освобождения памяти при превышении лимита памяти сервиса."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当服务内存超出限制时，终止所有连接以释放内存。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "當服務記憶體超出限制時，終止所有連線以釋放記憶體。"
+          }
+        }
+      }
+    },
+    "Kill Connections" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قطع اتصالات"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Завершить соединения"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "终止连接"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "終止連線"
           }
         }
       }
@@ -4946,6 +6640,34 @@
         }
       }
     },
+    "Last Seen" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آخرین بازدید"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Был(а) в сети"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最后在线"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最後上線"
+          }
+        }
+      }
+    },
     "Last Updated" : {
       "localizations" : {
         "fa" : {
@@ -4970,6 +6692,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "最後更新"
+          }
+        }
+      }
+    },
+    "Latency" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تأخیر"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Задержка"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "延迟"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "延遲"
           }
         }
       }
@@ -5030,6 +6780,90 @@
         }
       }
     },
+    "Light Configuration" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "پیکربندی روشن"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Светлая конфигурация"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "浅色配置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "淺色配置"
+          }
+        }
+      }
+    },
+    "Light Custom Configuration" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "پیکربندی سفارشی روشن"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Светлая пользовательская конфигурация"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "浅色自定义配置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "淺色自定義配置"
+          }
+        }
+      }
+    },
+    "Light Theme" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تم روشن"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Светлая тема"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "浅色主题"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "淺色主題"
+          }
+        }
+      }
+    },
     "Loading..." : {
       "localizations" : {
         "fa" : {
@@ -5086,6 +6920,34 @@
         }
       }
     },
+    "Local Device" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دستگاه محلی"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Локальное устройство"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本机"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本機"
+          }
+        }
+      }
+    },
     "Log Level" : {
       "comment" : "Log level filter",
       "localizations" : {
@@ -5111,6 +6973,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "日誌級別"
+          }
+        }
+      }
+    },
+    "Log out" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خروج از حساب"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выйти"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登出"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登出"
           }
         }
       }
@@ -5143,28 +7033,117 @@
         }
       }
     },
-    "Machine: " : {
+    "Logs and configuration files may contain private content and should not be made public." : {
       "localizations" : {
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Machine: "
+            "value" : "فایل‌های گزارش و پیکربندی ممکن است حاوی محتوای خصوصی باشند و نباید عمومی شوند."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Machine: "
+            "value" : "Журналы и файлы конфигурации могут содержать личные данные и не должны публиковаться."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日志和配置文件可能包含隐私内容，不应该被公开发布。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Machine: "
+            "value" : "日誌和配置檔案可能包含隱私內容，不應該被公開發佈。"
           }
         }
-      },
-      "shouldTranslate" : false
+      }
+    },
+    "MagicDNS" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MagicDNS"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MagicDNS"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MagicDNS"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MagicDNS"
+          }
+        }
+      }
+    },
+    "Manage Imported Fonts" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مدیریت فونت‌های وارد شده"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Управление импортированными шрифтами"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "管理已导入的字体"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "管理已匯入的字型"
+          }
+        }
+      }
+    },
+    "Manage Servers..." : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مدیریت سرورها..."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Управление серверами..."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "管理服务器..."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "管理伺服器..."
+          }
+        }
+      }
     },
     "Managing working directory requires Helper Service." : {
       "localizations" : {
@@ -5245,6 +7224,34 @@
       },
       "shouldTranslate" : false
     },
+    "Max Runtime" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حداکثر زمان اجرا"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Макс. время"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最大运行时间"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最大執行時間"
+          }
+        }
+      }
+    },
     "Memory" : {
       "localizations" : {
         "fa" : {
@@ -5273,6 +7280,34 @@
         }
       }
     },
+    "Memory Limit" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "محدودیت حافظه"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ограничение памяти"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "内存限制"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記憶體限制"
+          }
+        }
+      }
+    },
     "Metadata" : {
       "localizations" : {
         "fa" : {
@@ -5297,6 +7332,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "元數據"
+          }
+        }
+      }
+    },
+    "Metered Connection" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اتصال محدود"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Лимитное подключение"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按流量计费连接"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按流量計費連線"
           }
         }
       }
@@ -5497,6 +7560,9 @@
         }
       }
     },
+    "MTU" : {
+      "shouldTranslate" : false
+    },
     "Name" : {
       "localizations" : {
         "fa" : {
@@ -5524,6 +7590,93 @@
           }
         }
       }
+    },
+    "NAT Filtering" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فیلتر NAT"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NAT-фильтрация"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NAT 过滤"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NAT 過濾"
+          }
+        }
+      }
+    },
+    "NAT Mapping" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نگاشت NAT"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NAT-отображение"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NAT 映射"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NAT 映射"
+          }
+        }
+      }
+    },
+    "NAT Type Detection" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تشخیص نوع NAT"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Определение типа NAT"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NAT 类型检测"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NAT 類型偵測"
+          }
+        }
+      }
+    },
+    "Native Crash" : {
+      "shouldTranslate" : false
     },
     "Need Reboot" : {
       "localizations" : {
@@ -5580,6 +7733,37 @@
           }
         }
       }
+    },
+    "Network Quality" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کیفیت شبکه"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Качество сети"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "网络质量"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "網路品質"
+          }
+        }
+      }
+    },
+    "NetworkExtension" : {
+      "shouldTranslate" : false
     },
     "Never Connect" : {
       "localizations" : {
@@ -5693,6 +7877,62 @@
         }
       }
     },
+    "New Server" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سرور جدید"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Новый сервер"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新建服务器"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新建伺服器"
+          }
+        }
+      }
+    },
+    "New Session" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "جلسه جدید"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Новая сессия"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新建会话"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新建工作階段"
+          }
+        }
+      }
+    },
     "New version available: %@" : {
       "localizations" : {
         "fa" : {
@@ -5717,6 +7957,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "新版本可用：%@"
+          }
+        }
+      }
+    },
+    "New Window" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "پنجره جدید"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Новое окно"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新建窗口"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新建視窗"
           }
         }
       }
@@ -5749,6 +8017,34 @@
         }
       }
     },
+    "No data" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بدون داده"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нет данных"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无数据"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無資料"
+          }
+        }
+      }
+    },
     "No Default Route" : {
       "localizations" : {
         "fa" : {
@@ -5777,8 +8073,120 @@
         }
       }
     },
+    "No devices shared yet." : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "هنوز دستگاهی به اشتراک گذاشته نشده است."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Пока нет общих устройств."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚未共享任何设备。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚未共享任何裝置。"
+          }
+        }
+      }
+    },
     "No documentation.\n\n[Apple Documentation](https://developer.apple.com/documentation/networkextension/nevpnprotocol/excludedevicecommunication)" : {
       "shouldTranslate" : false
+    },
+    "No local devices available" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "هیچ دستگاه محلی در دسترس نیست"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нет доступных локальных устройств"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有可用的本地设备"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沒有可用的本機裝置"
+          }
+        }
+      }
+    },
+    "No servers" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بدون سرور"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нет серверов"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无服务器"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無伺服器"
+          }
+        }
+      }
+    },
+    "No Tailscale endpoint is running" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "هیچ نقطه اتصال Tailscale در حال اجرا نیست"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нет запущенных точек подключения Tailscale"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有正在运行的 Tailscale 端点"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沒有正在運行的 Tailscale 端點"
+          }
+        }
+      }
     },
     "No updates available" : {
       "localizations" : {
@@ -5832,6 +8240,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "不，謝謝"
+          }
+        }
+      }
+    },
+    "Not Connected" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "متصل نیست"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не подключено"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未连接"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未連線"
+          }
+        }
+      }
+    },
+    "Not supported by server" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "پشتیبانی نمی‌شود توسط سرور"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не поддерживается сервером"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务器不支持"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "伺服器不支援"
           }
         }
       }
@@ -5892,6 +8356,34 @@
         }
       }
     },
+    "Only available in the macOS standalone version" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فقط در نسخه مستقل macOS در دسترس است"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Доступно только в автономной версии для macOS"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅在 macOS 独立版本中可用"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "僅在 macOS 獨立版本中可用"
+          }
+        }
+      }
+    },
     "Only HTTP and HTTPS URLs are allowed" : {
       "localizations" : {
         "fa" : {
@@ -5916,6 +8408,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "只允許 HTTP 和 HTTPS URL"
+          }
+        }
+      }
+    },
+    "OOM Report" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "گزارش کمبود حافظه"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отчёт о нехватке памяти"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "内存不足报告"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記憶體不足報告"
           }
         }
       }
@@ -5948,6 +8468,62 @@
         }
       }
     },
+    "Open Auth URL" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "باز کردن لینک احراز هویت"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Открыть URL авторизации"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开认证链接"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開啟認證連結"
+          }
+        }
+      }
+    },
+    "Open Auth URL as QR Code" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "باز کردن لینک احراز هویت به‌صورت کد QR"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Открыть URL авторизации как QR-код"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "以二维码打开认证链接"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "以二維碼開啟認證連結"
+          }
+        }
+      }
+    },
     "Open Settings" : {
       "localizations" : {
         "fa" : {
@@ -5972,6 +8548,102 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "打開設置"
+          }
+        }
+      }
+    },
+    "Open sing-box" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "باز کردن sing-box"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Открыть sing-box"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开 sing-box"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開啟 sing-box"
+          }
+        }
+      }
+    },
+    "OpenConnect" : {
+      "shouldTranslate" : false
+    },
+    "OpenConnect: %@" : {
+      "shouldTranslate" : false
+    },
+    "OpenVPN" : {
+      "shouldTranslate" : false
+    },
+    "OpenVPN: %@" : {
+      "shouldTranslate" : false
+    },
+    "Optional" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اختیاری"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Необязательно"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可选"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可選"
+          }
+        }
+      }
+    },
+    "OS" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سیستم‌عامل"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ОС"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "操作系统"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "作業系統"
           }
         }
       }
@@ -6144,6 +8816,34 @@
         }
       }
     },
+    "Password" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "گذرواژه"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Пароль"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "密码"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "密碼"
+          }
+        }
+      }
+    },
     "Path" : {
       "localizations" : {
         "fa" : {
@@ -6197,6 +8897,90 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "暫停"
+          }
+        }
+      }
+    },
+    "Peer relay" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رله همتا"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Узел-ретранслятор"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "节点中继"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "節點中繼"
+          }
+        }
+      }
+    },
+    "Peer relay connection" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اتصال از طریق رله همتا"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Соединение через узел-ретранслятор"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "节点中继连接"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "節點中繼連接"
+          }
+        }
+      }
+    },
+    "Ping" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "پینگ"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Пинг"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ping"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ping"
           }
         }
       }
@@ -6257,6 +9041,62 @@
         }
       }
     },
+    "Power Report" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "گزارش انرژی"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отчёт о питании"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "电源报告"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "電源報告"
+          }
+        }
+      }
+    },
+    "Preparing" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "در حال آماده‌سازی"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подготовка"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在准备"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在準備"
+          }
+        }
+      }
+    },
     "Probe URL" : {
       "localizations" : {
         "fa" : {
@@ -6281,6 +9121,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "探測 URL"
+          }
+        }
+      }
+    },
+    "Product" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "محصول"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Продукт"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "产品"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "產品"
           }
         }
       }
@@ -6453,6 +9321,34 @@
         }
       }
     },
+    "Provide a soft memory limit for the service. The service will perform multiple processes to try to stay within this memory limit." : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "یک محدودیت نرم حافظه برای سرویس تعیین کنید. سرویس چندین فرآیند را انجام خواهد داد تا سعی کند در محدوده این محدودیت حافظه باقی بماند."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Задайте мягкое ограничение памяти для сервиса. Сервис будет выполнять различные процессы, чтобы оставаться в пределах этого ограничения."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "为服务提供软内存限制。服务将执行多个进程以尝试保持在此内存限制范围内。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "為服務提供軟記憶體限制。服務將執行多個程序以嘗試保持在此記憶體限制範圍內。"
+          }
+        }
+      }
+    },
     "QRS" : {
       "localizations" : {
         "fa" : {
@@ -6475,6 +9371,34 @@
         }
       },
       "shouldTranslate" : false
+    },
+    "Quick Connect" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اتصال سریع"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Быстрое подключение"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "快速连接"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "快速連接"
+          }
+        }
+      }
     },
     "Quit" : {
       "localizations" : {
@@ -6560,6 +9484,34 @@
         }
       }
     },
+    "Read from connection: %@" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خواندن از اتصال: %@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Чтение из соединения: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "读取连接：%@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "讀取連線：%@"
+          }
+        }
+      }
+    },
     "Real-time Speed" : {
       "localizations" : {
         "fa" : {
@@ -6588,6 +9540,34 @@
         }
       }
     },
+    "Reasserting" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "در حال اتصال مجدد"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Переподключение"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新连接中"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新連接中"
+          }
+        }
+      }
+    },
     "Reboot required." : {
       "localizations" : {
         "fa" : {
@@ -6612,6 +9592,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "需要重啟系統。"
+          }
+        }
+      }
+    },
+    "Receive" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دریافت"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Получение"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接收"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接收"
           }
         }
       }
@@ -6695,6 +9703,34 @@
       },
       "shouldTranslate" : false
     },
+    "Remember SSH Options" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "به خاطر سپردن گزینه‌های SSH"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Запомнить параметры SSH"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记住 SSH 选项"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記住 SSH 選項"
+          }
+        }
+      }
+    },
     "Remote" : {
       "localizations" : {
         "fa" : {
@@ -6719,6 +9755,90 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "遠程"
+          }
+        }
+      }
+    },
+    "Remote Control" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کنترل از راه دور"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удаленное управление"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "远程控制"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "遠端控制"
+          }
+        }
+      }
+    },
+    "Remote error: %@" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خطای راه دور: %@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ошибка удалённого подключения: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "远程错误：%@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "遠端錯誤：%@"
+          }
+        }
+      }
+    },
+    "Reports" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "گزارش‌ها"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отчёты"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "报告"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "報告"
           }
         }
       }
@@ -6779,6 +9899,34 @@
         }
       }
     },
+    "Response" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "پاسخ"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ответ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "响应"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "回應"
+          }
+        }
+      }
+    },
     "Restart Required" : {
       "localizations" : {
         "fa" : {
@@ -6803,6 +9951,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "需要重啟"
+          }
+        }
+      }
+    },
+    "Results" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نتایج"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Результаты"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "结果"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "結果"
           }
         }
       }
@@ -6835,6 +10011,9 @@
           }
         }
       }
+    },
+    "RootHelper" : {
+      "shouldTranslate" : false
     },
     "Rules" : {
       "localizations" : {
@@ -7032,6 +10211,34 @@
         }
       }
     },
+    "Secret" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رمز"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Секрет"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "密钥"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "密鑰"
+          }
+        }
+      }
+    },
     "Select Device" : {
       "localizations" : {
         "fa" : {
@@ -7088,6 +10295,174 @@
         }
       }
     },
+    "Send" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ارسال"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отправка"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发送"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "發送"
+          }
+        }
+      }
+    },
+    "Sending..." : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "در حال ارسال..."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отправка..."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发送中..."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "傳送中..."
+          }
+        }
+      }
+    },
+    "Serial" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ترتیبی"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Последовательно"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "串行"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "序列"
+          }
+        }
+      }
+    },
+    "Serial number" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "شماره سریال"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Серийный номер"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "序列号"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "序號"
+          }
+        }
+      }
+    },
+    "Server" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سرور"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сервер"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务器"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "伺服器"
+          }
+        }
+      }
+    },
+    "Servers" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سرورها"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Серверы"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务器"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "伺服器"
+          }
+        }
+      }
+    },
     "Service is Running" : {
       "localizations" : {
         "fa" : {
@@ -7116,34 +10491,6 @@
         }
       }
     },
-    "Service Log" : {
-      "localizations" : {
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "گزارش سرویس"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Журнал службы"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "服务日志"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "服務日誌"
-          }
-        }
-      }
-    },
     "Service not started" : {
       "localizations" : {
         "fa" : {
@@ -7168,6 +10515,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "服務未啟動"
+          }
+        }
+      }
+    },
+    "Services" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سرویس‌ها"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Службы"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服務"
           }
         }
       }
@@ -7368,6 +10743,62 @@
         }
       }
     },
+    "Share USB Device" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اشتراک‌گذاری دستگاه USB"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Поделиться USB-устройством"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共享 USB 设备"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共享 USB 裝置"
+          }
+        }
+      }
+    },
+    "Shared in" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "به اشتراک گذاشته شده"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Поделено"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共享至此"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共享至此"
+          }
+        }
+      }
+    },
     "Show in Menu Bar" : {
       "localizations" : {
         "fa" : {
@@ -7418,6 +10849,34 @@
         }
       },
       "shouldTranslate" : false
+    },
+    "Size" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اندازه"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Размер"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "大小"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "大小"
+          }
+        }
+      }
     },
     "Slice Size" : {
       "localizations" : {
@@ -7531,6 +10990,34 @@
         }
       }
     },
+    "Speed" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سرعت"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скорость"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "速度"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "速度"
+          }
+        }
+      }
+    },
     "Sponsors" : {
       "localizations" : {
         "fa" : {
@@ -7555,6 +11042,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "贊助"
+          }
+        }
+      }
+    },
+    "SSH" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SSH"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SSH"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SSH"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SSH"
+          }
+        }
+      }
+    },
+    "SSH Options" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "گزینه‌های SSH"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Параметры SSH"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SSH 选项"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SSH 選項"
           }
         }
       }
@@ -7671,6 +11214,34 @@
         }
       }
     },
+    "Start Test" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "شروع تست"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Начать тест"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始测试"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開始測試"
+          }
+        }
+      }
+    },
     "Start the VPN connection when conditions match." : {
       "localizations" : {
         "fa" : {
@@ -7695,6 +11266,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "當條件匹配時啟動 VPN 連接。"
+          }
+        }
+      }
+    },
+    "Started" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "شروع‌شده"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Запущено"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已启动"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已啟動"
+          }
+        }
+      }
+    },
+    "Starting" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "در حال شروع"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Запуск"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启动中"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "啟動中"
           }
         }
       }
@@ -7811,6 +11438,34 @@
         }
       }
     },
+    "Stop Sharing" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "توقف اشتراک‌گذاری"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Прекратить общий доступ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "停止共享"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "停止共享"
+          }
+        }
+      }
+    },
     "Stop the VPN connection when conditions match." : {
       "localizations" : {
         "fa" : {
@@ -7835,6 +11490,118 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "當條件匹配時停止 VPN 連接。"
+          }
+        }
+      }
+    },
+    "Stopped" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "متوقف‌شده"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Остановлено"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已停止"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已停止"
+          }
+        }
+      }
+    },
+    "Stopping" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "در حال توقف"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Остановка"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "停止中"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "停止中"
+          }
+        }
+      }
+    },
+    "STUN Test" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تست STUN"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "STUN-тест"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "STUN 测试"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "STUN 測試"
+          }
+        }
+      }
+    },
+    "Submit" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ارسال"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отправить"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "提交"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "提交"
           }
         }
       }
@@ -7979,28 +11746,117 @@
         }
       }
     },
-    "System: " : {
+    "Taildrop" : {
       "localizations" : {
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "System: "
+            "value" : "Taildrop"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "System: "
+            "value" : "Taildrop"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taildrop"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "System: "
+            "value" : "Taildrop"
           }
         }
-      },
-      "shouldTranslate" : false
+      }
+    },
+    "Tailscale" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tailscale"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tailscale"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tailscale"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tailscale"
+          }
+        }
+      }
+    },
+    "Tailscale Addresses" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آدرس‌های Tailscale"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Адреса Tailscale"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tailscale 地址"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tailscale 位址"
+          }
+        }
+      }
+    },
+    "Tailscale: %@" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tailscale: %@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tailscale: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tailscale: %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tailscale: %@"
+          }
+        }
+      }
     },
     "Taiwan Flag Available" : {
       "localizations" : {
@@ -8026,6 +11882,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "特殊旗幟可用"
+          }
+        }
+      }
+    },
+    "Terminal Type" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نوع ترمینال"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тип терминала"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "终端类型"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "終端類型"
+          }
+        }
+      }
+    },
+    "The Helper Service provides process lookup, the Bridge outbound, and many other basic features." : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سرویس کمکی جست‌وجوی فرایند، خروجی Bridge و بسیاری دیگر از امکانات پایه را فراهم می‌کند."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вспомогательная служба предоставляет поиск процессов, исходящее подключение Bridge и многие другие базовые функции."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "辅助服务提供进程查找、Bridge 出站等许多基础功能。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "輔助服務提供進程查找、Bridge 出站等許多基礎功能。"
           }
         }
       }
@@ -8114,6 +12026,62 @@
         }
       }
     },
+    "Theme" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "پوسته"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тема"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "主题"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "主題"
+          }
+        }
+      }
+    },
+    "Themes" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تم‌ها"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Темы"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "主题"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "主題"
+          }
+        }
+      }
+    },
     "This app needs to be placed under the Applications folder to work." : {
       "localizations" : {
         "fa" : {
@@ -8138,6 +12106,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "此應用程序需要放置在 Applications 文件夾下才能運行。"
+          }
+        }
+      }
+    },
+    "This Device" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "این دستگاه"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Это устройство"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此设备"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此裝置"
           }
         }
       }
@@ -8170,6 +12166,34 @@
         }
       }
     },
+    "to %@" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "به %@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "на %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发送至 %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "傳送至 %@"
+          }
+        }
+      }
+    },
     "To Clipboard" : {
       "localizations" : {
         "fa" : {
@@ -8194,6 +12218,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "到剪貼板"
+          }
+        }
+      }
+    },
+    "To export this report to your iPhone or iPad, make sure sing-box is the **same version** on both devices and **VPN is disabled**." : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "برای صادرات این گزارش به iPhone یا iPad، مطمئن شوید که sing-box در هر دو دستگاه **نسخه یکسان** است و **VPN غیرفعال** است."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Чтобы экспортировать этот отчёт на iPhone или iPad, убедитесь, что sing-box на обоих устройствах **одной версии** и **VPN отключён**."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要将此报告导出到 iPhone 或 iPad，请确保两台设备上的 sing-box 为**相同版本**且**已关闭 VPN**。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要將此報告匯出至 iPhone 或 iPad，請確認兩部裝置上的 sing-box 為**相同版本**且**已關閉 VPN**。"
           }
         }
       }
@@ -8254,6 +12306,62 @@
         }
       }
     },
+    "To provide devices, use a Chromium-based browser with the sing-box dashboard, or the sing-box graphical client on macOS or Android." : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "برای ارائه دستگاه‌ها، از مرورگری مبتنی بر Chromium همراه با sing-box dashboard یا از کلاینت گرافیکی sing-box روی macOS یا Android استفاده کنید."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Чтобы предоставлять устройства, используйте браузер на базе Chromium вместе с sing-box dashboard или графический клиент sing-box на macOS или Android."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要提供设备，您可以使用基于 Chromium 的浏览器配合 sing-box dashboard，或使用 macOS 或 Android 上的 sing-box 图形客户端。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要提供裝置，您可以使用基於 Chromium 的瀏覽器配合 sing-box dashboard，或使用 macOS 或 Android 上的 sing-box 圖形客戶端。"
+          }
+        }
+      }
+    },
+    "Tools" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ابزارها"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Инструменты"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "工具"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "工具"
+          }
+        }
+      }
+    },
     "Traffic" : {
       "localizations" : {
         "fa" : {
@@ -8306,6 +12414,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "流量"
+          }
+        }
+      }
+    },
+    "Transport" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "انتقال"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Транспорт"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传输"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "傳輸"
           }
         }
       }
@@ -8506,6 +12642,62 @@
         }
       }
     },
+    "Unknown" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ناشناخته"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Неизвестно"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未知"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未知"
+          }
+        }
+      }
+    },
+    "Unknown message type %u" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نوع پیام ناشناخته %u"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Неизвестный тип сообщения %u"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未知消息类型 %u"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未知訊息類型 %u"
+          }
+        }
+      }
+    },
     "Unsaved Changes" : {
       "localizations" : {
         "fa" : {
@@ -8674,6 +12866,34 @@
         }
       }
     },
+    "Upload RPM" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RPM آپلود"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отправка RPM"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上传 RPM"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上傳 RPM"
+          }
+        }
+      }
+    },
     "URL" : {
       "localizations" : {
         "fa" : {
@@ -8720,6 +12940,90 @@
       },
       "shouldTranslate" : false
     },
+    "USB/IP" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "USB/IP"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "USB/IP"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "USB/IP"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "USB/IP"
+          }
+        }
+      }
+    },
+    "USB/IP: %@" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "USB/IP: %@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "USB/IP: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "USB/IP：%@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "USB/IP：%@"
+          }
+        }
+      }
+    },
+    "Use the + button to share a local USB device from this Mac." : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "برای اشتراک‌گذاری یک دستگاه USB محلی از این Mac، از دکمه + استفاده کنید."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Используйте кнопку +, чтобы поделиться локальным USB-устройством этого Mac."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用 + 按钮共享此 Mac 上的本地 USB 设备。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用 + 按鈕共享此 Mac 上的本機 USB 裝置。"
+          }
+        }
+      }
+    },
     "User" : {
       "localizations" : {
         "fa" : {
@@ -8748,8 +13052,61 @@
         }
       }
     },
-    "v%@" : {
-      "shouldTranslate" : false
+    "Username" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نام کاربری"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Имя пользователя"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用户名"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用者名稱"
+          }
+        }
+      }
+    },
+    "Verifying" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "در حال تأیید"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Проверка"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在验证"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在驗證"
+          }
+        }
+      }
     },
     "Version" : {
       "localizations" : {
@@ -8778,6 +13135,9 @@
           }
         }
       }
+    },
+    "VID:PID" : {
+      "shouldTranslate" : false
     },
     "View Content" : {
       "localizations" : {
@@ -8919,6 +13279,34 @@
         }
       }
     },
+    "When memory limit is enabled, you will receive a report if the service memory exceeds the limit. You can also manually trigger report collection." : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "هنگامی که محدودیت حافظه فعال است، در صورت تجاوز حافظه سرویس از حد مجاز، گزارشی دریافت خواهید کرد. همچنین می‌توانید جمع‌آوری گزارش را به صورت دستی فعال کنید."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "При включённом ограничении памяти вы получите отчёт, если память сервиса превысит лимит. Вы также можете вручную запросить сбор отчёта."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启用内存限制后，当服务内存超出限制时，您将会收到报告。您也可以手动触发收集报告。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "啟用記憶體限制後，當服務記憶體超出限制時，您將會收到報告。您也可以手動觸發收集報告。"
+          }
+        }
+      }
+    },
     "Wi-Fi" : {
       "localizations" : {
         "fa" : {
@@ -8971,6 +13359,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "WiFi 狀態訪問"
+          }
+        }
+      }
+    },
+    "With Configuration" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "همراه با پیکربندی"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "С конфигурацией"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "附带配置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "附帶配置"
+          }
+        }
+      }
+    },
+    "With Log" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "همراه با گزارش"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "С журналом"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "附带日志"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "附帶日誌"
           }
         }
       }
@@ -9055,6 +13499,146 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "應用程序位置錯誤"
+          }
+        }
+      }
+    },
+    "Yes" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بله"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Да"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "是"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "是"
+          }
+        }
+      }
+    },
+    "You can customize the terminal appearance by editing the Ghostty Configuration in App Settings." : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "می‌توانید ظاهر ترمینال را با ویرایش پیکربندی Ghostty در تنظیمات برنامه سفارشی کنید."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вы можете настроить внешний вид терминала, изменив конфигурацию Ghostty в настройках приложения."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你可以通过在应用设置中编辑 Ghostty 配置来自定义终端外观。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你可以透過在應用程式設定中編輯 Ghostty 配置來自定義終端外觀。"
+          }
+        }
+      }
+    },
+    "You will receive a report when a crash occurs." : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "هنگام وقوع خرابی، گزارشی دریافت خواهید کرد."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "При сбое приложения вы получите отчёт."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当遇到崩溃时，您将会收到报告。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "當遇到崩潰時，您將會收到報告。"
+          }
+        }
+      }
+    },
+    "You will receive a report when the service runs out of memory. You can also manually trigger report collection." : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "هنگام کمبود حافظه سرویس، گزارشی دریافت خواهید کرد. همچنین می‌توانید جمع‌آوری گزارش را به صورت دستی فعال کنید."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "При нехватке памяти сервиса вы получите отчёт. Вы также можете вручную запросить сбор отчёта."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当服务内存不足时，您将会收到报告。您也可以手动触发收集报告。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "當服務記憶體不足時，您將會收到報告。您也可以手動觸發收集報告。"
+          }
+        }
+      }
+    },
+    "You're on a metered connection. This test will use a significant amount of data." : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "شما از اتصال محدود استفاده می‌کنید. این تست حجم زیادی از داده‌ها را مصرف خواهد کرد."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вы используете лимитное подключение. Этот тест потребляет значительный объём данных."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你正在使用按流量计费的连接。此测试将使用大量数据。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你正在使用按流量計費的連線。此測試將使用大量數據。"
           }
         }
       }

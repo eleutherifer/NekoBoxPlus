@@ -51,9 +51,11 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -64,6 +66,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
@@ -72,7 +75,9 @@ import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -80,8 +85,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.blacksquircle.ui.language.json.JsonLanguage
 import io.nekohasekai.sfa.R
+import io.nekohasekai.sfa.compat.ProfileCodeEditor
+import io.nekohasekai.sfa.compat.ProfileEditorColors
+import io.nekohasekai.sfa.compose.topbar.LocalScaffoldPadding
 import io.nekohasekai.sfa.compose.topbar.OverrideTopBar
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -221,10 +228,13 @@ fun EditProfileContentScreen(
         )
     }
 
+    val scaffoldPadding = LocalScaffoldPadding.current
+
     Column(
         modifier =
         modifier
             .fillMaxSize()
+            .padding(scaffoldPadding)
             .onPreviewKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown) {
                     // Support both Ctrl (Windows/Linux) and Cmd (macOS)
@@ -238,11 +248,8 @@ fun EditProfileContentScreen(
                         }
                         // Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y - Redo
                         (
-                            modifierPressed &&
-                                event.isShiftPressed &&
-                                event.key == Key.Z ||
-                                modifierPressed &&
-                                event.key == Key.Y
+                            (modifierPressed && event.isShiftPressed && event.key == Key.Z) ||
+                                (modifierPressed && event.key == Key.Y)
                             ) &&
                             !uiState.isReadOnly -> {
                             viewModel.redo()
@@ -436,32 +443,51 @@ fun EditProfileContentScreen(
             Modifier
                 .fillMaxSize()
                 .clipToBounds()
-                .weight(1f),
+                .weight(1f)
+                .imePadding(),
         ) {
             // Editor
+            val colorScheme = MaterialTheme.colorScheme
+            val editorColors =
+                remember(colorScheme) {
+                    ProfileEditorColors(
+                        background = colorScheme.background.toArgb(),
+                        foreground = colorScheme.onSurface.toArgb(),
+                        lineNumber = colorScheme.onSurfaceVariant.toArgb(),
+                        lineNumberBackground = colorScheme.background.toArgb(),
+                        selectionBackground = colorScheme.primary.copy(alpha = 0.35f).toArgb(),
+                        currentLineBackground = colorScheme.surfaceContainer.toArgb(),
+                        cursor = colorScheme.primary.toArgb(),
+                        matchedTextBackground = colorScheme.tertiary.copy(alpha = 0.35f).toArgb(),
+                        comment = colorScheme.onSurfaceVariant.toArgb(),
+                        key = colorScheme.primary.toArgb(),
+                        string = colorScheme.tertiary.toArgb(),
+                        number = colorScheme.secondary.toArgb(),
+                        literal = colorScheme.primary.toArgb(),
+                    )
+                }
+            // Inset the editor viewport by the measured height of the floating bottom bar,
+            // so auto-scrolling to the cursor never leaves it hidden behind the bar
+            var bottomBarHeight by remember { mutableIntStateOf(0) }
             AndroidView(
                 factory = { context ->
-                    ManualScrollTextProcessor(context).apply {
-                        language = JsonLanguage()
-                        setTextSize(14f)
-                        setPadding(16, 16, 16, if (uiState.isReadOnly) 16 else 120) // Less padding for read-only
-                        typeface = android.graphics.Typeface.MONOSPACE
-                        setBackgroundColor(
-                            androidx.core.content.ContextCompat.getColor(context, android.R.color.transparent),
-                        )
-                        // Set up the editor with read-only state - this handles all configuration
-                        viewModel.setEditor(this, uiState.isReadOnly)
-                    }
+                    ProfileCodeEditor(context).also { viewModel.attachEditor(it) }.view
                 },
-                update = { textProcessor ->
-                    // Re-apply configuration when read-only state changes
-                    viewModel.setEditor(textProcessor, uiState.isReadOnly)
-                },
+                update = { viewModel.applyEditorColors(editorColors) },
                 modifier =
                 Modifier
                     .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background),
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(bottom = with(LocalDensity.current) { bottomBarHeight.toDp() }),
             )
+
+            LaunchedEffect(uiState.isReadOnly) {
+                viewModel.setReadOnly(uiState.isReadOnly)
+            }
+
+            DisposableEffect(Unit) {
+                onDispose { viewModel.detachEditor() }
+            }
 
             // Simple loading indicator at the top
             if (uiState.isLoading) {
@@ -480,7 +506,7 @@ fun EditProfileContentScreen(
                     Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .imePadding(),
+                        .onSizeChanged { bottomBarHeight = it.height },
                 ) {
                     // Configuration error banner (appears above the symbol bar)
                     AnimatedVisibility(

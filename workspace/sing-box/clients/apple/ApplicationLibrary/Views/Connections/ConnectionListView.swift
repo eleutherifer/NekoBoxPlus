@@ -8,87 +8,75 @@ import SwiftUI
 public struct ConnectionListView: View {
     @EnvironmentObject private var environments: ExtensionEnvironments
     @StateObject private var viewModel = ConnectionListViewModel()
-    @StateObject private var commandClient = CommandClient([.connections])
 
     public init() {}
 
     public var body: some View {
-        VStack {
-            if viewModel.isLoading {
-                Text("Loading...")
-            } else {
-                if viewModel.connections.isEmpty {
-                    Text("Empty connections")
-                } else {
-                    ScrollView {
-                        LazyVStack {
-                            ForEach(viewModel.filteredConnections, id: \.id) { it in
-                                ConnectionView(it)
-                            }
-                        }
-                        .padding()
-                    }
-                }
-            }
-        }
+        ConnectionListContentView(dataModel: viewModel.dataModel)
         #if os(iOS)
-        .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                ConnectionMenuButton(
-                    connectionStateFilter: $viewModel.connectionStateFilter,
-                    connectionSort: $viewModel.connectionSort,
-                    closeAllConnections: viewModel.closeAllConnections
-                )
-            }
-        }
-        #elseif os(macOS)
-        .applySearchable(text: $viewModel.searchText, isSearching: $viewModel.isSearching, shouldShow: viewModel.isSearching)
-        .toolbar {
-            ToolbarItemGroup {
-                if #available(macOS 14.0, *) {
-                    Button(action: viewModel.toggleSearch) {
-                        Label("Search", systemImage: "magnifyingglass")
-                    }
+            .toolbar {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    ConnectionMenuButton(
+                        connectionStateFilter: $viewModel.connectionStateFilter,
+                        connectionSort: $viewModel.connectionSort,
+                        closeAllConnections: viewModel.closeAllConnections
+                    )
                 }
-                ConnectionMenuView(
-                    connectionStateFilter: $viewModel.connectionStateFilter,
-                    connectionSort: $viewModel.connectionSort,
-                    closeAllConnections: viewModel.closeAllConnections
-                )
             }
-        }
+        #elseif os(macOS)
+            .applySearchable(text: $viewModel.searchText, isSearching: $viewModel.isSearching, shouldShow: viewModel.isSearching)
+            .toolbar {
+                ToolbarItemGroup {
+                    if #available(macOS 14.0, *) {
+                        Button(action: viewModel.toggleSearch) {
+                            Label("Search", systemImage: "magnifyingglass")
+                        }
+                    }
+                    ConnectionMenuView(
+                        connectionStateFilter: $viewModel.connectionStateFilter,
+                        connectionSort: $viewModel.connectionSort,
+                        closeAllConnections: viewModel.closeAllConnections
+                    )
+                }
+            }
         #endif
-        .alert($viewModel.alert)
-        .onAppear {
-            if !environments.connectionSearchText.isEmpty {
-                viewModel.searchText = environments.connectionSearchText
-                viewModel.isSearching = true
+            .alert($viewModel.alert)
+            .onAppear {
+                if !environments.connectionSearchText.isEmpty {
+                    viewModel.searchText = environments.connectionSearchText
+                    viewModel.isSearching = true
+                }
+                viewModel.connect()
             }
-            viewModel.connect()
-            commandClient.connect()
-        }
-        .onDisappear {
-            environments.connectionSearchText = viewModel.searchText
-            viewModel.disconnect()
-            commandClient.disconnect()
-        }
-        .onReceive(commandClient.$connections) { connections in
-            Task { @MainActor in
-                viewModel.setConnections(connections)
+            .onDisappear {
+                environments.connectionSearchText = viewModel.searchText
+                viewModel.disconnect()
             }
-        }
-        .onChangeCompat(of: viewModel.connectionStateFilter) { filter in
-            commandClient.connectionStateFilter = filter
-            commandClient.filterConnectionsNow()
-        }
-        .onChangeCompat(of: viewModel.connectionSort) { sort in
-            commandClient.connectionSort = sort
-            commandClient.filterConnectionsNow()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         #if os(iOS)
             .background(Color(uiColor: .systemGroupedBackground))
         #endif
+    }
+}
+
+private struct ConnectionListContentView: View {
+    @ObservedObject var dataModel: ConnectionDataModel
+
+    var body: some View {
+        VStack {
+            if dataModel.isLoading {
+                Text("Loading...")
+            } else {
+                ScrollView {
+                    LazyVStack {
+                        ForEach(dataModel.filteredConnections, id: \.id) { it in
+                            ConnectionView(it)
+                        }
+                    }
+                    .padding()
+                }
+            }
+        }
     }
 }
 

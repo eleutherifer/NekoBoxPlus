@@ -215,18 +215,19 @@ func (f *cronetForwarder) tcpDialer() cronet.Dialer {
 }
 
 func (f *cronetForwarder) udpDialer() cronet.UDPDialer {
-	return func(address string, port uint16) (fd int, localAddress string, localPort uint16) {
+	return func(address string, port uint16) (fd int, localAddress string, localPort uint16, onClose func()) {
 		defer func() {
 			if recover() != nil {
 				fd = cronet.NetErrorConnectionFailed.Code()
 				localAddress = ""
 				localPort = 0
+				onClose = nil
 			}
 		}()
 		destination := M.ParseSocksaddrHostPort(address, port)
 		conn, err := dialForwarder(f.ctx, N.NetworkUDP, destination.String(), f.conn)
 		if err != nil {
-			return cronetNetError(err).Code(), "", 0
+			return cronetNetError(err).Code(), "", 0, nil
 		}
 		localAddr := M.SocksaddrFromNet(conn.LocalAddr())
 		if localAddr.IsValid() {
@@ -237,26 +238,26 @@ func (f *cronetForwarder) udpDialer() cronet.UDPDialer {
 			fd, duplicateErr := duplicateSocketFD(syscallConn)
 			if duplicateErr == nil {
 				_ = conn.Close()
-				return fd, localAddress, localPort
+				return fd, localAddress, localPort, nil
 			}
 		}
 		fd, pipeConn, err := createCronetPacketSocketPair()
 		if err != nil {
 			_ = conn.Close()
-			return cronet.NetErrorConnectionFailed.Code(), "", 0
+			return cronet.NetErrorConnectionFailed.Code(), "", 0, nil
 		}
 		remoteAddress := M.SocksaddrFromNet(conn.RemoteAddr())
 		packetConn := bufio.NewUnbindPacketConn(conn)
 		pipePacketConn := bufio.NewUnbindPacketConnWithAddr(pipeConn.(net.Conn), remoteAddress)
-		f.waitGroup.Add(1)
-		go func() {
+		relayContext, relayCancel := context.WithCancel(f.ctx)
+		f.waitGroup.Go(func() {
 			defer recoverCronetPanic(nil)
-			defer f.waitGroup.Done()
-			_ = bufio.CopyPacketConn(f.ctx, packetConn, pipePacketConn)
+			defer relayCancel()
+			_ = bufio.CopyPacketConn(relayContext, packetConn, pipePacketConn)
 			_ = conn.Close()
 			_ = pipeConn.Close()
-		}()
-		return fd, localAddress, localPort
+		})
+		return fd, localAddress, localPort, relayCancel
 	}
 }
 

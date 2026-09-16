@@ -402,11 +402,11 @@ func (t *cronetRoundTripper) tcpDialer(ctx context.Context, c *Client) cronet.Di
 }
 
 func (t *cronetRoundTripper) udpDialer(ctx context.Context, c *Client) cronet.UDPDialer {
-	return func(address string, port uint16) (int, string, uint16) {
+	return func(address string, port uint16) (int, string, uint16, func()) {
 		destination := M.ParseSocksaddrHostPort(address, port)
 		conn, err := c.detour.DialContext(ctx, N.NetworkUDP, destination)
 		if err != nil {
-			return cronetNetError(err).Code(), "", 0
+			return cronetNetError(err).Code(), "", 0, nil
 		}
 		localAddr := M.SocksaddrFromNet(conn.LocalAddr())
 		var localAddress string
@@ -419,13 +419,13 @@ func (t *cronetRoundTripper) udpDialer(ctx context.Context, c *Client) cronet.UD
 			fd, duplicateErr := dupSocketFD(udpConn)
 			if duplicateErr == nil {
 				conn.Close()
-				return fd, localAddress, localPort
+				return fd, localAddress, localPort, nil
 			}
 		}
 		fd, pipeConn, err := createPacketSocketPair(false)
 		if err != nil {
 			conn.Close()
-			return cronet.NetErrorConnectionFailed.Code(), "", 0
+			return cronet.NetErrorConnectionFailed.Code(), "", 0, nil
 		}
 		remoteAddress := M.SocksaddrFromNet(conn.RemoteAddr())
 		packetConn := bufio.NewUnbindPacketConn(conn)
@@ -433,15 +433,17 @@ func (t *cronetRoundTripper) udpDialer(ctx context.Context, c *Client) cronet.UD
 		releaseConn := t.tracker.addCloser(conn)
 		releasePipeConn := t.tracker.addCloser(pipeConn)
 		doneWaiter := t.tracker.addWaiter()
+		relayContext, relayCancel := context.WithCancel(ctx)
 		go func() {
 			defer doneWaiter()
 			defer releaseConn()
 			defer releasePipeConn()
-			if err := bufio.CopyPacketConn(ctx, packetConn, pipePacketConn); shouldRecoverCronetBridgeRoundTripper(err) && !t.closedForRecovery() {
+			defer relayCancel()
+			if err := bufio.CopyPacketConn(relayContext, packetConn, pipePacketConn); shouldRecoverCronetBridgeRoundTripper(err) && !t.closedForRecovery() {
 				c.scheduleRoundTripperRecoveryNow(t)
 			}
 		}()
-		return fd, localAddress, localPort
+		return fd, localAddress, localPort, relayCancel
 	}
 }
 

@@ -7,45 +7,44 @@ import SwiftUI
 struct MainView: View {
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var environments: ExtensionEnvironments
+    @EnvironmentObject private var sendManager: TaildropSendManager
 
-    @State private var selection = NavigationPage.dashboard
+    @State private var selection: NavigationPage = {
+        if Variant.screenshotMode,
+           let pageValue = ProcessInfo.processInfo.environment["SCREENSHOT_PAGE"],
+           let page = NavigationPage(snapshotValue: pageValue)
+        {
+            return page
+        }
+        return .dashboard
+    }()
+
     @State private var importProfile: LibboxProfileContent?
     @State private var importRemoteProfile: LibboxImportRemoteProfile?
     @State private var alert: AlertState?
     @State private var showGroups = false
     @State private var showConnections = false
     @State private var buttonState = ButtonVisibilityState()
+    @State private var initializedTabs: Set<NavigationPage> = []
 
     private let profileEditor: (Binding<String>, Bool) -> AnyView = { text, isEditable in
         AnyView(ProfileEditorWrapperView(text: text, isEditable: isEditable))
     }
 
-    private var shouldShowBottomAccessory: Bool {
-        guard !environments.extensionProfileLoading else {
-            return false
-        }
-        guard !environments.emptyProfiles else {
-            return false
-        }
-        guard environments.extensionProfile != nil else {
-            return false
-        }
-        return true
+    private let ghosttyConfigEditor: (Binding<String>) -> AnyView = { text in
+        AnyView(GhosttyConfigEditorWrapperView(text: text))
     }
 
-    @ViewBuilder
     private var tabViewContent: some View {
-        if shouldShowBottomAccessory {
-            if #available(iOS 26.0, *), !Variant.debugNoIOS26 {
-                baseTabView
-                    .tabViewBottomAccessory {
-                        bottomAccessoryContent
-                    }
-            } else {
-                legacyTabView
+        TabView(selection: $selection) {
+            ForEach(NavigationPage.allCases, id: \.self) { page in
+                NavigationStackCompat {
+                    tabContent(for: page)
+                }
+                .tag(page)
+                .tabItem { page.label }
+                .badge(page == .tools ? environments.toolsBadgeCount + sendManager.failedSessionCount : 0)
             }
-        } else {
-            baseTabView
         }
     }
 
@@ -57,63 +56,142 @@ struct MainView: View {
         }
     }
 
-    private var baseTabView: some View {
-        tabView(showsBottomAccessory: false)
-    }
-
-    private var legacyTabView: some View {
-        tabView(showsBottomAccessory: shouldShowBottomAccessory)
-    }
-
-    private func tabView(showsBottomAccessory: Bool) -> some View {
-        TabView(selection: $selection) {
-            ForEach(NavigationPage.allCases, id: \.self) { page in
-                NavigationStackCompat {
-                    tabContent(for: page, showsBottomAccessory: showsBottomAccessory)
-                }
-                .tag(page)
-                .tabItem { page.label }
+    @ViewBuilder
+    private func tabContent(for page: NavigationPage) -> some View {
+        let content = page.contentView
+            .navigationTitle(page.title)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                accessoryInset
+                    .transaction { transaction in
+                        if !initializedTabs.contains(page) {
+                            transaction.disablesAnimations = true
+                        }
+                    }
             }
+            .onAppear {
+                if !initializedTabs.contains(page) {
+                    DispatchQueue.main.async {
+                        initializedTabs.insert(page)
+                    }
+                }
+            }
+        if page == .logs {
+            content.navigationBarTitleDisplayMode(.inline)
+        } else {
+            content
         }
     }
 
     @ViewBuilder
-    private func tabContent(for page: NavigationPage, showsBottomAccessory: Bool) -> some View {
-        if showsBottomAccessory {
-            let content = page.contentView
-                .navigationTitle(page.title)
-                .tabViewBottomAccessoryCompat(useSystemAccessory: false) {
-                    bottomAccessoryContent
-                }
-            if page == .logs {
-                tabBarBackgroundIfAvailable(
-                    content
-                        .navigationBarTitleDisplayMode(.inline)
-                )
-            } else {
-                tabBarBackgroundIfAvailable(content)
-            }
-        } else {
-            let content = page.contentView
-                .navigationTitle(page.title)
-            if page == .logs {
-                content
-                    .navigationBarTitleDisplayMode(.inline)
-            } else {
-                content
+    private var accessoryInset: some View {
+        if environments.remoteServer != nil {
+            remoteStatusBarPill
+        } else if let profile = environments.extensionProfile, !environments.extensionProfileLoading, !environments.emptyProfiles {
+            AccessoryInset(profile: profile) {
+                statusBarPill
+            } fab: {
+                fabInset
             }
         }
     }
 
-    private func tabBarBackgroundIfAvailable(_ content: some View) -> some View {
-        content
+    private var fabInset: some View {
+        HStack {
+            Spacer()
+            FABStartButton()
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
+        .padding(.bottom, 12)
+    }
+
+    private var statusBarPill: some View {
+        bottomAccessoryContent
+            .frame(maxWidth: .infinity)
+            .frame(height: 44)
+            .modifier(AccessoryPillBackgroundModifier(cornerRadius: 22))
+            .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 12)
+    }
+
+    private var remoteStatusBarPill: some View {
+        remoteAccessoryContent
+            .frame(maxWidth: .infinity)
+            .frame(height: 44)
+            .modifier(AccessoryPillBackgroundModifier(cornerRadius: 22))
+            .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 12)
+    }
+
+    private var remoteAccessoryContent: some View {
+        HStack(spacing: 12) {
+            RemoteStatusText(
+                commandClient: environments.commandClient,
+                serverName: environments.remoteServer?.displayName ?? ""
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            NavigationButtonsView(
+                showGroupsButton: buttonState.showGroupsButton,
+                showConnectionsButton: buttonState.showConnectionsButton,
+                groupsCount: buttonState.groupsCount,
+                connectionsCount: buttonState.connectionsCount,
+                onGroupsTap: { showGroups = true },
+                onConnectionsTap: { showConnections = true }
+            )
+            Divider()
+            RemoteUptimeText(commandClient: environments.commandClient)
+            Button {
+                environments.exitRemoteControl()
+            } label: {
+                Label("Disconnect", systemImage: "antenna.radiowaves.left.and.right.slash")
+                    .labelStyle(.iconOnly)
+            }
+        }
+        .padding(.horizontal)
+        .tint(.primary)
+        .buttonStyle(BarItemButtonStyle())
+    }
+
+    private struct RemoteStatusText: View {
+        @ObservedObject var commandClient: CommandClient
+        let serverName: String
+
+        var body: some View {
+            statusText
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+
+        private var statusText: Text {
+            if commandClient.isConnected {
+                return Text(serverName)
+            } else {
+                return Text("Connecting...")
+            }
+        }
+    }
+
+    private struct AccessoryPillBackgroundModifier: ViewModifier {
+        let cornerRadius: CGFloat
+        func body(content: Content) -> some View {
+            if #available(iOS 26.0, *), !Variant.debugNoIOS26 {
+                content.glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            } else {
+                content.background(.bar, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            }
+        }
     }
 
     private var bottomAccessoryContent: some View {
         HStack(spacing: 12) {
             if let profile = environments.extensionProfile {
                 StatusText(profile: profile)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             }
             NavigationButtonsView(
                 showGroupsButton: buttonState.showGroupsButton,
@@ -128,67 +206,173 @@ struct MainView: View {
         }
         .padding(.horizontal)
         .tint(.primary)
+        .buttonStyle(BarItemButtonStyle())
+    }
+
+    private struct BarItemButtonStyle: ButtonStyle {
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .frame(maxHeight: .infinity)
+                .contentShape(Rectangle())
+                .opacity(configuration.isPressed ? 0.5 : 1)
+                .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+        }
     }
 
     private var mainBody: some View {
-        Group {
-            tabViewContent
-                .onAppear {
-                    updateButtonVisibility()
+        tabViewContent
+            .onAppear {
+                updateButtonVisibility()
+            }
+            .onReceive(environments.commandClient.$groups) { _ in
+                Task { @MainActor in updateButtonVisibility() }
+            }
+            .onReceive(environments.commandClient.$connections) { _ in
+                Task { @MainActor in updateButtonVisibility() }
+            }
+            .onReceive(environments.commandClient.$hasAnyConnection) { _ in
+                Task { @MainActor in updateButtonVisibility() }
+            }
+            .onReceive(environments.commandClient.$isConnected) { _ in
+                Task { @MainActor in updateButtonVisibility() }
+            }
+            .onReceive(environments.commandClient.statusPublisher) { _ in
+                Task { @MainActor in updateButtonVisibility() }
+            }
+            .onReceive(environments.$remoteServer) { _ in
+                Task { @MainActor in updateButtonVisibility() }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .NEVPNStatusDidChange)) { _ in
+                Task { @MainActor in updateButtonVisibility() }
+            }
+            .onReceive(environments.$extensionProfile) { _ in
+                Task { @MainActor in updateButtonVisibility() }
+            }
+            .onReceive(environments.$emptyProfiles) { _ in
+                Task { @MainActor in updateButtonVisibility() }
+            }
+            .sheet(isPresented: $showGroups) {
+                GroupsSheetContent()
+            }
+            .sheet(isPresented: $showConnections) {
+                ConnectionsSheetContent()
+            }
+            .onChangeCompat(of: buttonState.showGroupsButton) { newValue in
+                if !newValue {
+                    showGroups = false
                 }
-                .onReceive(environments.commandClient.$groups) { _ in
-                    Task { @MainActor in updateButtonVisibility() }
+            }
+            .onChangeCompat(of: buttonState.showConnectionsButton) { newValue in
+                if !newValue {
+                    showConnections = false
                 }
-                .onReceive(environments.commandClient.$connections) { _ in
-                    Task { @MainActor in updateButtonVisibility() }
-                }
-                .onReceive(environments.commandClient.$hasAnyConnection) { _ in
-                    Task { @MainActor in updateButtonVisibility() }
-                }
-                .onReceive(NotificationCenter.default.publisher(for: .NEVPNStatusDidChange)) { _ in
-                    Task { @MainActor in updateButtonVisibility() }
-                }
-                .onReceive(environments.$extensionProfile) { _ in
-                    Task { @MainActor in updateButtonVisibility() }
-                }
-                .onReceive(environments.$emptyProfiles) { _ in
-                    Task { @MainActor in updateButtonVisibility() }
-                }
-                .sheet(isPresented: $showGroups) {
-                    GroupsSheetContent()
-                }
-                .sheet(isPresented: $showConnections) {
-                    ConnectionsSheetContent()
-                }
-        }
-        .onAppear {
-            environments.postReload()
-        }
-        .alert($alert)
-        .globalChecks()
-        .onChangeCompat(of: scenePhase) { newValue in
-            if newValue == .active {
+            }
+            .onAppear {
                 environments.postReload()
             }
-        }
-        .onChangeCompat(of: selection) { newValue in
-            if newValue == .logs {
-                environments.connect()
+            .alert($alert)
+            .globalChecks()
+            .onChangeCompat(of: scenePhase) { newValue in
+                if newValue == .active {
+                    environments.postReload()
+                }
             }
-        }
-        .environment(\.selection, $selection)
-        .environment(\.importProfile, $importProfile)
-        .environment(\.importRemoteProfile, $importRemoteProfile)
-        .environment(\.profileEditor, profileEditor)
-        .handlesExternalEvents(preferring: [], allowing: ["*"])
-        .onOpenURL(perform: openURL)
+            .onChangeCompat(of: selection) { newValue in
+                if newValue == .logs {
+                    environments.connect()
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .reportReceived)) { _ in
+                Task {
+                    await environments.crashReportManager.refresh()
+                    await environments.oomReportManager.refresh()
+                    selection = .tools
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .navigateToSettingsPage)) { notification in
+                guard notification.object is SettingsPage else { return }
+                selection = .settings
+            }
+            .environment(\.selection, $selection)
+            .environment(\.importProfile, $importProfile)
+            .environment(\.importRemoteProfile, $importRemoteProfile)
+            .environment(\.profileEditor, profileEditor)
+            .environment(\.ghosttyConfigEditor, ghosttyConfigEditor)
+            .handlesExternalEvents(preferring: [], allowing: ["*"])
+            .onOpenURL(perform: openURL)
     }
 
     private func updateButtonVisibility() {
-        buttonState.update(
-            profile: environments.extensionProfile,
-            commandClient: environments.commandClient
-        )
+        var newState = buttonState
+        if environments.remoteServer != nil {
+            newState.update(remoteClient: environments.commandClient)
+        } else {
+            newState.update(
+                profile: environments.extensionProfile,
+                commandClient: environments.commandClient
+            )
+        }
+        if newState != buttonState {
+            buttonState = newState
+        }
+    }
+
+    private struct AccessoryInset<StatusBar: View, FAB: View>: View {
+        @ObservedObject var profile: ExtensionProfile
+        @ViewBuilder let statusBar: () -> StatusBar
+        @ViewBuilder let fab: () -> FAB
+
+        var body: some View {
+            ZStack(alignment: .bottomTrailing) {
+                if profile.status == .disconnected {
+                    fab()
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                } else {
+                    statusBar()
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: profile.status)
+        }
+    }
+
+    private struct FABStartButton: View {
+        @EnvironmentObject private var environments: ExtensionEnvironments
+        @State private var alert: AlertState?
+
+        var body: some View {
+            Button {
+                guard let profile = environments.extensionProfile else { return }
+                Task {
+                    do {
+                        try await profile.start()
+                    } catch {
+                        alert = AlertState(action: "start service", error: error)
+                    }
+                }
+            } label: {
+                Label("Start", systemImage: "play.fill")
+                    .labelStyle(.iconOnly)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 56, height: 56)
+                    .modifier(FABBackgroundModifier())
+                    .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(environments.extensionProfile == nil || environments.emptyProfiles)
+            .alert($alert)
+        }
+
+        private struct FABBackgroundModifier: ViewModifier {
+            func body(content: Content) -> some View {
+                if #available(iOS 26.0, *), !Variant.debugNoIOS26 {
+                    content.glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                } else {
+                    content.background(.bar, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+            }
+        }
     }
 
     private struct StatusText: View {
@@ -222,7 +406,10 @@ struct MainView: View {
     }
 
     private func openURL(url: URL) {
-        if url.host == "import-remote-profile" {
+        if url.schemeAction == "taildrop" {
+            environments.pendingTaildropEndpointTag = url.schemeQueryValue("endpoint") ?? ""
+            selection = .tools
+        } else if url.host == "import-remote-profile" {
             var error: NSError?
             importRemoteProfile = LibboxParseRemoteProfileImportLink(url.absoluteString, &error)
             if let error {

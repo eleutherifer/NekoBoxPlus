@@ -10,6 +10,7 @@ public final class CodeEditEditorController: ObservableObject {
 
     @Published public var canUndo = false
     @Published public var canRedo = false
+    @Published public var isCompletionPopupVisible = false
 
     public init() {}
 
@@ -34,13 +35,26 @@ public final class CodeEditEditorController: ObservableObject {
     }
 }
 
-private extension NSColor {
-    var forEditor: NSColor {
-        usingColorSpace(.sRGB) ?? self
+private func isDark(_ appearance: NSAppearance) -> Bool {
+    appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+}
+
+private final class CodeEditContainerView: NSView {
+    var onAppearanceChange: ((Bool) -> Void)?
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        onAppearanceChange?(isDark(effectiveAppearance))
     }
 }
 
-private func makeTheme(for colorScheme: ColorScheme) -> EditorTheme {
+private extension NSColor {
+    var forEditor: NSColor {
+        usingColorSpace(.deviceRGB) ?? self
+    }
+}
+
+private func makeTheme(isDark: Bool) -> EditorTheme {
     var theme: EditorTheme!
     let build = {
         theme = EditorTheme(
@@ -62,7 +76,7 @@ private func makeTheme(for colorScheme: ColorScheme) -> EditorTheme {
             comments: .init(color: NSColor.secondaryLabelColor.forEditor)
         )
     }
-    if let appearance = NSAppearance(named: colorScheme == .dark ? .darkAqua : .aqua) {
+    if let appearance = NSAppearance(named: isDark ? .darkAqua : .aqua) {
         appearance.performAsCurrentDrawingAppearance(build)
     } else {
         build()
@@ -70,10 +84,10 @@ private func makeTheme(for colorScheme: ColorScheme) -> EditorTheme {
     return theme
 }
 
-private func makeConfiguration(isEditable: Bool, colorScheme: ColorScheme) -> SourceEditorConfiguration {
+private func makeConfiguration(isEditable: Bool, isDark: Bool) -> SourceEditorConfiguration {
     SourceEditorConfiguration(
         appearance: .init(
-            theme: makeTheme(for: colorScheme),
+            theme: makeTheme(isDark: isDark),
             font: .monospacedSystemFont(ofSize: 14, weight: .regular),
             lineHeightMultiple: 1.3,
             wrapLines: false
@@ -92,27 +106,36 @@ private func makeConfiguration(isEditable: Bool, colorScheme: ColorScheme) -> So
 struct CodeEditTextView: NSViewRepresentable {
     @Binding var text: String
     let isEditable: Bool
+    let language: CodeLanguage
     let editorController: CodeEditEditorController?
+    let enableConfigCompletion: Bool
 
-    @Environment(\.colorScheme) private var colorScheme
-
-    init(text: Binding<String>, isEditable: Bool, editorController: CodeEditEditorController? = nil) {
+    init(
+        text: Binding<String>,
+        isEditable: Bool,
+        language: CodeLanguage = .json,
+        editorController: CodeEditEditorController? = nil,
+        enableConfigCompletion: Bool = false
+    ) {
         _text = text
         self.isEditable = isEditable
+        self.language = language
         self.editorController = editorController
+        self.enableConfigCompletion = enableConfigCompletion
     }
 
     func makeNSView(context: Context) -> NSView {
+        let containerView = CodeEditContainerView()
+        containerView.translatesAutoresizingMaskIntoConstraints = false
+        let initialIsDark = isDark(containerView.effectiveAppearance)
+
         let controller = TextViewController(
             string: text,
-            language: .json,
-            configuration: makeConfiguration(isEditable: isEditable, colorScheme: colorScheme),
+            language: language,
+            configuration: makeConfiguration(isEditable: isEditable, isDark: initialIsDark),
             cursorPositions: []
         )
         controller.loadView()
-
-        let containerView = NSView()
-        containerView.translatesAutoresizingMaskIntoConstraints = false
 
         let controllerView = controller.view
         controllerView.translatesAutoresizingMaskIntoConstraints = false
@@ -126,9 +149,22 @@ struct CodeEditTextView: NSViewRepresentable {
         ])
 
         context.coordinator.controller = controller
-        context.coordinator.lastColorScheme = colorScheme
+        context.coordinator.lastIsDark = initialIsDark
         context.coordinator.setupObservation()
+        containerView.onAppearanceChange = { [weak coordinator = context.coordinator] dark in
+            guard let coordinator, let controller = coordinator.controller else { return }
+            guard coordinator.lastIsDark != dark else { return }
+            coordinator.lastIsDark = dark
+            controller.configuration.appearance.theme = makeTheme(isDark: dark)
+        }
         editorController?.controller = controller
+        if enableConfigCompletion, isEditable {
+            let completionController = JSONCompletionController(textView: controller.textView)
+            completionController.onVisibilityChange = { [weak editorController] visible in
+                editorController?.isCompletionPopupVisible = visible
+            }
+            context.coordinator.completionController = completionController
+        }
         Task { @MainActor in
             editorController?.updateUndoState()
         }
@@ -142,14 +178,10 @@ struct CodeEditTextView: NSViewRepresentable {
             controller.text = text
             // setText() creates a new Highlighter but doesn't trigger initial highlighting.
             // Re-setting the language forces the highlighter to invalidate and re-highlight.
-            controller.language = .json
+            controller.language = language
         }
         if controller.configuration.behavior.isEditable != isEditable {
             controller.configuration.behavior.isEditable = isEditable
-        }
-        if context.coordinator.lastColorScheme != colorScheme {
-            context.coordinator.lastColorScheme = colorScheme
-            controller.configuration.appearance.theme = makeTheme(for: colorScheme)
         }
         editorController?.controller = controller
     }
@@ -160,7 +192,8 @@ struct CodeEditTextView: NSViewRepresentable {
 
     class Coordinator: NSObject {
         var controller: TextViewController?
-        var lastColorScheme: ColorScheme?
+        var completionController: JSONCompletionController?
+        var lastIsDark: Bool?
         @Binding var text: String
         private var observation: NSObjectProtocol?
         private weak var editorController: CodeEditEditorController?

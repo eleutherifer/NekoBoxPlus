@@ -27,16 +27,21 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.Autorenew
 import androidx.compose.material.icons.outlined.DeleteForever
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.NewReleases
 import androidx.compose.material.icons.outlined.Notifications
@@ -58,6 +63,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -78,6 +84,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.os.LocaleListCompat
@@ -88,8 +97,12 @@ import io.nekohasekai.libbox.Libbox
 import io.nekohasekai.sfa.Application
 import io.nekohasekai.sfa.BuildConfig
 import io.nekohasekai.sfa.R
+import io.nekohasekai.sfa.compose.base.UiEvent
+import io.nekohasekai.sfa.compose.base.rememberApplyServiceChangeNotifier
 import io.nekohasekai.sfa.compose.component.UpdateAvailableDialog
+import io.nekohasekai.sfa.compose.topbar.LocalScaffoldPadding
 import io.nekohasekai.sfa.compose.topbar.OverrideTopBar
+import io.nekohasekai.sfa.constant.Status
 import io.nekohasekai.sfa.database.Settings
 import io.nekohasekai.sfa.ktx.clipboardText
 import io.nekohasekai.sfa.update.UpdateCheckException
@@ -110,7 +123,10 @@ import android.provider.Settings as AndroidSettings
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun AppSettingsScreen(navController: NavController) {
+fun AppSettingsScreen(
+    navController: NavController,
+    serviceStatus: Status = Status.Stopped,
+) {
     OverrideTopBar {
         TopAppBar(
             title = { Text(stringResource(R.string.title_app_settings)) },
@@ -134,6 +150,8 @@ fun AppSettingsScreen(navController: NavController) {
     var currentSource by remember { mutableStateOf(Settings.updateSource) }
     var showTrackDialog by remember { mutableStateOf(false) }
     var currentTrack by remember { mutableStateOf(Settings.updateTrack) }
+    var showGitHubTokenDialog by remember { mutableStateOf(false) }
+    var githubToken by remember { mutableStateOf(Settings.githubToken) }
     var checkUpdateEnabled by remember { mutableStateOf(Settings.checkUpdateEnabled) }
     var showErrorDialog by remember { mutableStateOf<String?>(null) }
 
@@ -156,6 +174,7 @@ fun AppSettingsScreen(navController: NavController) {
     var notificationEnabled by remember { mutableStateOf(true) }
     var dynamicNotification by remember { mutableStateOf(Settings.dynamicNotification) }
     var showDisableNotificationDialog by remember { mutableStateOf(false) }
+    val notifyApplyChange = rememberApplyServiceChangeNotifier(serviceStatus)
 
     var showLanguageDialog by remember { mutableStateOf(false) }
     val availableLocales = remember { getSupportedLocales(context) }
@@ -247,6 +266,20 @@ fun AppSettingsScreen(navController: NavController) {
         )
     }
 
+    if (showGitHubTokenDialog) {
+        GitHubTokenDialog(
+            currentToken = githubToken,
+            onSave = { token ->
+                githubToken = token
+                scope.launch(Dispatchers.IO) {
+                    Settings.githubToken = token
+                }
+                showGitHubTokenDialog = false
+            },
+            onDismiss = { showGitHubTokenDialog = false },
+        )
+    }
+
     showErrorDialog?.let { message ->
         AlertDialog(
             onDismissRequest = { showErrorDialog = null },
@@ -273,16 +306,17 @@ fun AppSettingsScreen(navController: NavController) {
                         )
                     } else {
                         val progress by UpdateState.downloadProgress
+                        val progressValue = progress
                         Column {
-                            if (progress != null) {
-                                Text("${stringResource(R.string.downloading)} ${(progress!! * 100).toInt()}%")
+                            if (progressValue != null) {
+                                Text("${stringResource(R.string.downloading)} ${(progressValue * 100).toInt()}%")
                             } else {
                                 Text(stringResource(R.string.downloading))
                             }
                             Spacer(modifier = Modifier.height(8.dp))
-                            if (progress != null) {
+                            if (progressValue != null) {
                                 LinearProgressIndicator(
-                                    progress = { progress!! },
+                                    progress = { progressValue },
                                     modifier = Modifier.fillMaxWidth(),
                                 )
                             } else {
@@ -423,13 +457,18 @@ fun AppSettingsScreen(navController: NavController) {
         )
     }
 
+    val scaffoldPadding = LocalScaffoldPadding.current
+
     Column(
         modifier =
         Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface)
             .verticalScroll(rememberScrollState())
-            .padding(vertical = 8.dp),
+            .padding(
+                top = scaffoldPadding.calculateTopPadding() + 8.dp,
+                bottom = scaffoldPadding.calculateBottomPadding() + 8.dp,
+            ),
     ) {
         // Info Card
         Card(
@@ -613,6 +652,50 @@ fun AppSettingsScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
+            text = stringResource(R.string.tailscale),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp),
+        )
+
+        Card(
+            modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            ),
+        ) {
+            ListItem(
+                headlineContent = {
+                    Text(
+                        stringResource(R.string.tailscale_terminal_config),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.Terminal,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                },
+                modifier =
+                Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { navController.navigate("settings/tailscale/terminal_config") },
+                colors =
+                ListItemDefaults.colors(
+                    containerColor = Color.Transparent,
+                ),
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
             text = stringResource(R.string.notification_settings),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
@@ -680,6 +763,9 @@ fun AppSettingsScreen(navController: NavController) {
                                 dynamicNotification = checked
                                 scope.launch(Dispatchers.IO) {
                                     Settings.dynamicNotification = checked
+                                    withContext(Dispatchers.Main) {
+                                        notifyApplyChange(UiEvent.ApplyServiceChange.Mode.Restart)
+                                    }
                                 }
                             },
                         )
@@ -723,6 +809,9 @@ fun AppSettingsScreen(navController: NavController) {
                             count += 1
                         }
                         if (Vendor.hasCustomUpdate) {
+                            count += 1
+                        }
+                        if (Vendor.hasCustomUpdate && !isFDroid) {
                             count += 1
                         }
                         if (isFDroid) {
@@ -821,6 +910,38 @@ fun AppSettingsScreen(navController: NavController) {
                         updateItemModifier().let {
                             if (isFDroid) it.alpha(0.38f) else it.clickable { showTrackDialog = true }
                         },
+                        colors =
+                        ListItemDefaults.colors(
+                            containerColor = Color.Transparent,
+                        ),
+                    )
+                }
+
+                if (Vendor.hasCustomUpdate && !isFDroid) {
+                    ListItem(
+                        headlineContent = {
+                            Text(
+                                stringResource(R.string.github_token),
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                        },
+                        supportingContent = {
+                            Text(
+                                stringResource(R.string.github_token_description),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
+                        leadingContent = {
+                            Icon(
+                                imageVector = Icons.Outlined.Key,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        },
+                        modifier =
+                        updateItemModifier()
+                            .clickable { showGitHubTokenDialog = true },
                         colors =
                         ListItemDefaults.colors(
                             containerColor = Color.Transparent,
@@ -1347,6 +1468,49 @@ private fun UpdateTrackDialog(
         confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text(stringResource(android.R.string.cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun GitHubTokenDialog(
+    currentToken: String,
+    onSave: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var token by remember(currentToken) { mutableStateOf(currentToken) }
+    var tokenVisible by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.github_token)) },
+        text = {
+            OutlinedTextField(
+                value = token,
+                onValueChange = { token = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                visualTransformation = if (tokenVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    IconButton(onClick = { tokenVisible = !tokenVisible }) {
+                        Icon(
+                            imageVector = if (tokenVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            contentDescription = null,
+                        )
+                    }
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(token.trim()) }) {
+                Text(stringResource(R.string.save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
             }
         },
     )

@@ -22,42 +22,83 @@ public struct LogView: View {
 private struct LogViewContent: View {
     @EnvironmentObject private var environments: ExtensionEnvironments
     @StateObject private var viewModel: LogViewModel
+    #if os(iOS)
+        @State private var remoteServers: [RemoteServer] = []
+    #endif
 
     init(commandClient: CommandClient, initialSearchText: String = "") {
         _viewModel = StateObject(wrappedValue: LogViewModel(commandClient: commandClient, searchText: initialSearchText))
     }
 
     var body: some View {
-        LogContentInnerView(dataModel: viewModel.dataModel, viewModel: viewModel)
-        #if !os(tvOS)
-            .applySearchable(text: $viewModel.searchText, isSearching: $viewModel.isSearching, shouldShow: viewModel.isSearching)
-            .toolbar {
-                ToolbarItemGroup {
-                    toolbarButtons
+        #if os(tvOS)
+            LogContentInnerView(dataModel: viewModel.dataModel, viewModel: viewModel)
+        #else
+            contentWithToolbar
+                .onDisappear {
+                    environments.logSearchText = viewModel.searchText
                 }
-            }
-            .onDisappear {
-                environments.logSearchText = viewModel.searchText
-            }
-            .alert($viewModel.alert)
-            .background(
-                LogExportView(
-                    showFileExporter: Binding(
-                        get: { viewModel.dataModel.showFileExporter },
-                        set: { viewModel.dataModel.showFileExporter = $0 }
-                    ),
-                    logFileURL: Binding(
-                        get: { viewModel.dataModel.logFileURL },
-                        set: { viewModel.dataModel.logFileURL = $0 }
-                    ),
-                    alert: $viewModel.alert,
-                    cleanup: { viewModel.dataModel.cleanupLogFile() }
+                .alert($viewModel.alert)
+                .background(
+                    LogExportView(
+                        dataModel: viewModel.dataModel,
+                        alert: $viewModel.alert
+                    )
                 )
-            )
+            #if os(iOS)
+                .onAppear {
+                    Task { await reloadRemoteServers() }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .remoteServersUpdated)) { _ in
+                    Task { await reloadRemoteServers() }
+                }
+            #endif
         #endif
     }
 
     #if !os(tvOS)
+        private var searchableContent: some View {
+            LogContentInnerView(dataModel: viewModel.dataModel, viewModel: viewModel)
+                .applySearchable(text: $viewModel.searchText, isSearching: $viewModel.isSearching, shouldShow: viewModel.isSearching)
+        }
+
+        /// The iOS 15 fallback must be excluded from macOS builds entirely: with
+        /// `if #available(iOS 16.0, *)` the else branch is compile-time dead on macOS,
+        /// where the compiler permits unavailable declarations, so the Xcode 27 SDK
+        /// resolved the HStack's ViewBuilder.buildBlock to the macOS 26-only
+        /// `TupleContent` overload. That type still lands in this view's `Body`
+        /// associated type witness, and demangling it aborts on macOS < 26
+        /// (TestFlight crash in swift_getAssociatedTypeWitness).
+        @ViewBuilder
+        private var contentWithToolbar: some View {
+            #if os(iOS)
+                if #available(iOS 16.0, *) {
+                    groupedToolbarContent
+                } else {
+                    // iOS 15 renders only one trailing toolbar entry; group all buttons into a single item
+                    searchableContent.toolbar {
+                        ToolbarItem {
+                            HStack {
+                                toolbarButtons
+                                logMenu
+                            }
+                        }
+                    }
+                }
+            #else
+                groupedToolbarContent
+            #endif
+        }
+
+        private var groupedToolbarContent: some View {
+            searchableContent.toolbar {
+                ToolbarItemGroup {
+                    toolbarButtons
+                    logMenu
+                }
+            }
+        }
+
         @ViewBuilder
         private var toolbarButtons: some View {
             if #available(iOS 17.0, macOS 14.0, *) {
@@ -71,12 +112,35 @@ private struct LogViewContent: View {
                     systemImage: viewModel.isPaused ? "play.circle" : "pause.circle"
                 )
             }
+        }
+
+        private var logMenu: AnyView {
             #if canImport(UIKit)
-                LogMenuButton(viewModel: viewModel)
+                if #available(iOS 16.0, *) {
+                    return AnyView(LogMenuButton(
+                        viewModel: viewModel,
+                        remoteServers: remoteServers,
+                        activeRemoteServerID: environments.remoteServer?.id,
+                        onSelectLocalDevice: { environments.exitRemoteControl() },
+                        onSelectRemoteServer: { server in
+                            guard environments.remoteServer?.id != server.id else { return }
+                            environments.enterRemoteControl(server)
+                        }
+                    ))
+                } else {
+                    // UIViewRepresentable views collapse to zero size in iOS 15 toolbars
+                    return AnyView(LogMenuView(viewModel: viewModel, remoteServers: remoteServers))
+                }
             #else
-                LogMenuView(viewModel: viewModel)
+                return AnyView(LogMenuView(viewModel: viewModel))
             #endif
         }
+
+        #if os(iOS)
+            private func reloadRemoteServers() async {
+                remoteServers = await (try? RemoteServerManager.list()) ?? []
+            }
+        #endif
     #endif
 }
 
@@ -84,6 +148,10 @@ private struct LogViewContent: View {
     #if canImport(UIKit)
         private struct LogMenuButton: UIViewRepresentable {
             let viewModel: LogViewModel
+            let remoteServers: [RemoteServer]
+            let activeRemoteServerID: Int64?
+            let onSelectLocalDevice: () -> Void
+            let onSelectRemoteServer: (RemoteServer) -> Void
             @Environment(\.colorScheme) private var colorScheme
 
             func makeUIView(context _: Context) -> UIButton {
@@ -166,59 +234,98 @@ private struct LogViewContent: View {
                     viewModel.dataModel.clearLogs()
                 }
 
-                return UIMenu(children: [logLevelMenu, saveMenu, clearAction])
+                var children: [UIMenuElement] = [logLevelMenu, saveMenu, clearAction]
+
+                if !remoteServers.isEmpty {
+                    let remoteControlActions = [
+                        UIAction(
+                            title: NSLocalizedString("Local Device", comment: ""),
+                            state: activeRemoteServerID == nil ? .on : .off
+                        ) { _ in
+                            onSelectLocalDevice()
+                        },
+                    ] + remoteServers.map { server in
+                        UIAction(
+                            title: server.displayName,
+                            state: server.id == activeRemoteServerID ? .on : .off
+                        ) { _ in
+                            onSelectRemoteServer(server)
+                        }
+                    }
+
+                    children.append(UIMenu(
+                        title: NSLocalizedString("Remote Control", comment: ""),
+                        options: .displayInline,
+                        children: remoteControlActions
+                    ))
+                }
+
+                return UIMenu(children: children)
             }
         }
     #endif
 
-    #if canImport(AppKit)
-        private struct LogMenuView: View {
-            let viewModel: LogViewModel
+    private struct LogMenuView: View {
+        let viewModel: LogViewModel
+        var remoteServers: [RemoteServer] = []
 
-            var body: some View {
-                Menu {
-                    Picker(selection: Binding(
-                        get: { viewModel.selectedLogLevel },
-                        set: { viewModel.selectedLogLevel = $0 }
-                    )) {
-                        Text(NSLocalizedString("Default", comment: "Log level filter default option")).tag(Int?.none)
-                        ForEach(LogLevel.allCases) { level in
-                            Text(level.name).tag(Int?.some(level.rawValue))
-                        }
+        var body: some View {
+            Menu {
+                if #unavailable(iOS 16.0) {
+                    // iOS 15 renders a bare Picker inline; wrap it to match the iOS 16+ submenu
+                    Menu {
+                        logLevelPicker
                     } label: {
                         Label("Log Level", systemImage: "slider.horizontal.3")
                     }
-                    Menu {
-                        Button {
-                            viewModel.dataModel.copyToClipboard()
-                        } label: {
-                            Label("To Clipboard", systemImage: "doc.on.clipboard")
-                        }
-                        Button {
-                            viewModel.dataModel.prepareLogFile()
-                            viewModel.dataModel.showFileExporter = true
-                        } label: {
-                            Label("To File", systemImage: "arrow.down.doc")
-                        }
-                        Button {
-                            viewModel.dataModel.prepareLogFile()
-                        } label: {
-                            Label("Share", systemImage: "square.and.arrow.up")
-                        }
+                } else {
+                    logLevelPicker
+                }
+                Menu {
+                    Button {
+                        viewModel.dataModel.copyToClipboard()
                     } label: {
-                        Label("Save", systemImage: "square.and.arrow.down")
+                        Label("To Clipboard", systemImage: "doc.on.clipboard")
                     }
-                    Button(role: .destructive) {
-                        viewModel.dataModel.clearLogs()
+                    Button {
+                        viewModel.dataModel.prepareLogFile()
+                        viewModel.dataModel.showFileExporter = true
                     } label: {
-                        Label(NSLocalizedString("Clear Logs", comment: "Clear all logs"), systemImage: "trash")
+                        Label("To File", systemImage: "arrow.down.doc")
+                    }
+                    Button {
+                        viewModel.dataModel.prepareLogFile()
+                    } label: {
+                        Label("Share", systemImage: "square.and.arrow.up")
                     }
                 } label: {
-                    Label("Filter", systemImage: "line.3.horizontal.circle")
+                    Label("Save", systemImage: "square.and.arrow.down")
                 }
+                Button(role: .destructive) {
+                    viewModel.dataModel.clearLogs()
+                } label: {
+                    Label(NSLocalizedString("Clear Logs", comment: "Clear all logs"), systemImage: "trash")
+                }
+                RemoteControlMenuItems(servers: remoteServers)
+            } label: {
+                Label("Others", systemImage: "line.3.horizontal.circle")
             }
         }
-    #endif
+
+        private var logLevelPicker: some View {
+            Picker(selection: Binding(
+                get: { viewModel.selectedLogLevel },
+                set: { viewModel.selectedLogLevel = $0 }
+            )) {
+                Text(NSLocalizedString("Default", comment: "Log level filter default option")).tag(Int?.none)
+                ForEach(LogLevel.allCases) { level in
+                    Text(level.name).tag(Int?.some(level.rawValue))
+                }
+            } label: {
+                Label("Log Level", systemImage: "slider.horizontal.3")
+            }
+        }
+    }
 #endif
 
 private struct LogContentInnerView: View {
@@ -229,16 +336,14 @@ private struct LogContentInnerView: View {
     private let logFont = Font.system(.caption2, design: .monospaced)
 
     var body: some View {
-        Group {
-            if Variant.screenshotMode {
-                previewContent
-            } else if dataModel.isEmpty {
-                emptyContent
-            } else if dataModel.visibleLogs.isEmpty {
-                emptyContent
-            } else {
-                logScrollView
-            }
+        if Variant.screenshotMode {
+            previewContent
+        } else if dataModel.isEmpty {
+            emptyContent
+        } else if dataModel.visibleLogs.isEmpty {
+            emptyContent
+        } else {
+            logScrollView
         }
     }
 
@@ -279,7 +384,15 @@ private struct LogContentInnerView: View {
     private var emptyContent: some View {
         Group {
             if dataModel.isConnected {
-                Text("Empty logs")
+                if dataModel.initialLogsReceived {
+                    Text("Empty logs")
+                } else {
+                    ProgressView()
+                }
+            } else if environments.remoteServer != nil {
+                Text("Connecting...").onAppear {
+                    environments.connect()
+                }
             } else {
                 Text("Service not started").onAppear {
                     environments.connect()
@@ -385,29 +498,31 @@ private struct LogContentInnerView: View {
         }
     }
 
+    /// Observes the data model directly: presentation state (`showFileExporter`,
+    /// `logFileURL`) lives on `LogDataModel`, which the surrounding view does not
+    /// observe, so closure-based bindings would only pick up changes on the next
+    /// unrelated re-render — leaving the exporter/share sheet stuck until then.
     private struct LogExportView: View {
-        @Binding var showFileExporter: Bool
-        @Binding var logFileURL: URL?
+        @ObservedObject var dataModel: LogDataModel
         @Binding var alert: AlertState?
         @State private var showShareSheet = false
-        let cleanup: () -> Void
 
         var body: some View {
             Color.clear
                 .fileExporter(
-                    isPresented: $showFileExporter,
-                    document: logFileURL.map { LogTextDocument(url: $0) },
+                    isPresented: $dataModel.showFileExporter,
+                    document: dataModel.logFileURL.map { LogTextDocument(url: $0) },
                     contentType: .plainText,
                     defaultFilename: "logs.txt"
                 ) { result in
-                    cleanup()
-                    logFileURL = nil
+                    dataModel.cleanupLogFile()
+                    dataModel.logFileURL = nil
                     if case let .failure(error) = result {
                         alert = AlertState(action: "export log file", error: error)
                     }
                 }
                 .sheet(isPresented: $showShareSheet) {
-                    if let url = logFileURL {
+                    if let url = dataModel.logFileURL {
                         #if os(iOS)
                             ShareViewController(activityItems: [url])
                         #elseif os(macOS)
@@ -415,15 +530,15 @@ private struct LogContentInnerView: View {
                         #endif
                     }
                 }
-                .onChange(of: logFileURL) { newValue in
-                    if newValue != nil, !showFileExporter {
+                .onChange(of: dataModel.logFileURL) { newValue in
+                    if newValue != nil, !dataModel.showFileExporter {
                         showShareSheet = true
                     }
                 }
                 .onChange(of: showShareSheet) { newValue in
                     if !newValue {
-                        cleanup()
-                        logFileURL = nil
+                        dataModel.cleanupLogFile()
+                        dataModel.logFileURL = nil
                     }
                 }
         }
@@ -474,11 +589,23 @@ private struct LogContentInnerView: View {
                 NSView()
             }
 
-            func updateNSView(_ nsView: NSView, context _: Context) {
+            func updateNSView(_ nsView: NSView, context: Context) {
+                // updateNSView re-runs whenever the observed data model publishes;
+                // the picker must only be presented once per sheet appearance.
+                guard !context.coordinator.didShowPicker else { return }
+                context.coordinator.didShowPicker = true
                 let picker = NSSharingServicePicker(items: items)
                 DispatchQueue.main.async {
                     picker.show(relativeTo: .zero, of: nsView, preferredEdge: .minY)
                 }
+            }
+
+            func makeCoordinator() -> Coordinator {
+                Coordinator()
+            }
+
+            final class Coordinator {
+                var didShowPicker = false
             }
         }
     #endif

@@ -20,6 +20,7 @@ import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.FilterAlt
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.SettingsRemote
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Card
@@ -44,6 +45,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import io.nekohasekai.sfa.R
+import io.nekohasekai.sfa.compose.topbar.LocalScaffoldPadding
 import io.nekohasekai.sfa.compose.topbar.OverrideTopBar
 import io.nekohasekai.sfa.database.Settings
 import io.nekohasekai.sfa.update.UpdateState
@@ -69,13 +71,18 @@ fun SettingsScreen(navController: NavController) {
         HookStatusClient.refresh()
     }
 
+    val scaffoldPadding = LocalScaffoldPadding.current
+
     Column(
         modifier =
         Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface)
             .verticalScroll(rememberScrollState())
-            .padding(vertical = 8.dp),
+            .padding(
+                top = scaffoldPadding.calculateTopPadding() + 8.dp,
+                bottom = scaffoldPadding.calculateBottomPadding() + 8.dp,
+            ),
     ) {
         // General Settings Group
         Card(
@@ -179,6 +186,29 @@ fun SettingsScreen(navController: NavController) {
                     modifier =
                     Modifier
                         .clickable { navController.navigate("settings/profile_override") },
+                    colors =
+                    ListItemDefaults.colors(
+                        containerColor = Color.Transparent,
+                    ),
+                )
+
+                ListItem(
+                    headlineContent = {
+                        Text(
+                            stringResource(R.string.remote_control),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    },
+                    leadingContent = {
+                        Icon(
+                            imageVector = Icons.Outlined.SettingsRemote,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    },
+                    modifier =
+                    Modifier
+                        .clickable { navController.navigate("settings/remote_control") },
                     colors =
                     ListItemDefaults.colors(
                         containerColor = Color.Transparent,

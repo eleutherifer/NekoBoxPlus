@@ -1,0 +1,560 @@
+package io.nekohasekai.sfa.compose.screen.tools
+
+import android.net.Uri
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.Usb
+import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material.icons.outlined.Hub
+import androidx.compose.material.icons.outlined.Memory
+import androidx.compose.material.icons.outlined.NetworkCheck
+import androidx.compose.material.icons.outlined.Route
+import androidx.compose.material.icons.outlined.SwapHoriz
+import androidx.compose.material3.Badge
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import io.nekohasekai.sfa.R
+import io.nekohasekai.sfa.bg.CrashReportManager
+import io.nekohasekai.sfa.bg.OOMReportManager
+import io.nekohasekai.sfa.bg.PowerReportManager
+import io.nekohasekai.sfa.compose.component.RemoteControlMenuItems
+import io.nekohasekai.sfa.compose.component.rememberRemoteServers
+import io.nekohasekai.sfa.compose.screen.usbip.USBIPStatusViewModel
+import io.nekohasekai.sfa.compose.topbar.LocalScaffoldPadding
+import io.nekohasekai.sfa.compose.topbar.OverrideTopBar
+import io.nekohasekai.sfa.database.Settings
+import io.nekohasekai.sfa.terminal.DEFAULT_SSH_TERMINAL_TYPE
+import io.nekohasekai.sfa.terminal.TailscaleSSHPresentedSession
+import io.nekohasekai.sfa.utils.RemoteControlManager
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@Composable
+fun ToolsScreen(
+    navController: NavController,
+    tailscaleViewModel: TailscaleStatusViewModel,
+    sshSharedViewModel: TailscaleSSHSharedViewModel,
+    usbIPViewModel: USBIPStatusViewModel,
+    openConnectViewModel: OpenConnectStatusViewModel,
+    openVPNViewModel: OpenVPNStatusViewModel,
+    showStatusBar: Boolean = false,
+) {
+    val remoteServers by rememberRemoteServers()
+
+    OverrideTopBar {
+        TopAppBar(
+            title = { Text(stringResource(R.string.title_tools)) },
+            actions = {
+                if (remoteServers.isNotEmpty()) {
+                    Box {
+                        var showOthersMenu by remember { mutableStateOf(false) }
+                        IconButton(onClick = { showOthersMenu = true }) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = stringResource(R.string.title_others),
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showOthersMenu,
+                            onDismissRequest = { showOthersMenu = false },
+                        ) {
+                            RemoteControlMenuItems(
+                                servers = remoteServers,
+                                onAction = { showOthersMenu = false },
+                                leadingDivider = false,
+                            )
+                        }
+                    }
+                }
+            },
+        )
+    }
+
+    val crashUnreadCount by CrashReportManager.unreadCount.collectAsState()
+    val oomUnreadCount by OOMReportManager.unreadCount.collectAsState()
+    val powerUnreadCount by PowerReportManager.unreadCount.collectAsState()
+    val tailscaleState by tailscaleViewModel.uiState.collectAsState()
+    val taildropSendSessions by TaildropSendManager.sessions.collectAsState()
+    val usbIPState by usbIPViewModel.uiState.collectAsState()
+    val openConnectState by openConnectViewModel.uiState.collectAsState()
+    val openVPNState by openVPNViewModel.uiState.collectAsState()
+    val remoteServer by RemoteControlManager.remoteServer.collectAsState()
+
+    val scaffoldPadding = LocalScaffoldPadding.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface)
+            .verticalScroll(rememberScrollState())
+            .padding(scaffoldPadding)
+            .padding(top = 8.dp, bottom = if (showStatusBar) STATUS_BAR_CONTENT_PADDING else 8.dp),
+    ) {
+        val tailscaleEndpoints = tailscaleState.endpoints
+        val openConnectEndpoints = openConnectState.endpoints
+        val openVPNEndpoints = openVPNState.endpoints
+        val endpointRowCount = tailscaleEndpoints.size + openConnectEndpoints.size + openVPNEndpoints.size
+        if (endpointRowCount > 0) {
+            Text(
+                text = stringResource(R.string.tailscale_endpoints),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp),
+            )
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                ),
+            ) {
+                val endpoints = tailscaleEndpoints
+                endpoints.forEachIndexed { index, endpoint ->
+                    val shape = endpointRowShape(index, endpointRowCount)
+                    var showSSHMenu by remember { mutableStateOf(false) }
+                    val sshPeers = remember(endpoint) {
+                        endpoint.userGroups.flatMap { it.peers }.filter { peer ->
+                            peer.online && peer.sshHostKeys.isNotEmpty() &&
+                                peer.tailscaleIPs.isNotEmpty() && peer.id != endpoint.selfPeer?.id
+                        }
+                    }
+                    Box {
+                        ListItem(
+                            headlineContent = {
+                                Text(
+                                    if (endpoints.size == 1) {
+                                        stringResource(R.string.tailscale)
+                                    } else {
+                                        stringResource(R.string.tailscale_with_tag, endpoint.endpointTag)
+                                    },
+                                    style = MaterialTheme.typography.bodyLarge,
+                                )
+                            },
+                            leadingContent = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Hub,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                            },
+                            trailingContent = {
+                                if (taildropSendSessions.any { it.endpointTag == endpoint.endpointTag && it.errorMessage != null }) {
+                                    Badge(containerColor = MaterialTheme.colorScheme.error) {
+                                        Text("!")
+                                    }
+                                } else if (endpoint.unreadFileCount > 0) {
+                                    Badge(containerColor = MaterialTheme.colorScheme.primary) {
+                                        Text("${endpoint.unreadFileCount}")
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .clip(shape)
+                                .combinedClickable(
+                                    onClick = {
+                                        navController.navigate("tools/tailscale/${Uri.encode(endpoint.endpointTag)}")
+                                    },
+                                    onLongClick = {
+                                        if (sshPeers.isNotEmpty()) {
+                                            showSSHMenu = true
+                                        }
+                                    },
+                                ),
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        )
+                        DropdownMenu(
+                            expanded = showSSHMenu,
+                            onDismissRequest = { showSSHMenu = false },
+                        ) {
+                            if (sshPeers.size == 1) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.tailscale_ssh_connect)) },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Terminal, contentDescription = null)
+                                    },
+                                    onClick = {
+                                        showSSHMenu = false
+                                        handleSSHNavigation(
+                                            navController,
+                                            sshSharedViewModel,
+                                            sshPeers[0],
+                                            endpoint.endpointTag,
+                                        )
+                                    },
+                                )
+                            } else {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.tailscale_ssh_connect)) },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Terminal, contentDescription = null)
+                                    },
+                                    enabled = false,
+                                    onClick = {},
+                                )
+                                sshPeers.forEach { peer ->
+                                    DropdownMenuItem(
+                                        text = { Text(peer.hostName) },
+                                        onClick = {
+                                            showSSHMenu = false
+                                            handleSSHNavigation(
+                                                navController,
+                                                sshSharedViewModel,
+                                                peer,
+                                                endpoint.endpointTag,
+                                            )
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                openConnectEndpoints.forEachIndexed { index, endpoint ->
+                    ListItem(
+                        headlineContent = {
+                            Text(
+                                if (openConnectEndpoints.size == 1) {
+                                    stringResource(R.string.openconnect)
+                                } else {
+                                    stringResource(R.string.openconnect_with_tag, endpoint.endpointTag)
+                                },
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                        },
+                        leadingContent = {
+                            Icon(
+                                imageVector = Icons.Outlined.Route,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        },
+                        modifier = Modifier
+                            .clip(endpointRowShape(tailscaleEndpoints.size + index, endpointRowCount))
+                            .clickable {
+                                navController.navigate("tools/openconnect/${Uri.encode(endpoint.endpointTag)}")
+                            },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    )
+                }
+                openVPNEndpoints.forEachIndexed { index, endpoint ->
+                    ListItem(
+                        headlineContent = {
+                            Text(
+                                if (openVPNEndpoints.size == 1) {
+                                    stringResource(R.string.openvpn)
+                                } else {
+                                    stringResource(R.string.openvpn_with_tag, endpoint.endpointTag)
+                                },
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                        },
+                        leadingContent = {
+                            Icon(
+                                imageVector = Icons.Outlined.Route,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        },
+                        modifier = Modifier
+                            .clip(
+                                endpointRowShape(
+                                    tailscaleEndpoints.size + openConnectEndpoints.size + index,
+                                    endpointRowCount,
+                                ),
+                            )
+                            .clickable {
+                                navController.navigate("tools/openvpn/${Uri.encode(endpoint.endpointTag)}")
+                            },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    )
+                }
+            }
+        }
+
+        if (usbIPState.servers.isNotEmpty()) {
+            Text(
+                text = stringResource(R.string.title_services),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp),
+            )
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                ),
+            ) {
+                val servers = usbIPState.servers
+                servers.forEachIndexed { index, server ->
+                    val shape = when {
+                        servers.size == 1 -> RoundedCornerShape(12.dp)
+                        index == 0 -> RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
+                        index == servers.size - 1 -> RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)
+                        else -> RoundedCornerShape(0.dp)
+                    }
+                    ListItem(
+                        headlineContent = {
+                            Text(
+                                if (servers.size == 1) {
+                                    stringResource(R.string.title_usbip)
+                                } else {
+                                    stringResource(R.string.usbip_with_tag, server.serverTag)
+                                },
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                        },
+                        leadingContent = {
+                            Icon(
+                                imageVector = Icons.Default.Usb,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        },
+                        modifier = Modifier
+                            .clip(shape)
+                            .clickable {
+                                navController.navigate("tools/usbip/${Uri.encode(server.serverTag)}")
+                            },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    )
+                }
+            }
+        }
+
+        Text(
+            text = stringResource(R.string.title_network),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp),
+        )
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            ),
+        ) {
+            ListItem(
+                headlineContent = {
+                    Text(
+                        stringResource(R.string.network_quality),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Outlined.NetworkCheck,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                },
+                modifier = Modifier
+                    .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                    .clickable { navController.navigate("tools/network_quality") },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+            )
+            ListItem(
+                headlineContent = {
+                    Text(
+                        stringResource(R.string.stun_test),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Outlined.SwapHoriz,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                },
+                modifier = Modifier
+                    .clip(RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp))
+                    .clickable { navController.navigate("tools/stun_test") },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+            )
+        }
+
+        // Crash/OOM reports read local files, which the remote control API
+        // does not reach.
+        if (remoteServer == null) {
+            Text(
+                text = stringResource(R.string.title_debug),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp),
+            )
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                ),
+            ) {
+                val debugRowCount = 3
+                ListItem(
+                    headlineContent = {
+                        Text(
+                            stringResource(R.string.crash_report),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    },
+                    leadingContent = {
+                        Icon(
+                            imageVector = Icons.Outlined.BugReport,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    },
+                    trailingContent = {
+                        if (crashUnreadCount > 0) {
+                            Badge(containerColor = MaterialTheme.colorScheme.primary) {
+                                Text("$crashUnreadCount")
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                        .clickable { navController.navigate("tools/crash_report") },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                )
+                ListItem(
+                    headlineContent = {
+                        Text(
+                            stringResource(R.string.oom_report),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    },
+                    leadingContent = {
+                        Icon(
+                            imageVector = Icons.Outlined.Memory,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    },
+                    trailingContent = {
+                        if (oomUnreadCount > 0) {
+                            Badge(containerColor = MaterialTheme.colorScheme.primary) {
+                                Text("$oomUnreadCount")
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .clip(endpointRowShape(1, debugRowCount))
+                        .clickable { navController.navigate("tools/oom_report") },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                )
+                ListItem(
+                    headlineContent = {
+                        Text(
+                            stringResource(R.string.power_report),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    },
+                    leadingContent = {
+                        Icon(
+                            imageVector = Icons.Outlined.Bolt,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    },
+                    trailingContent = {
+                        if (powerUnreadCount > 0) {
+                            Badge(containerColor = MaterialTheme.colorScheme.primary) {
+                                Text("$powerUnreadCount")
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .clip(endpointRowShape(2, debugRowCount))
+                        .clickable { navController.navigate("tools/power_report") },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                )
+            }
+        }
+    }
+}
+
+private val STATUS_BAR_CONTENT_PADDING = 74.dp
+
+private fun endpointRowShape(index: Int, count: Int): RoundedCornerShape = when {
+    count == 1 -> RoundedCornerShape(12.dp)
+    index == 0 -> RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
+    index == count - 1 -> RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)
+    else -> RoundedCornerShape(0.dp)
+}
+
+internal fun handleSSHNavigation(
+    navController: NavController,
+    sshSharedViewModel: TailscaleSSHSharedViewModel,
+    peer: TailscalePeerData,
+    endpointTag: String,
+) {
+    val quickConnectPeers = Settings.tailscaleSSHQuickConnectPeers
+    if (quickConnectPeers.contains(peer.stableID)) {
+        val usernames = Settings.tailscaleSSHRememberedUsernames
+        val terminalTypes = Settings.tailscaleSSHRememberedTerminalTypes
+        sshSharedViewModel.setPendingSession(
+            TailscaleSSHPresentedSession(
+                endpointTag = endpointTag,
+                peerHostName = peer.hostName,
+                peerAddress = peer.tailscaleIPs.first(),
+                username = usernames[peer.stableID]?.takeIf { it.isNotBlank() } ?: DEFAULT_SSH_USERNAME,
+                terminalType = terminalTypes[peer.stableID]?.takeIf { it.isNotBlank() }
+                    ?: DEFAULT_SSH_TERMINAL_TYPE,
+                hostKeys = peer.sshHostKeys,
+            ),
+        )
+        navController.navigate(
+            "tools/tailscale/${Uri.encode(endpointTag)}/peer/${Uri.encode(peer.id)}/terminal",
+        )
+    } else {
+        navController.navigate(
+            "tools/tailscale/${Uri.encode(endpointTag)}/peer/${Uri.encode(peer.id)}/ssh",
+        )
+    }
+}

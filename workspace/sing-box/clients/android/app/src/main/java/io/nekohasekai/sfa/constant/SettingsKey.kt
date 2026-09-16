@@ -7,6 +7,7 @@ object SettingsKey {
     const val UPDATE_CHECK_PROMPTED = "update_check_prompted"
     const val UPDATE_SOURCE = "update_source"
     const val UPDATE_TRACK = "update_track"
+    const val GITHUB_TOKEN = "github_token"
     const val FDROID_MIRROR_URL = "fdroid_mirror_url"
     const val FDROID_CUSTOM_MIRRORS = "fdroid_custom_mirrors"
     const val SILENT_INSTALL_ENABLED = "silent_install_enabled"
@@ -31,9 +32,33 @@ object SettingsKey {
     const val PRIVILEGE_SETTINGS_INTERFACE_RENAME_ENABLED = "hide_settings_interface_rename_enabled"
     const val PRIVILEGE_SETTINGS_INTERFACE_PREFIX = "hide_settings_interface_prefix"
 
+    // OOM killer
+    const val OOM_KILLER_ENABLED = "oom_killer_enabled"
+    const val OOM_KILLER_DISABLED = "oom_killer_disabled"
+    const val OOM_MEMORY_LIMIT_MB = "oom_memory_limit_mb"
+
+    // Power report
+    const val POWER_REPORT_ENABLED = "power_report_enabled"
+
     // dashboard
     const val DASHBOARD_ITEM_ORDER = "dashboard_item_order"
     const val DASHBOARD_DISABLED_ITEMS = "dashboard_disabled_items"
+
+    // Remote Control
+    const val ACTIVE_REMOTE_SERVER_ID = "active_remote_server_id"
+
+    // Tailscale SSH
+    const val TAILSCALE_SSH_REMEMBERED_USERNAMES = "tailscale_ssh_remembered_usernames"
+    const val TAILSCALE_SSH_REMEMBERED_TERMINAL_TYPES = "tailscale_ssh_remembered_terminal_types"
+    const val TAILSCALE_SSH_QUICK_CONNECT_PEERS = "tailscale_ssh_quick_connect_peers"
+    const val TAILSCALE_SSH_LIGHT_THEME = "tailscale_ssh_light_theme"
+    const val TAILSCALE_SSH_DARK_THEME = "tailscale_ssh_dark_theme"
+    const val TAILSCALE_SSH_FONT_FAMILY = "tailscale_ssh_font_family"
+    const val TAILSCALE_SSH_FONT_SIZE = "tailscale_ssh_font_size"
+    const val TAILSCALE_SSH_CUSTOM_FONT_PATH = "tailscale_ssh_custom_font_path"
+    const val TAILSCALE_SSH_LIGHT_CONFIG = "tailscale_ssh_light_config"
+    const val TAILSCALE_SSH_DARK_CONFIG = "tailscale_ssh_dark_config"
+    const val TAILSCALE_SSH_FONT_FOLLOW_THEME = "tailscale_ssh_font_follow_theme"
 
     // cache
     const val STARTED_BY_USER = "started_by_user"

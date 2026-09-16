@@ -9,7 +9,6 @@ import (
 	"os"
 	"runtime"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
@@ -19,12 +18,12 @@ import (
 	"github.com/sagernet/sing-box/common/urltest"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/experimental"
+	"github.com/sagernet/sing-box/experimental/clashmode"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/json"
-	"github.com/sagernet/sing/common/observable"
 	"github.com/sagernet/sing/service"
 	"github.com/sagernet/sing/service/filemanager"
 	"github.com/sagernet/ws"
@@ -38,7 +37,7 @@ func init() {
 	experimental.RegisterClashServerConstructor(NewServer)
 }
 
-var _ adapter.ClashServer = (*Server)(nil)
+var _ adapter.LifecycleService = (*Server)(nil)
 
 type Server struct {
 	ctx            context.Context
@@ -51,12 +50,8 @@ type Server struct {
 	httpServer     *http.Server
 	trafficManager *trafficcontrol.Manager
 	urlTestHistory *urltest.HistoryStorage
+	clashMode      *clashmode.Manager
 	logDebug       bool
-
-	mode             string
-	modeList         []string
-	modeUpdateAccess sync.Mutex
-	modeUpdateHooks  []*observable.Subscriber[struct{}]
 
 	externalController       bool
 	externalUI               string
@@ -64,7 +59,7 @@ type Server struct {
 	externalUIDownloadDetour string
 }
 
-func NewServer(ctx context.Context, logFactory log.ObservableFactory, options option.ClashAPIOptions) (adapter.ClashServer, error) {
+func NewServer(ctx context.Context, logFactory log.ObservableFactory, options option.ClashAPIOptions) (adapter.LifecycleService, error) {
 	trafficManager := service.PtrFromContext[trafficcontrol.Manager](ctx)
 	if trafficManager == nil {
 		return nil, E.New("missing traffic manager")
@@ -72,6 +67,10 @@ func NewServer(ctx context.Context, logFactory log.ObservableFactory, options op
 	urlTestHistory := service.PtrFromContext[urltest.HistoryStorage](ctx)
 	if urlTestHistory == nil {
 		return nil, E.New("missing URL test history storage")
+	}
+	clashMode := service.PtrFromContext[clashmode.Manager](ctx)
+	if clashMode == nil {
+		return nil, E.New("missing clash mode manager")
 	}
 	chiRouter := chi.NewRouter()
 	s := &Server{
@@ -88,20 +87,12 @@ func NewServer(ctx context.Context, logFactory log.ObservableFactory, options op
 		},
 		trafficManager:           trafficManager,
 		urlTestHistory:           urlTestHistory,
+		clashMode:                clashMode,
 		logDebug:                 logFactory.Level() >= log.LevelDebug,
-		modeList:                 options.ModeList,
 		externalController:       options.ExternalController != "",
 		externalUIDownloadURL:    options.ExternalUIDownloadURL,
 		externalUIDownloadDetour: options.ExternalUIDownloadDetour,
 	}
-	defaultMode := "Rule"
-	if options.DefaultMode != "" {
-		defaultMode = options.DefaultMode
-	}
-	if !common.Contains(s.modeList, defaultMode) {
-		s.modeList = append([]string{defaultMode}, s.modeList...)
-	}
-	s.mode = defaultMode
 	//goland:noinspection GoDeprecation
 	//nolint:staticcheck
 	if options.StoreMode || options.StoreSelected || options.StoreFakeIP || options.CacheFile != "" || options.CacheID != "" {
@@ -157,49 +148,38 @@ func (s *Server) Name() string {
 }
 
 func (s *Server) Start(stage adapter.StartStage) error {
-	switch stage {
-	case adapter.StartStateStart:
-		cacheFile := service.FromContext[adapter.CacheFile](s.ctx)
-		if cacheFile != nil {
-			mode := cacheFile.LoadMode()
-			if common.Any(s.modeList, func(it string) bool {
-				return strings.EqualFold(it, mode)
-			}) {
-				s.mode = mode
-			}
-		}
-	case adapter.StartStateStarted:
-		if s.externalController {
-			s.checkAndDownloadExternalUI()
-			var (
-				listener net.Listener
-				err      error
-			)
-			for range 3 {
-				listenerNet, listenerAddr := s.getClashApiListener()
-				listener, err = net.Listen(listenerNet, listenerAddr)
-				if runtime.GOOS == "android" && errors.Is(err, syscall.EADDRINUSE) {
-					time.Sleep(100 * time.Millisecond)
-					continue
-				}
-				if listenerNet == "unix" {
-					_ = os.Chmod(listenerAddr, 0660)
-				}
-				break
-			}
-			if err != nil {
-				return E.Cause(err, "external controller listen error")
-			}
-			s.logger.Info("restful api listening at ", listener.Addr())
-			go func() {
-				err = s.httpServer.Serve(listener)
-				if err != nil && !errors.Is(err, http.ErrServerClosed) {
-					s.logger.Error("external controller serve error: ", err)
-				}
-			}()
-		}
+	if stage != adapter.StartStateStarted {
+		return nil
 	}
-
+	if s.externalController {
+		s.checkAndDownloadExternalUI()
+		var (
+			listener net.Listener
+			err      error
+		)
+		for range 3 {
+			listenerNetwork, listenerAddress := s.listenerAddress()
+			listener, err = net.Listen(listenerNetwork, listenerAddress)
+			if runtime.GOOS == "android" && errors.Is(err, syscall.EADDRINUSE) {
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
+			if err == nil && listenerNetwork == "unix" {
+				_ = os.Chmod(listenerAddress, 0o660)
+			}
+			break
+		}
+		if err != nil {
+			return E.Cause(err, "external controller listen error")
+		}
+		s.logger.Info("restful api listening at ", listener.Addr())
+		go func() {
+			err = s.httpServer.Serve(listener)
+			if err != nil && !errors.Is(err, http.ErrServerClosed) {
+				s.logger.Error("external controller serve error: ", err)
+			}
+		}()
+	}
 	return nil
 }
 
@@ -207,49 +187,6 @@ func (s *Server) Close() error {
 	return common.Close(
 		common.PtrOrNil(s.httpServer),
 	)
-}
-
-func (s *Server) Mode() string {
-	return s.mode
-}
-
-func (s *Server) ModeList() []string {
-	return s.modeList
-}
-
-func (s *Server) AddModeUpdateHook(hook *observable.Subscriber[struct{}]) {
-	s.modeUpdateAccess.Lock()
-	defer s.modeUpdateAccess.Unlock()
-	s.modeUpdateHooks = append(s.modeUpdateHooks, hook)
-}
-
-func (s *Server) SetMode(newMode string) {
-	if !common.Contains(s.modeList, newMode) {
-		newMode = common.Find(s.modeList, func(it string) bool {
-			return strings.EqualFold(it, newMode)
-		})
-	}
-	if !common.Contains(s.modeList, newMode) {
-		return
-	}
-	if newMode == s.mode {
-		return
-	}
-	s.mode = newMode
-	s.modeUpdateAccess.Lock()
-	for _, hook := range s.modeUpdateHooks {
-		hook.Emit(struct{}{})
-	}
-	s.modeUpdateAccess.Unlock()
-	s.dnsRouter.ClearCache()
-	cacheFile := service.FromContext[adapter.CacheFile](s.ctx)
-	if cacheFile != nil {
-		err := cacheFile.StoreMode(newMode)
-		if err != nil {
-			s.logger.Error(E.Cause(err, "save mode"))
-		}
-	}
-	s.logger.Info("updated mode: ", newMode)
 }
 
 func authentication(serverSecret string) func(next http.Handler) http.Handler {
@@ -435,21 +372,12 @@ func version(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, render.M{"version": "sing-box " + C.Version, "premium": true, "meta": true})
 }
 
-func (s *Server) getClashApiListener() (string, string) {
-	addr := s.httpServer.Addr
-
-	var network string
-
-	if strings.HasPrefix(addr, "unix://") {
-		network = "unix"
-		addr = strings.TrimPrefix(addr, "unix://")
-
-		// Optional but important:
-		// remove stale socket file
-		_ = os.Remove(addr)
-	} else {
-		network = "tcp"
+func (s *Server) listenerAddress() (network string, address string) {
+	address = s.httpServer.Addr
+	unixAddress, isUnix := strings.CutPrefix(address, "unix://")
+	if !isUnix {
+		return "tcp", address
 	}
-
-	return network, addr
+	_ = os.Remove(unixAddress)
+	return "unix", unixAddress
 }

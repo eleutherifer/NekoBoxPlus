@@ -23,6 +23,8 @@
     <string name="action">اقدام</string>
     <string name="action_start">شروع</string>
     <string name="action_deselect">لغو انتخاب</string>
+    <string name="action_reload">بارگذاری مجدد</string>
+    <string name="action_restart">راه‌اندازی مجدد</string>
     <string name="expand">باز کردن</string>
     <string name="collapse">جمع کردن</string>
     <string name="expand_all">باز کردن همه</string>
@@ -82,7 +84,6 @@
     <string name="reset_order">بازنشانی ترتیب</string>
 
     <!-- Connections -->
-    <string name="empty_connections">هیچ اتصالی وجود ندارد</string>
     <string name="search_connections">جستجوی اتصال‌ها…</string>
     <string name="close_connections_confirm">همه اتصال‌ها بسته شوند؟</string>
     <string name="connection_state_all">همه</string>
@@ -200,6 +201,8 @@
     <string name="working_directory">پوشه کاری</string>
     <string name="beta_settings">تنظیمات بتا</string>
     <string name="disable_deprecated_warnings">غیرفعال‌کردن هشدارهای منسوخ</string>
+    <string name="cache_size">اندازه حافظه پنهان</string>
+    <string name="clear_cache">پاک‌سازی حافظه پنهان</string>
     <string name="notification_settings">اعلان‌ها</string>
     <string name="enable_notification">فعال‌کردن اعلان</string>
     <string name="dynamic_notification">نمایش سرعت بلادرنگ در اعلان</string>
@@ -279,6 +282,24 @@
     <string name="new_version_available">نسخه جدید موجود است: %s</string>
     <string name="auto_update">به‌روزرسانی خودکار</string>
     <string name="auto_update_description">دانلود و نصب خودکار به‌روزرسانی‌ها در پس‌زمینه</string>
+    <string name="update_source">منبع به‌روزرسانی</string>
+    <string name="update_source_github">GitHub</string>
+    <string name="update_source_fdroid">F-Droid</string>
+    <string name="github_token">توکن GitHub</string>
+    <string name="github_token_description">دریافت محدودیت نرخ بالاتر برای API گیت‌هاب</string>
+    <string name="fdroid_mirror">آینه F-Droid</string>
+    <string name="fdroid_mirror_test_all">انتخاب خودکار بر اساس تأخیر</string>
+    <string name="fdroid_mirror_testing">در حال تست…</string>
+    <string name="fdroid_mirror_latency">%d ms</string>
+    <string name="fdroid_mirror_failed">ناموفق</string>
+    <string name="fdroid_mirror_untested">—</string>
+    <string name="fdroid_mirror_add">افزودن آینه</string>
+    <string name="fdroid_mirror_name_hint">نام</string>
+    <string name="fdroid_mirror_url_hint">URL</string>
+    <string name="fdroid_mirror_custom">سفارشی</string>
+    <string name="fdroid_mirror_invalid_url">URL نامعتبر</string>
+    <string name="fdroid_mirror_add_action">افزودن</string>
+    <string name="fdroid_mirror_delete">حذف</string>
 
     <!-- Silent Install -->
     <string name="silent_install">نصب بی‌صدا</string>
@@ -405,6 +426,166 @@
     <string name="content_description_pause_logs">مکث لاگ‌ها</string>
     <string name="content_description_collapse_search">جمع کردن جستجو</string>
     <string name="content_description_search_logs">جستجوی لاگ‌ها</string>
+    <string name="content_description_more_options">گزینه‌های بیشتر</string>
+
+    <!-- Tools -->
+    <string name="title_tools">ابزارها</string>
+    <string name="title_network">شبکه</string>
+    <string name="network_quality">کیفیت شبکه</string>
+    <string name="network_quality_url">URL</string>
+    <string name="network_quality_serial">ترتیبی</string>
+    <string name="network_quality_http3">HTTP/3</string>
+    <string name="network_quality_max_runtime">حداکثر زمان اجرا</string>
+    <string name="network_quality_max_runtime_30s">30s</string>
+    <string name="network_quality_max_runtime_60s">60s</string>
+    <string name="network_quality_start">شروع تست</string>
+    <string name="network_quality_cancel">لغو تست</string>
+    <string name="network_quality_idle_latency">تأخیر بیکاری</string>
+    <string name="network_quality_download">دانلود</string>
+    <string name="network_quality_upload">آپلود</string>
+    <string name="network_quality_download_rpm">RPM دانلود</string>
+    <string name="network_quality_upload_rpm">RPM آپلود</string>
+    <string name="network_quality_confidence_high">اطمینان بالا</string>
+    <string name="network_quality_confidence_medium">اطمینان متوسط</string>
+    <string name="network_quality_confidence_low">اطمینان پایین</string>
+    <string name="network_quality_metered_title">اتصال محدود</string>
+    <string name="network_quality_metered_message">شما از اتصال محدود استفاده می‌کنید. این تست حجم قابل توجهی داده مصرف خواهد کرد.</string>
+    <string name="network_quality_metered_continue">ادامه</string>
+    <string name="tool_configuration">پیکربندی</string>
+    <string name="tool_results">نتایج</string>
+    <string name="tool_outbound">خروجی</string>
+    <string name="tool_default_outbound">پیش‌فرض</string>
+
+    <!-- STUN Test -->
+    <!-- Tailscale -->
+    <string name="tailscale_endpoints">نقاط اتصال</string>
+    <string name="title_services">سرویس‌ها</string>
+
+    <string name="tailscale_status">وضعیت</string>
+    <string name="tailscale_state">وضعیت</string>
+    <string name="tailscale_network">شبکه</string>
+    <string name="tailscale_hostname">نام میزبان</string>
+    <string name="tailscale_open_auth_url">باز کردن لینک احراز هویت</string>
+    <string name="tailscale_open_auth_url_qr_code">نمایش QR کد لینک احراز هویت</string>
+    <string name="tailscale_this_device">این دستگاه</string>
+    <string name="tailscale_logout">خروج از حساب</string>
+    <string name="tailscale_connected">متصل</string>
+    <string name="tailscale_not_connected">متصل نیست</string>
+    <string name="tailscale_addresses">آدرس‌های Tailscale</string>
+    <string name="tailscale_details">جزئیات</string>
+    <string name="tailscale_key_expiry">انقضای کلید</string>
+    <string name="tailscale_exit_node">گره خروجی</string>
+    <string name="tailscale_active">فعال</string>
+    <string name="tailscale_ping">پینگ</string>
+    <string name="tailscale_ping_start">شروع</string>
+    <string name="tailscale_ping_stop">توقف</string>
+    <string name="tailscale_ping_direct">اتصال مستقیم</string>
+    <string name="tailscale_ping_derp">اتصال از طریق DERP</string>
+    <string name="tailscale_ping_peer_relay">اتصال از طریق بازپخش همتا</string>
+    <string name="tailscale_ping_endpoint">نقطه پایانی</string>
+    <string name="tailscale_ping_derp_region">منطقه DERP</string>
+    <string name="tailscale_ping_peer_relay_address">بازپخش همتا</string>
+    <string name="tailscale_ping_connecting">در حال اتصال…</string>
+    <string name="tailscale_ping_no_data">بدون داده</string>
+    <string name="tailscale_shared_in">به اشتراک گذاشته شده</string>
+    <string name="tailscale_expired">منقضی شده</string>
+    <string name="tailscale_expires_relative">انقضا %1$s</string>
+    <string name="tailscale_key_expiry_disabled">انقضای کلید غیرفعال است</string>
+    <string name="tailscale_last_seen">آخرین بازدید</string>
+    <string name="tailscale_available">در دسترس</string>
+    <string name="tailscale_yes">بله</string>
+
+    <!-- Tailscale SSH -->
+    <string name="tailscale_ssh_connect">اتصال از طریق SSH</string>
+    <string name="tailscale_ssh_options">گزینه‌های SSH</string>
+    <string name="tailscale_ssh_username">نام کاربری</string>
+    <string name="tailscale_ssh_terminal_type">نوع ترمینال</string>
+    <string name="tailscale_ssh_remember_options">به خاطر سپردن گزینه‌های SSH</string>
+    <string name="tailscale_ssh_quick_connect">اتصال سریع</string>
+    <string name="tailscale_ssh_quick_connect_description">در صورت فعال بودن، می‌توانید از طریق منوی زمینه (فشار طولانی) روی ورودی Tailscale در ابزارها و ورودی‌های همتا در لیست همتاها به سرعت به این همتا متصل شوید.\n\nاین همتا همچنین در منوی جلسه جدید هنگام اتصال به همتاهای دیگر از طریق SSH ظاهر خواهد شد.</string>
+    <string name="tailscale_ssh_terminal_hint">می‌توانید ظاهر ترمینال را در تنظیمات ← پیکربندی Ghostty سفارشی کنید.</string>
+    <string name="tailscale_ssh_connect_button">اتصال</string>
+    <string name="tailscale_ssh_connecting">در حال اتصال…</string>
+    <string name="tailscale_ssh_no_sessions">جلسه فعالی وجود ندارد</string>
+    <string name="terminal_session_ended">جلسه پایان یافت</string>
+    <string name="terminal_press_any_key">هر کلیدی را فشار دهید</string>
+    <string name="tailscale_ssh_new_session">جلسه جدید</string>
+
+    <!-- Terminal Configuration -->
+    <string name="tailscale_terminal_config">پیکربندی Ghostty</string>
+    <string name="tailscale_terminal_light_theme">تم روشن</string>
+    <string name="tailscale_terminal_dark_theme">تم تیره</string>
+    <string name="tailscale_terminal_font_config">فونت</string>
+    <string name="tailscale_terminal_font">خانواده فونت</string>
+    <string name="tailscale_terminal_font_size">اندازه فونت</string>
+    <string name="tailscale_terminal_font_system">فونت‌های سیستم</string>
+    <string name="tailscale_terminal_font_imported">فونت‌های وارد شده</string>
+    <string name="tailscale_terminal_import_font">وارد کردن از فایل</string>
+    <string name="tailscale_terminal_manage_fonts">مدیریت فونت‌های وارد شده</string>
+    <string name="tailscale_terminal_manage_fonts_done">انجام شد</string>
+    <string name="tailscale_terminal_search_themes">جستجوی تم‌ها</string>
+    <string name="tailscale_terminal_light_config">پیکربندی روشن</string>
+    <string name="tailscale_terminal_dark_config">پیکربندی تیره</string>
+    <string name="tailscale_terminal_theme">تم</string>
+    <string name="tailscale_terminal_custom_config">پیکربندی سفارشی</string>
+    <string name="tailscale_terminal_edit_custom_config">ویرایش پیکربندی سفارشی</string>
+    <string name="tailscale_terminal_light_custom_config">پیکربندی سفارشی روشن</string>
+    <string name="tailscale_terminal_dark_custom_config">پیکربندی سفارشی تیره</string>
+    <string name="tailscale_terminal_font_follow_theme">پیروی از تم</string>
+    <string name="tailscale_terminal_import_config">وارد کردن از فایل</string>
+
+    <string name="stun_test">تست STUN</string>
+    <string name="stun_server">سرور</string>
+    <string name="stun_start">شروع تست</string>
+    <string name="stun_cancel">لغو تست</string>
+    <string name="stun_external_address">آدرس خارجی</string>
+    <string name="stun_latency">تأخیر</string>
+    <string name="stun_nat_mapping">نگاشت NAT</string>
+    <string name="stun_nat_filtering">فیلتر NAT</string>
+    <string name="stun_nat_type_detection">تشخیص نوع NAT</string>
+    <string name="stun_nat_not_supported">پشتیبانی نمی‌شود توسط سرور</string>
+
+    <!-- Shared Report -->
+    <string name="report_empty">خالی</string>
+    <string name="report_section_reports">گزارش‌ها</string>
+    <string name="report_section_files">فایل‌ها</string>
+    <string name="report_delete_all">حذف همه</string>
+    <string name="report_delete">حذف</string>
+    <string name="report_share">اشتراک‌گذاری</string>
+    <string name="report_share_with_config">اشتراک‌گذاری با پیکربندی</string>
+    <string name="report_with_config">همراه با پیکربندی</string>
+    <string name="report_with_log">همراه با گزارش</string>
+    <string name="report_share_privacy_warning">فایل‌های گزارش و پیکربندی ممکن است حاوی محتوای خصوصی باشند و نباید عمومی شوند.</string>
+    <string name="report_share_privacy_warning_config">فایل‌های پیکربندی ممکن است حاوی محتوای خصوصی باشند و نباید عمومی شوند.</string>
+    <string name="report_with_age_encryption">رمزگذاری با age برای Project S</string>
+    <string name="report_age_encryption_description">[age](https://github.com/filosottile/age) یک ابزار رمزگذاری نامتقارن مدرن و امن است. با فعال‌سازی، فایل zip با کلید عمومی این پروژه رمزگذاری می‌شود تا بتوان آن را به‌صورت عمومی، مثلاً در GitHub issues، منتشر کرد.</string>
+    <string name="report_metadata">فراداده</string>
+    <string name="report_configuration">پیکربندی</string>
+    <string name="report_origin_local">محلی</string>
+    <string name="service_not_started">سرویس شروع نشده است</string>
+    <string name="service_reload_required">برای اعمال تغییرات، بارگذاری مجدد سرویس لازم است</string>
+    <string name="service_restart_required">برای اعمال تغییرات، راه‌اندازی مجدد سرویس لازم است</string>
+
+    <!-- Crash Report -->
+    <string name="crash_report">گزارش خرابی</string>
+    <string name="crash_report_go_log">Go Crash Log</string>
+    <string name="crash_report_jvm_log">JVM Crash Log</string>
+    <string name="crash_report_description">هنگام بروز خرابی گزارشی دریافت خواهید کرد.</string>
+
+    <!-- OOM Report -->
+    <string name="oom_report">گزارش کمبود حافظه</string>
+    <string name="oom_report_description">هنگامی که محدودیت حافظه فعال است، در صورت تجاوز حافظه سرویس از حد مجاز، گزارشی دریافت خواهید کرد. همچنین می‌توانید جمع‌آوری گزارش را به صورت دستی فعال کنید.</string>
+    <string name="oom_report_fetch">دریافت گزارش حافظه</string>
+    <string name="oom_report_enable_memory_limit">فعال‌سازی محدودیت حافظه</string>
+    <string name="oom_report_enable_memory_limit_description">یک محدودیت نرم حافظه برای سرویس تعیین کنید. سرویس چندین فرآیند را انجام خواهد داد تا سعی کند در محدوده این محدودیت حافظه باقی بماند.</string>
+    <string name="oom_report_memory_limit">محدودیت حافظه</string>
+    <string name="oom_report_kill_connections">قطع اتصالات</string>
+    <string name="oom_report_kill_connections_description">هنگام تجاوز حافظه سرویس از حد مجاز، تمام اتصالات را برای آزادسازی حافظه قطع کنید.</string>
+
+    <!-- Power Report -->
+    <string name="power_report">گزارش مصرف انرژی</string>
+    <string name="power_report_enable">فعال‌سازی گزارش مصرف انرژی</string>
+    <string name="power_report_enable_description">آمار زمان پردازنده، بیدارسازی و ترافیک سرویس را ثبت می‌کند. برای هر اجرای سرویس یک گزارش ذخیره می‌شود.</string>
 
     <!-- Xposed Module -->
     <string name="xposed_description">بهبود دسترسی ویژه برای sing-box</string>
@@ -442,4 +623,47 @@
     <string name="privilege_module_restart_notification_title">نیاز به راه‌اندازی مجدد</string>
     <string name="privilege_module_restart_notification_message">ماژول LSPosed به‌روزرسانی شد. برای اعمال تغییرات دستگاه را راه‌اندازی مجدد کنید.</string>
     <string name="privilege_module_restart_channel">ماژول LSPosed</string>
+
+    <!-- Remote Control -->
+    <string name="remote_control">کنترل از راه دور</string>
+    <string name="remote_servers">سرورها</string>
+    <string name="remote_no_servers">بدون سرور</string>
+    <string name="remote_new_server">سرور جدید</string>
+    <string name="remote_edit_server">ویرایش سرور</string>
+    <string name="remote_local_device">دستگاه محلی</string>
+    <string name="remote_manage_servers">مدیریت سرورها…</string>
+    <string name="remote_secret">رمز</string>
+    <string name="remote_optional">اختیاری</string>
+    <string name="remote_connecting">در حال اتصال…</string>
+    <string name="remote_disconnect">قطع اتصال</string>
+    <string name="remote_invalid_url">نشانی سرور نامعتبر است: %1$s، قالب مورد انتظار host:port، http://host:port یا https://host:port است</string>
+    <string name="remote_connect_failed">اتصال به سرور راه دور %1$s ناموفق بود</string>
+    <string name="remote_disconnected_from">اتصال با سرور راه دور %1$s قطع شد</string>
+    <string name="remote_checking">در حال بررسی…</string>
+    <string name="remote_available">در دسترس</string>
+    <string name="remote_unavailable">در دسترس نیست</string>
+    <string name="endpoint_globalprotect_sso_unsupported_android">احراز هویت مرورگر SAML در GlobalProtect در Android پشتیبانی نمی‌شود.</string>
+    <string name="endpoint_browser_cookie_missing">احراز هویت مرورگر تکمیل شد، اما کوکی VPN موردنیاز دریافت نشد.</string>
+
+    <!-- Taildrop -->
+    <plurals name="taildrop_file_count">
+        <item quantity="one">%1$d فایل</item>
+        <item quantity="other">%1$d فایل</item>
+    </plurals>
+    <string name="taildrop_send">ارسال</string>
+    <string name="taildrop_receive">دریافت</string>
+    <string name="taildrop_files">فایل‌ها</string>
+    <string name="taildrop_from">از %1$s</string>
+    <string name="taildrop_to">به %1$s</string>
+    <string name="taildrop_save">ذخیره</string>
+    <string name="taildrop_share">اشتراک‌گذاری</string>
+    <string name="taildrop_delete">حذف</string>
+    <string name="taildrop_drop_zone">فایل‌ها را برای ارسال به اینجا بکشید یا برای انتخاب ضربه بزنید</string>
+    <string name="taildrop_done">انجام شد</string>
+    <string name="taildrop_no_targets">هیچ دستگاهی نمی‌تواند فایل دریافت کند</string>
+    <string name="taildrop_no_files_selected">فایلی انتخاب نشده است</string>
+    <string name="taildrop_connecting">در حال اتصال…</string>
+    <string name="taildrop_dismiss">بستن</string>
+    <string name="taildrop_open_app">باز کردن sing-box</string>
+    <string name="taildrop_notification_title">در حال ارسال فایل‌ها</string>
 </resources>

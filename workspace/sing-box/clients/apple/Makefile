@@ -2,22 +2,27 @@ SHELL := /bin/bash
 .SHELLFLAGS := -o pipefail -c
 .SILENT:
 
-INSTALLER_SIGN_IDENTITY := 16480CA444F481F8DEAF9421FAD2CCE590FC54E4
-XCODEBUILD_FLAGS ?=
+APPLICATION_SIGN_IDENTITY := 34EED4C8F8E609CD5D253D88202A071521D1BE74
+INSTALLER_SIGN_IDENTITY := 21E03A44ACC2B48753BABB3DAE9B5F9A9CFF0480
+XCODEBUILD_FLAGS ?= -skipPackagePluginValidation
+export DISABLE_SWIFTLINT := 1
 
 build_all: build_ios build_macos build_tvos
 
+build_ios_deb:
+	bash Jailbreak/package.sh
+
 build_ios:
-	xcodebuild build -scheme SFI -configuration Debug -destination 'generic/platform=iOS' | xcbeautify | grep -A 10 -e "Build Succeeded" -e "BUILD FAILED" -e "❌"
+	xcodebuild build $(XCODEBUILD_FLAGS) -scheme SFI -configuration Debug -destination 'generic/platform=iOS' | xcbeautify | grep -A 10 -e "Build Succeeded" -e "BUILD FAILED" -e "❌"
 
 build_macos:
-	xcodebuild build -scheme SFM -configuration Debug -destination 'generic/platform=macOS' | xcbeautify | grep -A 10 -e "Build Succeeded" -e "BUILD FAILED" -e "❌"
+	xcodebuild build $(XCODEBUILD_FLAGS) -scheme SFM -configuration Debug -destination 'generic/platform=macOS' | xcbeautify | grep -A 10 -e "Build Succeeded" -e "BUILD FAILED" -e "❌"
 
 build_macos_standalone:
-	xcodebuild build -scheme SFM.System -configuration Debug -destination 'generic/platform=macOS' | xcbeautify | grep -A 10 -e "Build Succeeded" -e "BUILD FAILED" -e "❌"
+	xcodebuild build $(XCODEBUILD_FLAGS) -scheme SFM.System -configuration Debug -destination 'generic/platform=macOS' | xcbeautify | grep -A 10 -e "Build Succeeded" -e "BUILD FAILED" -e "❌"
 
 build_tvos:
-	xcodebuild build -scheme SFT -configuration Debug -destination 'generic/platform=tvOS' | xcbeautify | grep -A 10 -e "Build Succeeded" -e "BUILD FAILED" -e "❌"
+	xcodebuild build $(XCODEBUILD_FLAGS) -scheme SFT -configuration Debug -destination 'generic/platform=tvOS' | xcbeautify | grep -A 10 -e "Build Succeeded" -e "BUILD FAILED" -e "❌"
 
 release: release_ios release_macos release_tvos
 
@@ -25,7 +30,7 @@ release_ios: archive_ios upload_ios
 
 archive_ios:
 	rm -rf build/SFI.xcarchive
-	xcodebuild archive -scheme SFI -configuration Release -destination 'generic/platform=iOS' -archivePath build/SFI.xcarchive | xcbeautify
+	xcodebuild archive $(XCODEBUILD_FLAGS) -scheme SFI -configuration Release -destination 'generic/platform=iOS' -archivePath build/SFI.xcarchive | xcbeautify
 
 upload_ios:
 	xcodebuild -exportArchive -archivePath build/SFI.xcarchive -exportOptionsPlist SFI/Upload.plist
@@ -34,7 +39,7 @@ release_macos: archive_macos upload_macos
 
 archive_macos:
 	rm -rf build/SFM.xcarchive
-	xcodebuild archive -scheme SFM -configuration Release -archivePath build/SFM.xcarchive | xcbeautify
+	xcodebuild archive $(XCODEBUILD_FLAGS) -scheme SFM -configuration Release -archivePath build/SFM.xcarchive | xcbeautify
 
 upload_macos:
 	xcodebuild -exportArchive -archivePath build/SFM.xcarchive -exportOptionsPlist SFI/Upload.plist
@@ -43,7 +48,7 @@ release_tvos: archive_tvos upload_tvos
 
 archive_tvos:
 	rm -rf build/SFT.xcarchive
-	xcodebuild archive -scheme SFT -configuration Release -archivePath build/SFT.xcarchive | xcbeautify
+	xcodebuild archive $(XCODEBUILD_FLAGS) -scheme SFT -configuration Release -archivePath build/SFT.xcarchive | xcbeautify
 
 upload_tvos:
 	xcodebuild -exportArchive -archivePath build/SFT.xcarchive -exportOptionsPlist SFI/Upload.plist
@@ -143,7 +148,7 @@ build_macos_pkg_apple: archive_macos_standalone_apple export_macos_standalone_ap
 	ditto "build/SFM.System-arm64/SFM.app" "build/pkgroot-arm64/SFM.app"
 	pkgbuild --root "build/pkgroot-arm64" \
 		--component-plist SFM.System/component.plist \
-		--identifier io.nekohasekai.sfavt.standalone \
+		--identifier io.nekohasekai.sfamt.standalone \
 		--install-location /Applications \
 		--min-os-version 13.0 \
 		--compression latest \
@@ -163,7 +168,7 @@ build_macos_pkg_intel: archive_macos_standalone_intel export_macos_standalone_in
 	ditto "build/SFM.System-x86_64/SFM.app" "build/pkgroot-x86_64/SFM.app"
 	pkgbuild --root "build/pkgroot-x86_64" \
 		--component-plist SFM.System/component.plist \
-		--identifier io.nekohasekai.sfavt.standalone \
+		--identifier io.nekohasekai.sfamt.standalone \
 		--install-location /Applications \
 		--min-os-version 13.0 \
 		--compression latest \
@@ -183,7 +188,7 @@ build_macos_pkg_universal: archive_macos_standalone_universal export_macos_stand
 	ditto "build/SFM.System-universal/SFM.app" "build/pkgroot-universal/SFM.app"
 	pkgbuild --root "build/pkgroot-universal" \
 		--component-plist SFM.System/component.plist \
-		--identifier io.nekohasekai.sfavt.standalone \
+		--identifier io.nekohasekai.sfamt.standalone \
 		--install-location /Applications \
 		--min-os-version 13.0 \
 		--compression latest \
@@ -199,7 +204,7 @@ build_macos_pkg_universal: archive_macos_standalone_universal export_macos_stand
 build_macos_pkg: build_macos_pkg_apple build_macos_pkg_intel build_macos_pkg_universal
 
 build_macos_pkg_all: archive_macos_standalone_universal export_macos_standalone_universal
-	bash SFM.System/package_from_universal.sh
+	APPLICATION_SIGN_IDENTITY="$(APPLICATION_SIGN_IDENTITY)" INSTALLER_SIGN_IDENTITY="$(INSTALLER_SIGN_IDENTITY)" bash SFM.System/package_from_universal.sh
 
 # PKG notarize commands
 notarize_macos_pkg_apple:
@@ -257,6 +262,9 @@ clean:
 	rm -rf build/SFM.System-arm64
 	rm -rf build/SFM.System-x86_64
 	rm -rf build/SFM.System-universal
+	rm -rf build/SFI.dd
+	rm -rf build/SFM.dd
+	rm -rf build/SFT.dd
 	rm -rf build/SFM.System-arm64.dd
 	rm -rf build/SFM.System-x86_64.dd
 	rm -rf build/SFM.System-universal.dd

@@ -9,16 +9,23 @@ import UserNotifications
 
 class ApplicationDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     private var profileServer: ProfileServer?
+    private var reportTransferServer: ReportTransferServer?
 
     func application(_: UIApplication, didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        LibboxPrepareCrashSignalHandlers()
+        NativeCrashReporter.installForCurrentProcess()
+        LibboxReinstallCrashSignalHandlers()
         NSLog("Here I stand")
-        let options = LibboxSetupOptions()
-        options.basePath = FilePath.sharedDirectory.relativePath
-        options.workingPath = FilePath.workingDirectory.relativePath
-        options.tempPath = FilePath.cacheDirectory.relativePath
-        var error: NSError?
-        LibboxSetup(options, &error)
-        LibboxSetLocale(Locale.current.identifier)
+        do {
+            try ServiceSetup.apply(crashReportSource: "Application")
+        } catch {
+            NSLog("setup service error: \(error.localizedDescription)")
+        }
+        do {
+            try ApplicationLocale.apply()
+        } catch {
+            NSLog("failed to set locale: \(error)")
+        }
         let notificationCenter = UNUserNotificationCenter.current()
         notificationCenter.setNotificationCategories([
             UNNotificationCategory(
@@ -31,6 +38,18 @@ class ApplicationDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCe
             ),
         ])
         notificationCenter.delegate = self
+        #if JAILBREAK
+            // usernotificationsd only registers the live BulletinBoard data provider that gates
+            // delivery once requestAuthorization runs from the host app; it never reaches that path
+            // for a section that is already authorized, so the call must not be skipped.
+            Task {
+                do {
+                    _ = try await notificationCenter.requestAuthorization(options: [.alert, .sound])
+                } catch {
+                    NSLog("request notification authorization error: \(error.localizedDescription)")
+                }
+            }
+        #endif
         setup()
         return true
     }
@@ -76,6 +95,16 @@ class ApplicationDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCe
                 NSLog("started profile server")
             } catch {
                 NSLog("setup profile server error: \(error.localizedDescription)")
+            }
+            do {
+                let reportTransferServer = try ReportTransferServer()
+                reportTransferServer.start()
+                await MainActor.run {
+                    self.reportTransferServer = reportTransferServer
+                }
+                NSLog("started report transfer server")
+            } catch {
+                NSLog("setup report transfer server error: \(error.localizedDescription)")
             }
             registerFileProviderDomain()
         }

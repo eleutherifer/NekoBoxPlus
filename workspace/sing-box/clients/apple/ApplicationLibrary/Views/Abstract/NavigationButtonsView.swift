@@ -34,21 +34,20 @@ public struct NavigationButtonsView: View {
     }
 
     #if os(tvOS)
+        @ViewBuilder
         private var tvOSBody: some View {
-            Group {
-                if showConnectionsButton {
-                    Button {
-                        onConnectionsTap()
-                    } label: {
-                        Image(systemName: "list.bullet.rectangle.portrait.fill")
-                    }
+            if showConnectionsButton {
+                Button {
+                    onConnectionsTap()
+                } label: {
+                    Image(systemName: "list.bullet.rectangle.portrait.fill")
                 }
-                if showGroupsButton {
-                    Button {
-                        onGroupsTap()
-                    } label: {
-                        Image(systemName: "rectangle.3.group.fill")
-                    }
+            }
+            if showGroupsButton {
+                Button {
+                    onGroupsTap()
+                } label: {
+                    Image(systemName: "rectangle.3.group.fill")
                 }
             }
         }
@@ -57,31 +56,35 @@ public struct NavigationButtonsView: View {
             HStack(spacing: 12) {
                 if showConnectionsButton {
                     Divider()
-                    Text(verbatim: "\(connectionsCount)")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .fixedSize()
                     Button {
                         onConnectionsTap()
                     } label: {
-                        Label("Connections", systemImage: "list.bullet.rectangle.portrait.fill")
+                        HStack(spacing: 12) {
+                            Text(verbatim: "\(connectionsCount)")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .fixedSize()
+                            Label("Connections", systemImage: "list.bullet.rectangle.portrait.fill")
+                                .labelStyle(.iconOnly)
+                                .foregroundStyle(.primary)
+                        }
                     }
-                    .labelStyle(.iconOnly)
-                    .foregroundStyle(.primary)
                 }
                 if showGroupsButton {
                     Divider()
-                    Text(verbatim: "\(groupsCount)")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .fixedSize()
                     Button {
                         onGroupsTap()
                     } label: {
-                        Label("Groups", systemImage: "rectangle.3.group.fill")
+                        HStack(spacing: 12) {
+                            Text(verbatim: "\(groupsCount)")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .fixedSize()
+                            Label("Groups", systemImage: "rectangle.3.group.fill")
+                                .labelStyle(.iconOnly)
+                                .foregroundStyle(.primary)
+                        }
                     }
-                    .labelStyle(.iconOnly)
-                    .foregroundStyle(.primary)
                 }
             }
         }
