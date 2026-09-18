@@ -2,6 +2,7 @@
 package pausecontrol
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"time"
@@ -30,6 +31,9 @@ type Controller struct {
 	rebind      bool
 	// forceDown remembers a pause even if wake arrives before the worker runs.
 	forceDown bool
+	ready     bool
+	lastError error
+	updated   chan struct{}
 	closed    bool
 	signal    chan struct{}
 	stop      chan struct{}
@@ -46,6 +50,7 @@ func New(manager pause.Manager, device Device, afterRebind func(), report func(e
 		signal:      make(chan struct{}, 1),
 		stop:        make(chan struct{}),
 		done:        make(chan struct{}),
+		updated:     make(chan struct{}),
 	}
 	if manager != nil {
 		c.callback = manager.RegisterCallback(c.changed)
@@ -67,6 +72,7 @@ func (c *Controller) changed(event int) {
 	if event == pause.EventDevicePaused || event == pause.EventNetworkPause {
 		c.forceDown = true
 	}
+	c.setReadyLocked(false, nil)
 	c.access.Unlock()
 	c.notify()
 }
@@ -75,9 +81,41 @@ func (c *Controller) Rebind() {
 	c.access.Lock()
 	if !c.closed {
 		c.rebind = true
+		c.setReadyLocked(false, nil)
 	}
 	c.access.Unlock()
 	c.notify()
+}
+
+func (c *Controller) setReadyLocked(ready bool, err error) {
+	c.ready = ready
+	c.lastError = err
+	close(c.updated)
+	c.updated = make(chan struct{})
+}
+
+func (c *Controller) WaitReady(ctx context.Context) error {
+	for {
+		c.access.Lock()
+		if c.closed {
+			err := c.lastError
+			c.access.Unlock()
+			return errors.Join(errors.New("device lifecycle controller is closed"), err)
+		}
+		if c.ready {
+			c.access.Unlock()
+			return nil
+		}
+		updated := c.updated
+		lastError := c.lastError
+		c.access.Unlock()
+
+		select {
+		case <-ctx.Done():
+			return errors.Join(context.Cause(ctx), lastError)
+		case <-updated:
+		}
+	}
 }
 
 func (c *Controller) paused() bool {
@@ -148,12 +186,17 @@ func (c *Controller) run() {
 			c.access.Lock()
 			c.forceDown = c.forceDown || forceDown
 			c.rebind = c.rebind || rebind
+			c.setReadyLocked(false, err)
 			c.access.Unlock()
 			c.report(errors.Join(errors.New("device lifecycle update failed"), err))
 			timer = time.NewTimer(retryDelay)
 			retry = timer.C
 			retryDelay = min(2*retryDelay, 30*time.Second)
 		} else {
+			c.access.Lock()
+			ready := !c.closed && active && !c.forceDown && !c.rebind && !c.paused()
+			c.setReadyLocked(ready, nil)
+			c.access.Unlock()
 			retryDelay = time.Second
 		}
 	}
@@ -166,6 +209,7 @@ func (c *Controller) Close() {
 		}
 		c.access.Lock()
 		c.closed = true
+		c.setReadyLocked(false, c.lastError)
 		c.access.Unlock()
 		close(c.stop)
 	})

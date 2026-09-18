@@ -1,5 +1,6 @@
 package io.nekohasekai.sagernet.bg
 
+import android.os.SystemClock
 import io.nekohasekai.sagernet.ktx.Logs
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -17,9 +18,16 @@ internal class ConnectionRecoveryQueue(
     private val pause: (Boolean) -> Unit,
     private val recover: (Boolean, Boolean, ServiceRestartCause) -> Unit,
     private val log: (String) -> Unit = { Logs.d(it) },
+    private val elapsedRealtime: () -> Long = SystemClock::elapsedRealtime,
 ) : AutoCloseable {
     private sealed interface Event {
         data class Idle(val idle: Boolean, val reconnect: Boolean, val reset: Boolean) : Event
+        data class Screen(
+            val on: Boolean,
+            val reconnect: Boolean,
+            val reset: Boolean,
+            val elapsedRealtime: Long,
+        ) : Event
         data class Network(val available: Boolean) : Event
         data class Request(val reconnect: Boolean, val reset: Boolean, val cause: ServiceRestartCause) : Event
         data object Ready : Event
@@ -35,6 +43,8 @@ internal class ConnectionRecoveryQueue(
             var ready = false
             var idle = false
             var networkAvailable = false
+            var screenOffAt: Long? = null
+            var wakeRecoveryRequested = false
             var flushJob: Job? = null
             for (event in events) {
                 try {
@@ -42,9 +52,32 @@ internal class ConnectionRecoveryQueue(
                         is Event.Idle -> {
                             val wasIdle = idle
                             idle = event.idle
+                            if (idle) wakeRecoveryRequested = false
                             if (wasIdle != idle && ready) pause(idle)
-                            if (wasIdle && !idle) {
+                            if (wasIdle && !idle && !wakeRecoveryRequested) {
                                 pending.request(event.reconnect, event.reset, ServiceRestartCause.WakeReconnect)
+                                wakeRecoveryRequested = event.reconnect || event.reset
+                            }
+                        }
+                        is Event.Screen -> {
+                            if (!event.on) {
+                                screenOffAt = event.elapsedRealtime
+                                wakeRecoveryRequested = false
+                            } else {
+                                val recordedScreenOffAt = screenOffAt
+                                screenOffAt = null
+                                if (
+                                    recordedScreenOffAt != null &&
+                                    event.elapsedRealtime - recordedScreenOffAt >= SCREEN_OFF_RECOVERY_THRESHOLD_MS &&
+                                    !wakeRecoveryRequested
+                                ) {
+                                    pending.request(
+                                        event.reconnect,
+                                        event.reset,
+                                        ServiceRestartCause.WakeReconnect,
+                                    )
+                                    wakeRecoveryRequested = event.reconnect || event.reset
+                                }
                             }
                         }
                         is Event.Network -> networkAvailable = event.available
@@ -85,6 +118,10 @@ internal class ConnectionRecoveryQueue(
         events.trySend(Event.Network(available))
     }
 
+    fun screen(on: Boolean, reconnect: Boolean, reset: Boolean) {
+        events.trySend(Event.Screen(on, reconnect, reset, elapsedRealtime()))
+    }
+
     fun ready() {
         events.trySend(Event.Ready)
     }
@@ -100,6 +137,10 @@ internal class ConnectionRecoveryQueue(
     override fun close() {
         events.close()
         scope.cancelScope()
+    }
+
+    private companion object {
+        const val SCREEN_OFF_RECOVERY_THRESHOLD_MS = 2 * 60 * 1_000L
     }
 }
 

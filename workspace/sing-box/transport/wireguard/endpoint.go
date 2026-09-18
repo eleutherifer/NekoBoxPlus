@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net"
 	"net/netip"
@@ -301,6 +302,13 @@ func (e *Endpoint) BindUpdate() error {
 		e.lifecycle.Rebind()
 	}
 	return nil
+}
+
+func (e *Endpoint) WaitReady(ctx context.Context) error {
+	if e.lifecycle == nil {
+		return errors.New("WireGuard device is not started")
+	}
+	return e.lifecycle.WaitReady(ctx)
 }
 
 func wireGuardDeviceContext(ctx context.Context) context.Context {

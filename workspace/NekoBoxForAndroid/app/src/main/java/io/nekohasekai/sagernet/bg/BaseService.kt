@@ -132,6 +132,16 @@ class BaseService {
                         )
                     }
                 }
+                Intent.ACTION_SCREEN_OFF -> connectionRecovery?.screen(
+                    on = false,
+                    reconnect = DataStore.wakeReconnect,
+                    reset = DataStore.wakeResetConnections,
+                )
+                Intent.ACTION_SCREEN_ON -> connectionRecovery?.screen(
+                    on = true,
+                    reconnect = DataStore.wakeReconnect,
+                    reset = DataStore.wakeResetConnections,
+                )
 
                 Action.RESET_UPSTREAM_CONNECTIONS -> runOnDefaultDispatcher {
                     service.resetCoreNetwork()
@@ -1117,6 +1127,9 @@ class BaseService {
                 SagerNet.application.nativeInterface.syncNetworkState(network)
                 DataStore.vpnService?.updateUnderlyingNetwork()
                 val link = network?.let { current -> SagerNet.connectivity.getLinkProperties(current) }
+                val capabilities = network?.let { current ->
+                    SagerNet.connectivity.getNetworkCapabilities(current)
+                }
                 val currentName = link?.interfaceName
                 upstreamInterfaceName = currentName
                 val decision = networkChangeRecoveryPolicy.onNetworkChanged(
@@ -1125,11 +1138,15 @@ class BaseService {
                     isVpnNetwork = isVpnNetwork(network),
                     reconnectEnabled = DataStore.networkChangeReconnect,
                     resetEnabled = DataStore.networkChangeResetConnections,
+                    validated = capabilities?.hasCapability(
+                        NetworkCapabilities.NET_CAPABILITY_VALIDATED,
+                    ),
                 )
                 if (decision.reconnect || decision.reset) {
                     Logs.d(
                         "Network changed: ${decision.oldInterfaceName}/${decision.oldNetworkHandle} -> " +
-                            "${decision.newInterfaceName}/${decision.newNetworkHandle}"
+                            "${decision.newInterfaceName}/${decision.newNetworkHandle}; " +
+                            "validated=${decision.oldValidated}->${decision.newValidated}"
                     )
                     recovery?.request(
                         decision.reconnect,
@@ -1252,7 +1269,7 @@ class BaseService {
                                 restartCause = cause,
                             )
                         } else if (reset) {
-                            proxy.box.resetNetwork()
+                            resetCoreNetwork()
                         }
                     }
                 },
@@ -1274,6 +1291,8 @@ class BaseService {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                         addAction(PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED)
                     }
+                    addAction(Intent.ACTION_SCREEN_OFF)
+                    addAction(Intent.ACTION_SCREEN_ON)
                     addAction(Action.RESET_UPSTREAM_CONNECTIONS)
                     addAction(Action.UPDATE_NOTIFICATION_COUNTRY_INDICATOR)
                 }

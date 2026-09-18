@@ -27,7 +27,10 @@ import (
 	"go4.org/netipx"
 )
 
-var _ adapter.InterfaceUpdateListener = (*Endpoint)(nil)
+var (
+	_ adapter.InterfaceUpdateListener = (*Endpoint)(nil)
+	_ adapter.OutboundWithReadiness   = (*Endpoint)(nil)
+)
 
 func RegisterEndpoint(registry *endpoint.Registry) {
 	endpoint.Register(registry, constant.TypeAwg, NewEndpoint)
@@ -531,6 +534,14 @@ func (e *Endpoint) InterfaceUpdated(ctx context.Context) {
 	if ctx.Err() == nil && e.device != nil {
 		e.device.InterfaceUpdated(ctx)
 	}
+}
+
+func (e *Endpoint) WaitReady(ctx context.Context) error {
+	device, err := e.currentDevice()
+	if err != nil {
+		return err
+	}
+	return device.WaitReady(ctx)
 }
 
 func (e *Endpoint) currentDevice() (*awg.Device, error) {

@@ -136,6 +136,7 @@ func testEncryptedRecovery(t *testing.T, protocol string, keepalive uint16) {
 	peer := netip.AddrPortFrom(netip.MustParseAddr("127.0.0.1"), uint16(port))
 	var client N.Dialer
 	var rebind func()
+	var waitReady func(context.Context) error
 	if protocol == "wireguard" {
 		endpoint, createErr := wireguard.NewEndpoint(wireguard.EndpointOptions{
 			Context: ctx, Logger: logger.NOP(), Dialer: dialer,
@@ -155,7 +156,7 @@ func testEncryptedRecovery(t *testing.T, protocol string, keepalive uint16) {
 		if err = endpoint.Start(false); err != nil {
 			t.Fatal(err)
 		}
-		client, rebind = endpoint, endpoint.InterfaceUpdated
+		client, rebind, waitReady = endpoint, endpoint.InterfaceUpdated, endpoint.WaitReady
 	} else {
 		ipc = fmt.Sprintf("private_key=%s\npublic_key=%s\nendpoint=%s\nallowed_ip=0.0.0.0/0\npersistent_keepalive_interval=%d\n",
 			hex.EncodeToString(clientKey.Bytes()), hex.EncodeToString(serverKey.PublicKey().Bytes()), peer, keepalive)
@@ -171,6 +172,7 @@ func testEncryptedRecovery(t *testing.T, protocol string, keepalive uint16) {
 		}
 		client = device
 		rebind = func() { device.InterfaceUpdated(ctx) }
+		waitReady = device.WaitReady
 	}
 
 	probe := func(stage string) {
@@ -196,11 +198,20 @@ func testEncryptedRecovery(t *testing.T, protocol string, keepalive uint16) {
 			}
 		}
 	}
+	waitForReady := func(stage string) {
+		t.Helper()
+		readyCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+		if readyErr := waitReady(readyCtx); readyErr != nil {
+			t.Fatalf("%s readiness: %v", stage, readyErr)
+		}
+	}
 	time.Sleep(100 * time.Millisecond)
 	if dialer.opens.Load() != 0 {
 		t.Fatal("device opened an upstream socket while starting paused")
 	}
 	manager.DeviceWake()
+	waitForReady("initial")
 	probe("initial")
 	for cycle := range 3 {
 		manager.DevicePause()
@@ -208,12 +219,10 @@ func testEncryptedRecovery(t *testing.T, protocol string, keepalive uint16) {
 		rebind()
 		manager.DeviceWake()
 		manager.NetworkWake()
-		// Give the asynchronous lifecycle worker time to finish rebinding before
-		// opening a flow; recovery can legitimately terminate pre-reset flows.
-		time.Sleep(100 * time.Millisecond)
+		waitForReady(fmt.Sprintf("wake-%d", cycle))
 		probe(fmt.Sprintf("wake-%d", cycle))
 	}
 	rebind()
-	time.Sleep(100 * time.Millisecond)
+	waitForReady("explicit-reset")
 	probe("explicit-reset")
 }

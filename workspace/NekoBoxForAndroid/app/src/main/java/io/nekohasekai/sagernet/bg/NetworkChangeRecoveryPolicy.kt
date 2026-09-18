@@ -6,17 +6,22 @@ internal class NetworkChangeRecoveryPolicy {
         val newInterfaceName: String?,
         val oldNetworkHandle: Long?,
         val newNetworkHandle: Long?,
+        val oldValidated: Boolean?,
+        val newValidated: Boolean?,
         val reconnect: Boolean = false,
         val reset: Boolean = false,
         val ignoredReconnectForVpn: Boolean = false,
     ) {
         val changed: Boolean
-            get() = oldInterfaceName != newInterfaceName || oldNetworkHandle != newNetworkHandle
+            get() = oldInterfaceName != newInterfaceName ||
+                oldNetworkHandle != newNetworkHandle ||
+                oldValidated != newValidated
     }
 
     private var observedInitialState = false
     private var currentInterfaceName: String? = null
     private var currentNetworkHandle: Long? = null
+    private var currentValidated: Boolean? = null
     private var pendingRecoveryAfterLoss = false
 
     fun onNetworkChanged(
@@ -25,33 +30,63 @@ internal class NetworkChangeRecoveryPolicy {
         isVpnNetwork: Boolean,
         reconnectEnabled: Boolean,
         resetEnabled: Boolean,
+        validated: Boolean? = null,
     ): Decision {
         val oldInterfaceName = currentInterfaceName
         val oldNetworkHandle = currentNetworkHandle
+        val oldValidated = currentValidated
 
         if (!observedInitialState) {
             observedInitialState = true
             currentInterfaceName = interfaceName
             currentNetworkHandle = networkHandle
-            return Decision(oldInterfaceName, interfaceName, oldNetworkHandle, networkHandle)
+            currentValidated = validated
+            return Decision(
+                oldInterfaceName,
+                interfaceName,
+                oldNetworkHandle,
+                networkHandle,
+                oldValidated,
+                validated,
+            )
         }
 
-        if (oldInterfaceName == interfaceName && oldNetworkHandle == networkHandle) {
-            return Decision(oldInterfaceName, interfaceName, oldNetworkHandle, networkHandle)
+        if (
+            oldInterfaceName == interfaceName &&
+            oldNetworkHandle == networkHandle &&
+            oldValidated == validated
+        ) {
+            return Decision(
+                oldInterfaceName,
+                interfaceName,
+                oldNetworkHandle,
+                networkHandle,
+                oldValidated,
+                validated,
+            )
         }
 
         val lostKnownInterface = oldInterfaceName != null && interfaceName == null
         val recoveredAfterLoss = oldInterfaceName == null &&
             interfaceName != null &&
             pendingRecoveryAfterLoss
-        val switchedKnownInterface = oldInterfaceName != null && interfaceName != null
+        val networkIdentityChanged = oldInterfaceName != interfaceName || oldNetworkHandle != networkHandle
+        val switchedKnownInterface = oldInterfaceName != null &&
+            interfaceName != null &&
+            networkIdentityChanged
         val reconnectCandidate = recoveredAfterLoss || switchedKnownInterface
         val reconnect = reconnectEnabled && reconnectCandidate && !isVpnNetwork
         val ignoredReconnectForVpn = reconnectEnabled && reconnectCandidate && isVpnNetwork
-        val reset = resetEnabled && (lostKnownInterface || recoveredAfterLoss || switchedKnownInterface)
+        val validationRecovered = oldInterfaceName == interfaceName &&
+            oldNetworkHandle == networkHandle &&
+            oldValidated == false &&
+            validated == true
+        val reset = resetEnabled &&
+            (lostKnownInterface || recoveredAfterLoss || switchedKnownInterface || validationRecovered)
 
         currentInterfaceName = interfaceName
         currentNetworkHandle = networkHandle
+        currentValidated = validated
         if (lostKnownInterface) {
             pendingRecoveryAfterLoss = true
         } else if (interfaceName != null && !isVpnNetwork) {
@@ -63,6 +98,8 @@ internal class NetworkChangeRecoveryPolicy {
             newInterfaceName = interfaceName,
             oldNetworkHandle = oldNetworkHandle,
             newNetworkHandle = networkHandle,
+            oldValidated = oldValidated,
+            newValidated = validated,
             reconnect = reconnect,
             reset = reset,
             ignoredReconnectForVpn = ignoredReconnectForVpn,

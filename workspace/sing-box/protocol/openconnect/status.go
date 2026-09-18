@@ -1,6 +1,9 @@
 package openconnect
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"slices"
 
@@ -10,7 +13,33 @@ import (
 	"github.com/sagernet/sing/service"
 )
 
-var _ adapter.OpenConnectEndpoint = (*Endpoint)(nil)
+var (
+	_ adapter.OpenConnectEndpoint   = (*Endpoint)(nil)
+	_ adapter.OutboundWithReadiness = (*Endpoint)(nil)
+)
+
+func (e *Endpoint) WaitReady(ctx context.Context) error {
+	for {
+		statusUpdated := e.StatusUpdated()
+		status := e.OpenConnectStatus()
+		switch status.State {
+		case adapter.OpenConnectStateConnected:
+			return nil
+		case adapter.OpenConnectStateAuthPending:
+			return errors.New("OpenConnect authentication is required")
+		case adapter.OpenConnectStateError:
+			if status.Error != "" {
+				return fmt.Errorf("OpenConnect client failed: %s", status.Error)
+			}
+			return errors.New("OpenConnect client failed")
+		}
+		select {
+		case <-ctx.Done():
+			return context.Cause(ctx)
+		case <-statusUpdated:
+		}
+	}
+}
 
 func (e *Endpoint) OpenConnectStatus() adapter.OpenConnectStatus {
 	var status adapter.OpenConnectStatus

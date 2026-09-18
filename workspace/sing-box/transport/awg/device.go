@@ -2,6 +2,7 @@ package awg
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/netip"
@@ -111,6 +112,13 @@ func (d *Device) InterfaceUpdated(ctx context.Context) {
 	if ctx.Err() == nil && d.lifecycle != nil {
 		d.lifecycle.Rebind()
 	}
+}
+
+func (d *Device) WaitReady(ctx context.Context) error {
+	if d.lifecycle == nil {
+		return errors.New("AmneziaWG device is not started")
+	}
+	return d.lifecycle.WaitReady(ctx)
 }
 
 func (d *Device) DialContext(ctx context.Context, network string, destination metadata.Socksaddr) (net.Conn, error) {

@@ -20,6 +20,13 @@ type Outbound interface {
 	N.Dialer
 }
 
+// OutboundWithReadiness reports when an asynchronously started outbound can
+// accept traffic. Callers should bound WaitReady with their own context.
+type OutboundWithReadiness interface {
+	Outbound
+	WaitReady(ctx context.Context) error
+}
+
 type OutboundWithPreferredRoutes interface {
 	Outbound
 	PreferredDomain(metadata *InboundContext, domain string) bool

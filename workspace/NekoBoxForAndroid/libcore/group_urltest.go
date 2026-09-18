@@ -99,10 +99,7 @@ func (t *GroupURLTester) test(config, tag string) (int32, error) {
 	if t == nil || !t.destination.IsValid() {
 		return -1, errors.New("group URLTester is not initialized")
 	}
-	ctx, cancel := context.WithTimeout(
-		context.Background(),
-		groupURLTestProfileBudget(t.timeout, t.attempts, t.pauseMillis),
-	)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	return runGroupURLTestOperation(ctx, func() (int32, error) {
 		return runGroupURLTestStartRetry(ctx, func() (int32, error) {
@@ -132,24 +129,12 @@ func (t *GroupURLTester) testProfile(ctx context.Context, config, tag string) (l
 	if err != nil {
 		return -1, err
 	}
-	readyCtx, cancelReady := context.WithTimeout(ctx, t.timeout)
-	err = waitURLTestOutboundReady(readyCtx, instance.Outbound(), detour)
-	cancelReady()
-	if err != nil {
-		return -1, err
-	}
 	latency, err = t.testWithRetry(ctx, instance, detour)
 	if errors.Is(err, context.DeadlineExceeded) {
 		closeSynchronously = false
 		instance.closeURLTestAsync()
 	}
 	return latency, err
-}
-
-func groupURLTestProfileBudget(timeout time.Duration, attempts int32, pauseMillis int32) time.Duration {
-	attempts = min(max(attempts, 1), 5)
-	pause := time.Duration(max(pauseMillis, 0)) * time.Millisecond
-	return timeout*time.Duration(attempts) + pause*time.Duration(attempts-1)
 }
 
 func runGroupURLTestOperation(ctx context.Context, test func() (int32, error)) (int32, error) {
@@ -190,8 +175,8 @@ func (b *BoxInstance) urlTestOutbound(tag string) (adapter.Outbound, error) {
 	return detour, nil
 }
 
-func (t *GroupURLTester) testWithRetry(ctx context.Context, instance *BoxInstance, detour N.Dialer) (int32, error) {
-	return runURLTestAttempts(ctx, int32(t.timeout/time.Millisecond), t.attempts, t.pauseMillis, func(ctx context.Context) (int32, error) {
+func (t *GroupURLTester) testWithRetry(ctx context.Context, instance *BoxInstance, detour adapter.Outbound) (int32, error) {
+	return runURLTestAfterOutboundReady(ctx, instance.Outbound(), detour, int32(t.timeout/time.Millisecond), t.attempts, t.pauseMillis, func(ctx context.Context) (int32, error) {
 		return t.testOnce(ctx, instance, detour)
 	})
 }

@@ -1,7 +1,9 @@
 package pausecontrol
 
 import (
+	"context"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -123,6 +125,85 @@ func TestFailedResumeRetriesWithoutNetworkEvent(t *testing.T) {
 	}
 }
 
+func TestWaitReadyWaitsForInitialUp(t *testing.T) {
+	d := &blockingUpDevice{
+		fakeDevice: fakeDevice{events: make(chan string, 32)},
+		release:    make(chan struct{}),
+	}
+	c := New(nil, d, nil, func(err error) { t.Error(err) })
+	defer c.Close()
+	expect(t, &d.fakeDevice, "up-blocked")
+	ready := make(chan error, 1)
+	go func() { ready <- c.WaitReady(t.Context()) }()
+	select {
+	case err := <-ready:
+		t.Fatalf("readiness returned before Up completed: %v", err)
+	case <-time.After(20 * time.Millisecond):
+	}
+	close(d.release)
+	select {
+	case err := <-ready:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("readiness did not follow successful Up")
+	}
+}
+
+func TestWaitReadyTimeoutIncludesLatestLifecycleError(t *testing.T) {
+	d := &fakeDevice{events: make(chan string, 32), failUp: true}
+	c := New(nil, d, nil, func(error) {})
+	defer c.Close()
+	expect(t, d, "up-failed")
+	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
+	defer cancel()
+	err := c.WaitReady(ctx)
+	if !errors.Is(err, context.DeadlineExceeded) || !strings.Contains(err.Error(), "network unavailable") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestWaitReadyIsInvalidatedDuringRebind(t *testing.T) {
+	d := &blockingBindDevice{
+		fakeDevice: fakeDevice{events: make(chan string, 32)},
+		release:    make(chan struct{}),
+	}
+	c := New(nil, d, nil, func(err error) { t.Error(err) })
+	defer c.Close()
+	expect(t, &d.fakeDevice, "up")
+	if err := c.WaitReady(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	c.Rebind()
+	expect(t, &d.fakeDevice, "bind-blocked")
+	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
+	err := c.WaitReady(ctx)
+	cancel()
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("error = %v", err)
+	}
+	close(d.release)
+	expect(t, &d.fakeDevice, "keepalive")
+	if err = c.WaitReady(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestWaitReadyReturnsAfterClose(t *testing.T) {
+	m := manager(t)
+	m.DevicePause()
+	d := &fakeDevice{events: make(chan string, 32)}
+	c := New(m, d, nil, func(err error) { t.Error(err) })
+	expect(t, d, "down")
+	c.Close()
+	expect(t, d, "close")
+	err := c.WaitReady(t.Context())
+	if err == nil || !strings.Contains(err.Error(), "closed") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
 func TestPauseCallbackDoesNotWaitForDevice(t *testing.T) {
 	m := manager(t)
 	d := &blockingDevice{
@@ -150,6 +231,28 @@ func TestPauseCallbackDoesNotWaitForDevice(t *testing.T) {
 type blockingDevice struct {
 	fakeDevice
 	release chan struct{}
+}
+
+type blockingUpDevice struct {
+	fakeDevice
+	release chan struct{}
+}
+
+func (d *blockingUpDevice) Up() error {
+	d.event("up-blocked")
+	<-d.release
+	return nil
+}
+
+type blockingBindDevice struct {
+	fakeDevice
+	release chan struct{}
+}
+
+func (d *blockingBindDevice) BindUpdate() error {
+	d.event("bind-blocked")
+	<-d.release
+	return nil
 }
 
 func (d *blockingDevice) Down() error {

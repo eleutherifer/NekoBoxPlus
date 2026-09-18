@@ -120,6 +120,7 @@ import io.nekohasekai.sagernet.ui.compose.ProfileCardLayout
 import io.nekohasekai.sagernet.ui.compose.ProfileCardModel
 import io.nekohasekai.sagernet.ui.compose.ProfileShareAction
 import io.nekohasekai.sagernet.ui.compose.SubscriptionBannerCard
+import io.nekohasekai.sagernet.ui.compose.doubleProfileMinimumHeightDp
 import io.nekohasekai.sagernet.ui.compose.showComposeItemDialog
 import io.nekohasekai.sagernet.ui.compose.showComposeMessageDialog
 import io.nekohasekai.sagernet.ui.profile.HttpSettingsActivity
@@ -3050,13 +3051,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                         undoManager.flush()
                     }
                     val cached = configurationList[profile.id]
-                    val updatedProfile = if (noTraffic && cached != null) {
-                        profile.copy(tx = cached.tx, rx = cached.rx).also {
-                            it.dirty = profile.dirty
-                        }
-                    } else {
-                        profile
-                    }
+                    val updatedProfile = mergeProfileRefresh(profile, cached, noTraffic)
                     val holder = configurationListView.findViewHolderForItemId(profile.id)
                         as? ConfigurationHolder
                     val previous = holder?.lastSelfHasMiddleRow
@@ -3647,7 +3642,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                         DataStore.dontHighlightInsecureProfiles,
                     ),
                     borders = DataStore.profileCardBorders,
-                    middleRowVisible = hasMiddleRow,
+                    middleRowVisible = if (double) address.isNotBlank() else hasMiddleRow,
                     middleRowReserved = reserveMiddleRow,
                     statusVisible = !double || entity.status > 0,
                     batchSelection = batchSelection,
@@ -3660,11 +3655,10 @@ class ConfigurationFragment @JvmOverloads constructor(
                     showDelete = !double && !select && !batchSelection,
                     showOverflow = double && !batchSelection,
                     minimumHeightDp = if (double) {
-                        when {
-                            adapter?.shouldShowTraffic() == true && parent.alwaysShowAddress -> 112
-                            adapter?.shouldShowTraffic() == true || parent.alwaysShowAddress -> 92
-                            else -> 0
-                        }
+                        doubleProfileMinimumHeightDp(
+                            showAddress = parent.alwaysShowAddress,
+                            showTraffic = adapter?.shouldShowTraffic() == true,
+                        )
                     } else 0,
                 )
                 lastBoundTx = tx
@@ -3688,7 +3682,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                         }
                         onMainDispatcher { render() }
                         if (update) {
-                            ProfileManager.postUpdate(lastSelected)
+                            ProfileManager.postUpdate(lastSelected, noTraffic = true)
                             if (ProfileSelectionReloadPolicy.shouldReload(update, serviceState)) {
                                 SagerNet.reloadService(entity.id)
                             }

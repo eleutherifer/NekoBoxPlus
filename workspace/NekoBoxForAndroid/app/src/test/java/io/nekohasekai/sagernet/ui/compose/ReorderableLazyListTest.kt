@@ -31,4 +31,38 @@ class ReorderableLazyListTest {
     fun movementInsideCurrentCardDoesNotReorder() {
         assertNull(findReorderTarget(2L, 100, 80, 145f, 5f, items))
     }
+
+    @Test
+    fun autoScrollMovesUpForTopOverflow() {
+        assertEquals(-24f, calculateAutoScrollDelta(-24f, 56f, 0, 300, 40f))
+    }
+
+    @Test
+    fun autoScrollMovesDownForBottomOverflow() {
+        assertEquals(18f, calculateAutoScrollDelta(238f, 318f, 0, 300, 40f))
+    }
+
+    @Test
+    fun autoScrollIsLimitedToOneFrameStep() {
+        assertEquals(-40f, calculateAutoScrollDelta(-120f, -40f, 0, 300, 40f))
+        assertEquals(40f, calculateAutoScrollDelta(340f, 420f, 0, 300, 40f))
+    }
+
+    @Test
+    fun autoScrollStopsInsideViewport() {
+        assertEquals(0f, calculateAutoScrollDelta(40f, 120f, 0, 300, 40f))
+    }
+
+    @Test
+    fun autoScrollCanTargetNewlyVisibleCardWithoutDraggedCardBeingVisible() {
+        val newlyVisibleItems = listOf(
+            ReorderItemBounds(1L, 20, 60),
+            ReorderItemBounds(2L, 80, 60),
+        )
+
+        assertEquals(
+            2L,
+            findReorderTarget(3L, 160, 60, 70f, -20f, newlyVisibleItems),
+        )
+    }
 }

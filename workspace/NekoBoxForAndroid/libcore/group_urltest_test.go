@@ -180,27 +180,6 @@ func TestRunGroupURLTestStartRetryDoesNotRetryOtherFailures(t *testing.T) {
 	}
 }
 
-func TestGroupURLTestProfileBudgetIncludesAttemptsAndPauses(t *testing.T) {
-	tests := []struct {
-		name     string
-		attempts int32
-		pause    int32
-		want     time.Duration
-	}{
-		{name: "minimum attempts", attempts: 0, pause: 100, want: time.Second},
-		{name: "configured attempts", attempts: 3, pause: 50, want: 3100 * time.Millisecond},
-		{name: "clamped attempts", attempts: 10, pause: 50, want: 5200 * time.Millisecond},
-		{name: "negative pause", attempts: 2, pause: -1, want: 2 * time.Second},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			if got := groupURLTestProfileBudget(time.Second, test.attempts, test.pause); got != test.want {
-				t.Fatalf("budget = %v, want %v", got, test.want)
-			}
-		})
-	}
-}
-
 func TestRunGroupURLTestOperationHonorsDeadlineWhenWorkerBlocks(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
 	defer cancel()

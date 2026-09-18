@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -116,8 +117,19 @@ internal fun shouldWrapDoubleProfileFooter(
     statusWidth: Int,
     trafficWidth: Int,
     spacing: Int,
+    availableHeight: Int = 0,
+    statusHeight: Int = 0,
+    trafficHeight: Int = 0,
+    forceSecondLine: Boolean = false,
 ): Boolean = statusWidth > 0 && trafficWidth > 0 &&
-    statusWidth > availableWidth - trafficWidth - spacing
+    (forceSecondLine || statusWidth > availableWidth - trafficWidth - spacing ||
+        statusHeight > 0 && trafficHeight > 0 &&
+        availableHeight >= statusHeight + trafficHeight)
+
+internal fun doubleProfileMinimumHeightDp(
+    showAddress: Boolean,
+    showTraffic: Boolean,
+): Int = if (showAddress && showTraffic) 112 else 0
 
 private class ProfileCardFocusHandles {
     val body = FocusRequester()
@@ -235,11 +247,17 @@ fun ProfileCard(
                         ),
                 )
             }
+            val contentModifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 8.dp)
             Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(start = 8.dp)
-                    .height(IntrinsicSize.Min),
+                if (double) {
+                    contentModifier
+                        .fillMaxHeight()
+                        .heightIn(min = model.minimumHeightDp.dp)
+                } else {
+                    contentModifier.height(IntrinsicSize.Min)
+                },
             ) {
                 if (double) {
                     DoubleProfileContent(
@@ -492,10 +510,16 @@ private fun DoubleProfileContent(
     focusHandles: ProfileCardFocusHandles,
 ) {
     val televisionUi = isTelevisionUi()
-    Box(Modifier.fillMaxWidth()) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(),
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .fillMaxHeight()
+                .heightIn(min = model.minimumHeightDp.dp)
                 .padding(start = 10.dp, top = 8.dp, end = 8.dp, bottom = 8.dp),
         ) {
             Row(verticalAlignment = Alignment.Top) {
@@ -533,7 +557,16 @@ private fun DoubleProfileContent(
                 )
             }
             Spacer(Modifier.height(3.dp))
-            DoubleProfileFooter(model, televisionUi, onStatusClick)
+            DoubleProfileFooter(
+                model,
+                televisionUi,
+                onStatusClick,
+                modifier = if (model.minimumHeightDp > 0) {
+                    Modifier
+                } else {
+                    Modifier.fillMaxHeight()
+                },
+            )
         }
         if (model.batchSelection) {
             Checkbox(
@@ -563,12 +596,13 @@ private fun DoubleProfileFooter(
     model: ProfileCardModel,
     televisionUi: Boolean,
     onStatusClick: (() -> Unit)?,
+    modifier: Modifier = Modifier,
 ) {
     val showStatus = model.statusVisible && model.status.isNotEmpty()
     val showTraffic = model.traffic.isNotEmpty()
     val spacing = 8.dp
     Layout(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         content = {
             if (showStatus) {
                 MarqueeText(
@@ -579,6 +613,7 @@ private fun DoubleProfileFooter(
                     color = Color(model.statusColor),
                     fontSize = 14.sp,
                     lineHeight = 16.sp,
+                    textAlign = TextAlign.End,
                 )
             }
             if (showTraffic) {
@@ -587,6 +622,11 @@ private fun DoubleProfileFooter(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp,
                     lineHeight = 16.sp,
+                    autoSize = TextAutoSize.StepBased(
+                        minFontSize = 10.sp,
+                        maxFontSize = 14.sp,
+                        stepSize = 1.sp,
+                    ),
                     maxLines = 1,
                 )
             }
@@ -609,6 +649,10 @@ private fun DoubleProfileFooter(
             statusWidth = status?.width ?: 0,
             trafficWidth = traffic?.width ?: 0,
             spacing = spacingPx,
+            availableHeight = constraints.minHeight,
+            statusHeight = status?.height ?: 0,
+            trafficHeight = traffic?.height ?: 0,
+            forceSecondLine = model.minimumHeightDp > 0,
         )
         val height = if (wrap) {
             (traffic?.height ?: 0) + (status?.height ?: 0)
@@ -618,16 +662,18 @@ private fun DoubleProfileFooter(
         val constrainedHeight = height.coerceIn(constraints.minHeight, constraints.maxHeight)
         layout(width, constrainedHeight) {
             if (wrap) {
-                traffic?.placeRelative(width - traffic.width, 0)
-                status?.placeRelative(0, traffic?.height ?: 0)
+                traffic?.placeRelative(0, 0)
+                status?.placeRelative(
+                    width - status.width,
+                    maxOf(traffic?.height ?: 0, constrainedHeight - status.height),
+                )
             } else {
-                val statusTrailingSpace = if (traffic == null) 0 else traffic.width + spacingPx
                 traffic?.placeRelative(
-                    width - traffic.width,
+                    0,
                     (height - traffic.height) / 2,
                 )
                 status?.placeRelative(
-                    width - statusTrailingSpace - status.width,
+                    width - status.width,
                     (height - status.height) / 2,
                 )
             }
