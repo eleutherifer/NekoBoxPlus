@@ -11,7 +11,7 @@
             android:targetPackage="com.nb4a.plus" />
     </shortcut>
     <shortcut
-        android:icon="@drawable/ic_qu_enable_launcher"
+        android:icon="@drawable/ic_qu_shadowsocks_launcher"
         android:shortcutId="enable"
         android:shortcutLongLabel="@string/quick_enable"
         android:shortcutShortLabel="@string/quick_enable">
@@ -21,7 +21,7 @@
             android:targetPackage="com.nb4a.plus" />
     </shortcut>
     <shortcut
-        android:icon="@drawable/ic_qu_disable_launcher"
+        android:icon="@drawable/ic_qu_shadowsocks_launcher"
         android:shortcutId="disable"
         android:shortcutLongLabel="@string/quick_disable"
         android:shortcutShortLabel="@string/quick_disable">
@@ -31,7 +31,7 @@
             android:targetPackage="com.nb4a.plus" />
     </shortcut>
     <shortcut
-        android:icon="@drawable/ic_qu_scan_launcher"
+        android:icon="@drawable/ic_qu_camera_launcher"
         android:shortcutId="scan"
         android:shortcutLongLabel="@string/add_profile_methods_scan_qr_code"
         android:shortcutShortLabel="@string/add_profile_methods_scan_qr_code">

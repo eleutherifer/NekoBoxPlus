@@ -199,7 +199,7 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var networkChangeReconnect by configurationStore.boolean(Key.NETWORK_CHANGE_RECONNECT)
     var networkChangeResetConnections by configurationStore.boolean(Key.NETWORK_CHANGE_RESET_CONNECTIONS) { true }
     var wakeReconnect by configurationStore.boolean(Key.WAKE_RECONNECT)
-    var wakeResetConnections by configurationStore.boolean(Key.WAKE_RESET_CONNECTIONS) { true }
+    var wakeResetConnections by configurationStore.boolean(Key.WAKE_RESET_CONNECTIONS)
     var globalTcpFastOpen by configurationStore.boolean(Key.GLOBAL_TCP_FAST_OPEN)
     var globalTcpMultiPath by configurationStore.boolean(Key.GLOBAL_TCP_MULTI_PATH)
     var globalUdpFragment by configurationStore.string(Key.GLOBAL_UDP_FRAGMENT) { "" }
@@ -253,7 +253,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var allowAccess by configurationStore.boolean(Key.ALLOW_ACCESS)
     var speedInterval by configurationStore.stringToInt(Key.SPEED_INTERVAL)
     var profileTrafficUpdateInterval by configurationStore.stringToInt(Key.PROFILE_TRAFFIC_UPDATE_INTERVAL)
-    var subscriptionXrayBalancers by configurationStore.stringToInt(Key.SUBSCRIPTION_XRAY_BALANCERS) { 0 }
     var subscriptionTrafficUnit by configurationStore.stringToInt(Key.SUBSCRIPTION_TRAFFIC_UNIT) {
         SubscriptionTrafficUnit.DECIMAL
     }

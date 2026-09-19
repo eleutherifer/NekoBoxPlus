@@ -120,7 +120,6 @@ import io.nekohasekai.sagernet.ui.compose.ProfileCardLayout
 import io.nekohasekai.sagernet.ui.compose.ProfileCardModel
 import io.nekohasekai.sagernet.ui.compose.ProfileShareAction
 import io.nekohasekai.sagernet.ui.compose.SubscriptionBannerCard
-import io.nekohasekai.sagernet.ui.compose.doubleProfileMinimumHeightDp
 import io.nekohasekai.sagernet.ui.compose.showComposeItemDialog
 import io.nekohasekai.sagernet.ui.compose.showComposeMessageDialog
 import io.nekohasekai.sagernet.ui.profile.HttpSettingsActivity
@@ -3051,7 +3050,13 @@ class ConfigurationFragment @JvmOverloads constructor(
                         undoManager.flush()
                     }
                     val cached = configurationList[profile.id]
-                    val updatedProfile = mergeProfileRefresh(profile, cached, noTraffic)
+                    val updatedProfile = if (noTraffic && cached != null) {
+                        profile.copy(tx = cached.tx, rx = cached.rx).also {
+                            it.dirty = profile.dirty
+                        }
+                    } else {
+                        profile
+                    }
                     val holder = configurationListView.findViewHolderForItemId(profile.id)
                         as? ConfigurationHolder
                     val previous = holder?.lastSelfHasMiddleRow
@@ -3521,7 +3526,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                                 model = model,
                                 bodyFocusRequester = bodyFocusRequester,
                                 onClick = ::handleClick,
-                                onStatusClick = if (entity.status == 3) ::handleStatusClick else null,
+                                onStatusClick = ::handleStatusClick,
                                 onEdit = ::edit,
                                 onUrlTest = ::urlTest,
                                 onShare = ::showShareMenu,
@@ -3586,11 +3591,15 @@ class ConfigurationFragment @JvmOverloads constructor(
                 val double = layout == ProfileCardLayout.DOUBLE ||
                     layout == ProfileCardLayout.ALTERNATE
                 val compact = layout == ProfileCardLayout.COMPACT
-                val showTrafficSeparately = !compact || entity.status > 0
+                val showTrafficSeparately = compact || double
                 val address = entity.displayAddress().takeIf {
                     entity.requireBean().name.isNotBlank() && parent.alwaysShowAddress
                 }.orEmpty()
-                val trafficUsesMiddleRow = showTraffic && showTrafficSeparately
+                val trafficUsesMiddleRow = showTraffic && when {
+                    double -> true
+                    compact -> entity.status > 0
+                    else -> false
+                }
                 val hasMiddleRow = trafficUsesMiddleRow || address.isNotBlank()
                 val reserveMiddleRow = !double && !hasMiddleRow &&
                     adapter?.neighbourHasMiddleRow(bindingAdapterPosition) == true
@@ -3599,9 +3608,10 @@ class ConfigurationFragment @JvmOverloads constructor(
                 var status = ""
                 var statusColor = context.getColorAttr(android.R.attr.textColorSecondary)
                 when {
-                    entity.status <= 0 && showTraffic && !showTrafficSeparately -> status = traffic
+                    entity.status <= 0 && showTraffic && !double -> status = traffic
                     entity.status == 1 -> {
                         status = getString(R.string.available, entity.ping)
+                        if (showTraffic && !showTrafficSeparately) status += "  $traffic"
                         statusColor = context.getColour(R.color.material_green_500)
                     }
                     entity.status == 2 -> {
@@ -3613,6 +3623,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                         statusColor = context.getColour(R.color.material_red_500)
                     }
                 }
+
                 val countryCode = ProfileCountryResolver.effectiveCountryCode(entity)
                 val countryVisible = DataStore.profileCountryIndicator &&
                     CountryFlagRenderer.loadSvg(context, countryCode) != null
@@ -3642,7 +3653,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                         DataStore.dontHighlightInsecureProfiles,
                     ),
                     borders = DataStore.profileCardBorders,
-                    middleRowVisible = if (double) address.isNotBlank() else hasMiddleRow,
+                    middleRowVisible = hasMiddleRow,
                     middleRowReserved = reserveMiddleRow,
                     statusVisible = !double || entity.status > 0,
                     batchSelection = batchSelection,
@@ -3655,10 +3666,11 @@ class ConfigurationFragment @JvmOverloads constructor(
                     showDelete = !double && !select && !batchSelection,
                     showOverflow = double && !batchSelection,
                     minimumHeightDp = if (double) {
-                        doubleProfileMinimumHeightDp(
-                            showAddress = parent.alwaysShowAddress,
-                            showTraffic = adapter?.shouldShowTraffic() == true,
-                        )
+                        when {
+                            adapter?.shouldShowTraffic() == true && parent.alwaysShowAddress -> 112
+                            adapter?.shouldShowTraffic() == true || parent.alwaysShowAddress -> 92
+                            else -> 0
+                        }
                     } else 0,
                 )
                 lastBoundTx = tx
@@ -3682,7 +3694,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                         }
                         onMainDispatcher { render() }
                         if (update) {
-                            ProfileManager.postUpdate(lastSelected, noTraffic = true)
+                            ProfileManager.postUpdate(lastSelected)
                             if (ProfileSelectionReloadPolicy.shouldReload(update, serviceState)) {
                                 SagerNet.reloadService(entity.id)
                             }

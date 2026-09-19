@@ -57,12 +57,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
 import io.nekohasekai.sfa.R
 import io.nekohasekai.sfa.bg.RootClient
-import io.nekohasekai.sfa.compose.base.UiEvent
-import io.nekohasekai.sfa.compose.base.rememberApplyServiceChangeNotifier
 import io.nekohasekai.sfa.compose.screen.profileoverride.PerAppProxyScanner
-import io.nekohasekai.sfa.compose.topbar.LocalScaffoldPadding
 import io.nekohasekai.sfa.compose.topbar.OverrideTopBar
-import io.nekohasekai.sfa.constant.Status
 import io.nekohasekai.sfa.database.Settings
 import io.nekohasekai.sfa.vendor.PackageQueryManager
 import kotlinx.coroutines.Dispatchers
@@ -71,10 +67,7 @@ import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileOverrideScreen(
-    navController: NavController,
-    serviceStatus: Status = Status.Stopped,
-) {
+fun ProfileOverrideScreen(navController: NavController) {
     OverrideTopBar {
         TopAppBar(
             title = { Text(stringResource(R.string.profile_override)) },
@@ -96,9 +89,8 @@ fun ProfileOverrideScreen(
     var perAppProxyEnabled by remember { mutableStateOf(Settings.perAppProxyEnabled) }
     var managedModeEnabled by remember { mutableStateOf(Settings.perAppProxyManagedMode) }
     var isScanning by remember { mutableStateOf(false) }
-    val notifyApplyChange = rememberApplyServiceChangeNotifier(serviceStatus)
 
-    fun scanAndSaveManagedList(shouldNotify: Boolean = false) {
+    fun scanAndSaveManagedList() {
         isScanning = true
         scope.launch {
             val chinaApps = PerAppProxyScanner.scanAllChinaApps()
@@ -106,9 +98,6 @@ fun ProfileOverrideScreen(
                 Settings.perAppProxyManagedList = chinaApps
             }
             isScanning = false
-            if (shouldNotify) {
-                notifyApplyChange(UiEvent.ApplyServiceChange.Mode.Reload)
-            }
         }
     }
 
@@ -180,14 +169,10 @@ fun ProfileOverrideScreen(
                 Settings.perAppProxyEnabled = true
             }
             if (managedModeEnabled) {
-                scanAndSaveManagedList(shouldNotify = true)
-            } else {
-                notifyApplyChange(UiEvent.ApplyServiceChange.Mode.Reload)
+                scanAndSaveManagedList()
             }
         }
     }
-
-    val scaffoldPadding = LocalScaffoldPadding.current
 
     Column(
         modifier =
@@ -195,10 +180,7 @@ fun ProfileOverrideScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface)
             .verticalScroll(rememberScrollState())
-            .padding(
-                top = scaffoldPadding.calculateTopPadding() + 8.dp,
-                bottom = scaffoldPadding.calculateBottomPadding() + 8.dp,
-            ),
+            .padding(vertical = 8.dp),
     ) {
         // Card 1: Auto Redirect
         Card(
@@ -245,7 +227,6 @@ fun ProfileOverrideScreen(
                                         withContext(Dispatchers.IO) {
                                             Settings.autoRedirect = true
                                         }
-                                        notifyApplyChange(UiEvent.ApplyServiceChange.Mode.Reload)
                                     } else {
                                         Toast.makeText(
                                             context,
@@ -258,9 +239,6 @@ fun ProfileOverrideScreen(
                                 autoRedirect = false
                                 scope.launch(Dispatchers.IO) {
                                     Settings.autoRedirect = false
-                                    withContext(Dispatchers.Main) {
-                                        notifyApplyChange(UiEvent.ApplyServiceChange.Mode.Reload)
-                                    }
                                 }
                             }
                         },
@@ -386,14 +364,9 @@ fun ProfileOverrideScreen(
                                     perAppProxyEnabled = checked
                                     scope.launch(Dispatchers.IO) {
                                         Settings.perAppProxyEnabled = checked
-                                        if (!checked || !managedModeEnabled) {
-                                            withContext(Dispatchers.Main) {
-                                                notifyApplyChange(UiEvent.ApplyServiceChange.Mode.Reload)
-                                            }
-                                        }
                                     }
                                     if (checked && managedModeEnabled) {
-                                        scanAndSaveManagedList(shouldNotify = true)
+                                        scanAndSaveManagedList()
                                     }
                                 }
                             },
@@ -502,14 +475,11 @@ fun ProfileOverrideScreen(
                                             scope.launch(Dispatchers.IO) {
                                                 Settings.perAppProxyManagedMode = true
                                             }
-                                            scanAndSaveManagedList(shouldNotify = true)
+                                            scanAndSaveManagedList()
                                         } else {
                                             managedModeEnabled = false
                                             scope.launch(Dispatchers.IO) {
                                                 Settings.perAppProxyManagedMode = false
-                                                withContext(Dispatchers.Main) {
-                                                    notifyApplyChange(UiEvent.ApplyServiceChange.Mode.Reload)
-                                                }
                                             }
                                         }
                                     },
@@ -545,14 +515,9 @@ fun ProfileOverrideScreen(
                                     perAppProxyEnabled = true
                                     scope.launch(Dispatchers.IO) {
                                         Settings.perAppProxyEnabled = true
-                                        if (!managedModeEnabled) {
-                                            withContext(Dispatchers.Main) {
-                                                notifyApplyChange(UiEvent.ApplyServiceChange.Mode.Reload)
-                                            }
-                                        }
                                     }
                                     if (managedModeEnabled) {
-                                        scanAndSaveManagedList(shouldNotify = true)
+                                        scanAndSaveManagedList()
                                     }
                                 },
                             ) {
@@ -628,9 +593,7 @@ fun ProfileOverrideScreen(
                                         Settings.perAppProxyEnabled = true
                                     }
                                     if (managedModeEnabled) {
-                                        scanAndSaveManagedList(shouldNotify = true)
-                                    } else {
-                                        notifyApplyChange(UiEvent.ApplyServiceChange.Mode.Reload)
+                                        scanAndSaveManagedList()
                                     }
                                 } else {
                                     showRootDialog = false
@@ -689,7 +652,6 @@ fun ProfileOverrideScreen(
                                         Settings.perAppProxyEnabled = false
                                     }
                                 }
-                                notifyApplyChange(UiEvent.ApplyServiceChange.Mode.Reload)
                                 showModeDialog = false
                             },
                             colors = ListItemDefaults.colors(
@@ -710,7 +672,6 @@ fun ProfileOverrideScreen(
                                 scope.launch(Dispatchers.IO) {
                                     Settings.perAppProxyPackageQueryMode = Settings.PACKAGE_QUERY_MODE_ROOT
                                 }
-                                notifyApplyChange(UiEvent.ApplyServiceChange.Mode.Reload)
                                 showModeDialog = false
                             },
                             colors = ListItemDefaults.colors(

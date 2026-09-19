@@ -405,11 +405,11 @@ func buildClientDataChannelOptions(options option.OpenVPNClientEndpointOptions) 
 }
 
 func buildClientTunnelOptions(options option.OpenVPNClientEndpointOptions, requirePeerAddress bool) (ovpn.ClientTunnelOptions, error) {
-	vpnGateway := options.PeerAddress.Build(netip.Addr{})
+	vpnGateway := netip.Addr(options.PeerAddress)
 	if vpnGateway.IsValid() && !vpnGateway.Is4() {
 		return ovpn.ClientTunnelOptions{}, E.New("`peer_address` must be an IPv4 address")
 	}
-	vpnGatewayIPv6 := options.PeerAddressIPv6.Build(netip.Addr{})
+	vpnGatewayIPv6 := netip.Addr(options.PeerAddressIPv6)
 	if vpnGatewayIPv6.IsValid() && !vpnGatewayIPv6.Is6() {
 		return ovpn.ClientTunnelOptions{}, E.New("`peer_address_ipv6` must be an IPv6 address")
 	}

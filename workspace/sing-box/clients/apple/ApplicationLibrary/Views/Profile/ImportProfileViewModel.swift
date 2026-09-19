@@ -159,7 +159,7 @@
             let profile = Profile(
                 name: uniqueProfileName,
                 type: type,
-                path: "configs/config_\(nextProfileID).json",
+                path: profileConfig.relativePath,
                 remoteURL: remotePath,
                 autoUpdate: autoUpdate,
                 autoUpdateInterval: autoUpdateInterval,

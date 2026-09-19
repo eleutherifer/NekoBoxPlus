@@ -29,5 +29,9 @@ public enum Variant {
         public static var debugNoIOS18 = false
     #endif
 
-    public static let screenshotMode = ProcessInfo.processInfo.arguments.contains("-FASTLANE_SNAPSHOT")
+    #if targetEnvironment(simulator)
+        public static let screenshotMode = true
+    #else
+        public static let screenshotMode = ProcessInfo.processInfo.arguments.contains("-FASTLANE_SNAPSHOT")
+    #endif
 }

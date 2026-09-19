@@ -28,7 +28,6 @@ import (
 
 var (
 	_ adapter.OutboundWithPreferredRoutes = (*Endpoint)(nil)
-	_ adapter.OutboundWithReadiness       = (*Endpoint)(nil)
 	_ adapter.InterfaceUpdateListener     = (*Endpoint)(nil)
 	_ dialer.PacketDialerWithDestination  = (*Endpoint)(nil)
 )
@@ -185,14 +184,7 @@ func (w *Endpoint) InterfaceUpdated(ctx context.Context) {
 	if !w.started.Load() || w.detoured {
 		return
 	}
-	w.updateBind(ctx)
-}
-
-func (w *Endpoint) WaitReady(ctx context.Context) error {
-	if !w.started.Load() {
-		return E.New("WireGuard is not started")
-	}
-	return w.endpoint.WaitReady(ctx)
+	go w.updateBind(ctx)
 }
 
 func (w *Endpoint) updateBind(ctx context.Context) {

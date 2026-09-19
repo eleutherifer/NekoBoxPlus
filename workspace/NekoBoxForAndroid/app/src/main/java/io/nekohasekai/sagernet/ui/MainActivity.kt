@@ -34,6 +34,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.PreferenceDataStore
+import androidx.compose.ui.platform.ComposeView
 import com.google.android.material.snackbar.Snackbar
 import io.nekohasekai.sagernet.AppLogLevel
 import io.nekohasekai.sagernet.BuildConfig
@@ -78,7 +79,6 @@ import io.nekohasekai.sagernet.ui.MessageStore
 import io.nekohasekai.sagernet.ui.compose.MainComposeDrawer
 import io.nekohasekai.sagernet.ui.compose.MainShellState
 import io.nekohasekai.sagernet.ui.compose.NekoComposeTheme
-import io.nekohasekai.sagernet.ui.compose.DrawerOverlayComposeView
 import io.nekohasekai.sagernet.ui.compose.showBlockingProgressDialog
 import io.nekohasekai.sagernet.ui.compose.showComposeItemDialog
 import io.nekohasekai.sagernet.ui.compose.showComposeMessageDialog
@@ -188,8 +188,7 @@ class MainActivity :
         syncProxyAppsDrawerItem()
         // Keep the fragment host synchronously attached; Compose owns the drawer overlay.
         setContentView(binding.root)
-        val drawerOverlay = DrawerOverlayComposeView(this).apply {
-            drawerActive = { shellState.drawerRequestedOpen || shellState.drawerIsOpen }
+        val drawerOverlay = ComposeView(this).apply {
             setContent {
             NekoComposeTheme {
                 MainComposeDrawer(
@@ -197,7 +196,6 @@ class MainActivity :
                     onNavigate = ::displayFragmentWithId,
                     onOpenApps = ::openAppManager,
                     onToggleProxyApps = ::requestProxyAppsToggle,
-                    onDrawerActiveChanged = ::setDrawerActive,
                 )
             }
         }
@@ -919,8 +917,7 @@ class MainActivity :
         bottomControlsVisibleForCurrentFragment =
             fragment is ConfigurationFragment ||
             (fragment is SettingsFragment && DataStore.showBottomBarInSettings)
-        binding.stats.useExternalScrollDriver =
-            fragment is ConfigurationFragment || fragment is SettingsFragment
+        binding.stats.useExternalScrollDriver = fragment is ConfigurationFragment
         if (bottomControlsVisibleForCurrentFragment) {
             binding.stats.allowShow = true
             binding.stats.visibility = View.VISIBLE

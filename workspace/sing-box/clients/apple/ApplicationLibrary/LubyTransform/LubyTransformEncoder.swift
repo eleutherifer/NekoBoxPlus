@@ -153,9 +153,7 @@ final class LubyTransformEncoder {
                         return false
                     }
                     do {
-                        if try decoder.addBlock(block) {
-                            break
-                        }
+                        if try decoder.addBlock(block) { break }
                     } catch {
                         print("LubyTransform self-test FAILED: \(error)")
                         return false

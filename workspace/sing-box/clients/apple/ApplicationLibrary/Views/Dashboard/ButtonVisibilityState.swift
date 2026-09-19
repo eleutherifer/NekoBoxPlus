@@ -2,7 +2,7 @@ import Foundation
 import Library
 
 @MainActor
-public struct ButtonVisibilityState: Equatable {
+public struct ButtonVisibilityState {
     public var showGroupsButton = false
     public var showConnectionsButton = false
     public var groupsCount = 0
@@ -32,13 +32,6 @@ public struct ButtonVisibilityState: Equatable {
 
         showConnectionsButton = isConnected
         showGroupsButton = isConnected && hasGroups
-    }
-
-    public mutating func update(remoteClient commandClient: CommandClient) {
-        groupsCount = commandClient.groups?.count ?? 0
-        connectionsCount = Int(commandClient.status?.connectionsIn ?? 0)
-        showConnectionsButton = commandClient.isConnected
-        showGroupsButton = commandClient.isConnected && groupsCount > 0
     }
 
     private mutating func reset() {

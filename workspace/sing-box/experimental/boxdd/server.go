@@ -33,7 +33,6 @@ type Daemon struct {
 	logger                  log.ContextLogger
 	startedService          *daemon.StartedService
 	powerManager            *powerreport.Manager
-	oomRecorder             *oomkiller.Recorder
 	server                  *grpc.Server
 	runtimeWorkingDirectory string
 	lifecycleAccess         sync.Mutex
@@ -65,15 +64,14 @@ func newDaemon() (*Daemon, error) {
 		Context:     ctx,
 		LogMaxLines: 3000,
 	})
-	d.oomRecorder = oomkiller.NewRecorder(libbox.OOMRecorderOptions(d.startedService))
-	service.MustRegister[*oomkiller.Recorder](ctx, d.oomRecorder)
-	d.oomRecorder.Start()
+	reporter := libbox.NewOOMReporter(d.startedService)
+	service.MustRegister[oomkiller.OOMReporter](ctx, reporter)
 	d.powerManager = powerreport.NewManager()
 	service.MustRegister[*powerreport.Manager](ctx, d.powerManager)
 	managedService := daemon.NewManagedService(daemon.ManagedServiceOptions{
 		Handler:     &managedHandler{d},
 		Debug:       debugEnabled,
-		OOMRecorder: d.oomRecorder,
+		OOMReporter: reporter,
 	})
 	authorizer := newAuthorizer(d)
 	serverOptions := []grpc.ServerOption{
@@ -292,7 +290,6 @@ func (d *Daemon) Close() {
 	}
 	_ = d.startedService.CloseService()
 	d.startedService.Close()
-	_ = d.oomRecorder.Close()
 	if d.platform != nil {
 		_ = d.platform.Close()
 	}

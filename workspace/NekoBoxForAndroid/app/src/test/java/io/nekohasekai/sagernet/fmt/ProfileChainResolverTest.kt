@@ -40,7 +40,7 @@ class ProfileChainResolverTest {
             resolver.run { first.resolveInternal() }
         }
 
-        assertEquals("Profile reference cycle: First → Second → First", error.message)
+        assertEquals("Profile chain cycle detected at First", error.message)
     }
 
     private fun direct(id: Long, name: String) = ProxyEntity(id = id).putBean(

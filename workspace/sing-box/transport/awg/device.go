@@ -2,7 +2,6 @@ package awg
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"net/netip"
@@ -12,11 +11,11 @@ import (
 	"github.com/amnezia-vpn/amneziawg-go/v3/device"
 
 	"github.com/sagernet/sing-box/adapter"
-	"github.com/sagernet/sing-box/common/pausecontrol"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/logger"
 	"github.com/sagernet/sing/common/metadata"
 	"github.com/sagernet/sing/common/network"
+	"github.com/sagernet/sing/common/x/list"
 	"github.com/sagernet/sing/service"
 	"github.com/sagernet/sing/service/pause"
 )
@@ -34,13 +33,13 @@ type DeviceOpts struct {
 }
 
 type Device struct {
-	awgDevice *device.Device
-	tun       tunAdapter
-	bind      conn.Bind
-	logger    *device.Logger
-	ipcConfig string
-	pause     pause.Manager
-	lifecycle *pausecontrol.Controller
+	awgDevice     *device.Device
+	tun           tunAdapter
+	bind          conn.Bind
+	logger        *device.Logger
+	ipcConfig     string
+	pause         pause.Manager
+	pauseCallback *list.Element[pause.Callback]
 }
 
 func NewDevice(ctx context.Context, logger logger.ContextLogger, dial network.Dialer, ipcConfig string, opts DeviceOpts) (*Device, error) {
@@ -93,32 +92,55 @@ func (d *Device) Start(stage adapter.StartStage) error {
 		return E.Cause(err, "tun start")
 	}
 
-	d.lifecycle = pausecontrol.New(d.pause, d.awgDevice, d.tun.ResetConnections, func(err error) {
-		d.logger.Errorf("reconcile AmneziaWG transport: %v", err)
-	})
+	if err := d.awgDevice.Up(); err != nil {
+		return err
+	}
+	if d.pause != nil {
+		d.pauseCallback = d.pause.RegisterCallback(d.onPauseUpdated)
+	}
 	return nil
 }
 
 func (d *Device) Close() error {
-	if d.lifecycle != nil {
-		d.lifecycle.Close()
-	} else if d.awgDevice != nil {
+	if d.pauseCallback != nil {
+		d.pause.UnregisterCallback(d.pauseCallback)
+		d.pauseCallback = nil
+	}
+	if d.awgDevice != nil {
 		d.awgDevice.Close()
 	}
 	return nil
 }
 
-func (d *Device) InterfaceUpdated(ctx context.Context) {
-	if ctx.Err() == nil && d.lifecycle != nil {
-		d.lifecycle.Rebind()
+func (d *Device) onPauseUpdated(event int) {
+	if d.awgDevice == nil {
+		return
+	}
+	switch event {
+	case pause.EventDevicePaused, pause.EventNetworkPause:
+		if err := d.awgDevice.Down(); err != nil {
+			d.logger.Errorf("device pause failed: %v", err)
+		}
+	case pause.EventDeviceWake, pause.EventNetworkWake:
+		if err := d.awgDevice.Up(); err != nil {
+			d.logger.Errorf("device wake failed: %v", err)
+		}
 	}
 }
 
-func (d *Device) WaitReady(ctx context.Context) error {
-	if d.lifecycle == nil {
-		return errors.New("AmneziaWG device is not started")
+func (d *Device) InterfaceUpdated() {
+	if d.awgDevice == nil {
+		return
 	}
-	return d.lifecycle.WaitReady(ctx)
+	err := d.awgDevice.BindUpdate()
+	// Connections from the embedded network stack outlive a bind update but
+	// cannot reliably survive the underlying network change.
+	d.tun.ResetConnections()
+	if err != nil {
+		d.logger.Errorf("UDP bind update failed: %v", err)
+		return
+	}
+	d.awgDevice.SendKeepalivesToPeersWithCurrentKeypair()
 }
 
 func (d *Device) DialContext(ctx context.Context, network string, destination metadata.Socksaddr) (net.Conn, error) {

@@ -29,7 +29,6 @@ import (
 	experimentalAdblock "github.com/sagernet/sing-box/experimental/adblock"
 	adblockRegexpr "github.com/sagernet/sing-box/experimental/adblock/regexpr"
 	"github.com/sagernet/sing-box/experimental/cachefile"
-	"github.com/sagernet/sing-box/experimental/clashmode"
 	"github.com/sagernet/sing-box/experimental/deprecated"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
@@ -161,7 +160,7 @@ func New(options Options) (*Box, error) {
 	if experimentalOptions.CacheFile != nil && experimentalOptions.CacheFile.Enabled || options.PlatformLogWriter != nil {
 		needCacheFile = true
 	}
-	if experimentalOptions.ClashAPI != nil {
+	if experimentalOptions.ClashAPI != nil || options.PlatformLogWriter != nil {
 		needClashAPI = true
 	}
 	if experimentalOptions.V2RayAPI != nil && experimentalOptions.V2RayAPI.Listen != "" {
@@ -184,7 +183,7 @@ func New(options Options) (*Box, error) {
 	logFactory, err := log.New(log.Options{
 		Context:        ctx,
 		Options:        common.PtrValueOrDefault(options.Log),
-		Observable:     needClashAPI && experimentalOptions.ClashAPI.ExternalController != "",
+		Observable:     needClashAPI || needAPIService,
 		DefaultWriter:  defaultLogWriter,
 		BaseTime:       createdAt,
 		PlatformWriter: options.PlatformLogWriter,
@@ -218,7 +217,7 @@ func New(options Options) (*Box, error) {
 	if needAdblock && experimentalOptions.Adblock.Constraints.HasProcessRules() {
 		routeOptions.FindProcess = true
 	}
-	endpointManager := endpoint.NewManager(ctx, logFactory.NewLogger("endpoint"), endpointRegistry)
+	endpointManager := endpoint.NewManager(logFactory.NewLogger("endpoint"), endpointRegistry)
 	inboundManager := inbound.NewManager(logFactory.NewLogger("inbound"), inboundRegistry, endpointManager)
 	outboundManager := outbound.NewManager(logFactory.NewLogger("outbound"), outboundRegistry, endpointManager, routeOptions.Final)
 	dnsTransportManager := dns.NewTransportManager(logFactory.NewLogger("dns/transport"), dnsTransportRegistry, outboundManager, dnsOptions.Final)
@@ -263,18 +262,11 @@ func New(options Options) (*Box, error) {
 	if err != nil {
 		return nil, E.Cause(err, "initialize router")
 	}
-	if needClashAPI || needAPIService || options.PlatformLogWriter != nil {
+	if needClashAPI || needAPIService {
 		trafficManager := trafficcontrol.NewManager(outboundManager)
 		service.MustRegisterPtr(ctx, trafficManager)
 		router.AppendTracker(trafficManager)
 		internalServices = append(internalServices, trafficManager)
-		var clashDefaultMode string
-		if experimentalOptions.ClashAPI != nil {
-			clashDefaultMode = experimentalOptions.ClashAPI.DefaultMode
-		}
-		clashMode := clashmode.NewManager(ctx, logFactory.NewLogger("clash-mode"), clashDefaultMode, clashmode.CalculateModeList(options.Options))
-		service.MustRegisterPtr(ctx, clashMode)
-		internalServices = append(internalServices, clashMode)
 	}
 	ntpOptions := common.PtrValueOrDefault(options.NTP)
 	var timeService *tls.TimeServiceWrapper
@@ -447,10 +439,13 @@ func New(options Options) (*Box, error) {
 		internalServices = append(internalServices, cacheFile)
 	}
 	if needClashAPI {
-		clashServer, err := experimental.NewClashServer(ctx, logFactory.(log.ObservableFactory), common.PtrValueOrDefault(experimentalOptions.ClashAPI))
+		clashAPIOptions := common.PtrValueOrDefault(experimentalOptions.ClashAPI)
+		clashAPIOptions.ModeList = experimental.CalculateClashModeList(options.Options)
+		clashServer, err := experimental.NewClashServer(ctx, logFactory.(log.ObservableFactory), clashAPIOptions)
 		if err != nil {
 			return nil, E.Cause(err, "create clash-server")
 		}
+		service.MustRegister[adapter.ClashServer](ctx, clashServer)
 		internalServices = append(internalServices, clashServer)
 	}
 	if needV2RayAPI {

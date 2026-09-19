@@ -4,44 +4,20 @@ import Library
 import NetworkExtension
 import SwiftUI
 
-@MainActor
-public final class MacApplicationState: ObservableObject {
-    @Published fileprivate var showMenuBarExtra = false
-    @Published fileprivate var menuBarExtraSpeedMode = MenuBarExtraSpeedMode.enabled.rawValue
-    fileprivate let environments = ExtensionEnvironments()
-    fileprivate var statusBarController: StatusBarController?
-
-    private var isInitialized = false
-
-    func initialize() async {
-        guard !isInitialized else { return }
-        isInitialized = true
-        showMenuBarExtra = await SharedPreferences.showMenuBarExtra.get()
-        menuBarExtraSpeedMode = await SharedPreferences.menuBarExtraSpeedMode.get()
-        statusBarController = StatusBarController(environments: environments)
-        statusBarController?.updateVisibility(showMenuBarExtra)
-        statusBarController?.updateSpeedMode(menuBarExtraSpeedMode)
-    }
-}
-
 public struct MacApplication: Scene {
     @State private var isInitialized = false
-    @ObservedObject private var applicationState: MacApplicationState
-    @StateObject private var peerStore = TailscaleSSHPeerStore()
-    @StateObject private var tailscaleViewModel = TailscaleStatusViewModel()
-    @StateObject private var taildropSendManager = TaildropSendManager()
-    @StateObject private var taildropInbox = TaildropInboxViewModel()
+    @State private var showMenuBarExtra = false
+    @State private var menuBarExtraSpeedMode = MenuBarExtraSpeedMode.enabled.rawValue
+    @StateObject private var environments = ExtensionEnvironments()
     @StateObject private var updateManager = UpdateManager()
+    @State private var statusBarController: StatusBarController?
     @State private var showUpdateCheckPrompt = false
 
     private let profileEditor: (Binding<String>, Bool) -> AnyView = { text, isEditable in
         AnyView(ProfileEditorWrapperView(text: text, isEditable: isEditable))
     }
 
-    public init(applicationState: MacApplicationState) {
-        self.applicationState = applicationState
-    }
-
+    public init() {}
     public var body: some Scene {
         Window("sing-box", id: "main", content: {
             MainView()
@@ -50,14 +26,9 @@ public struct MacApplication: Scene {
                         await initialize()
                     }
                 }
-                .environment(\.showMenuBarExtra, $applicationState.showMenuBarExtra)
-                .environment(\.menuBarExtraSpeedMode, $applicationState.menuBarExtraSpeedMode)
-                .tailscaleStatusSubscription(tailscaleViewModel, environments: applicationState.environments, peerStore: peerStore)
-                .environmentObject(applicationState.environments)
-                .environmentObject(peerStore)
-                .environmentObject(tailscaleViewModel)
-                .environmentObject(taildropSendManager)
-                .environmentObject(taildropInbox)
+                .environment(\.showMenuBarExtra, $showMenuBarExtra)
+                .environment(\.menuBarExtraSpeedMode, $menuBarExtraSpeedMode)
+                .environmentObject(environments)
                 .environmentObject(updateManager)
                 .alert(
                     "Check Update",
@@ -82,16 +53,16 @@ public struct MacApplication: Scene {
                     updateManager.dismissUpdateSheet()
                 }) {
                     UpdateSheet(updateManager: updateManager)
-                        .environmentObject(applicationState.environments)
+                        .environmentObject(environments)
                 }
-                .onChangeCompat(of: applicationState.showMenuBarExtra) { newValue in
-                    applicationState.statusBarController?.updateVisibility(newValue)
+                .onChangeCompat(of: showMenuBarExtra) { newValue in
+                    statusBarController?.updateVisibility(newValue)
                     Task {
                         await SharedPreferences.showMenuBarExtra.set(newValue)
                     }
                 }
-                .onChangeCompat(of: applicationState.menuBarExtraSpeedMode) { newValue in
-                    applicationState.statusBarController?.updateSpeedMode(newValue)
+                .onChangeCompat(of: menuBarExtraSpeedMode) { newValue in
+                    statusBarController?.updateSpeedMode(newValue)
                     Task {
                         await SharedPreferences.menuBarExtraSpeedMode.set(newValue)
                     }
@@ -99,7 +70,7 @@ public struct MacApplication: Scene {
         })
         .windowResizability(.contentSize)
         .commands {
-            if applicationState.showMenuBarExtra {
+            if showMenuBarExtra {
                 CommandGroup(replacing: .appTermination) {
                     Button("Quit sing-box") {
                         hide(closeApp: true)
@@ -116,7 +87,7 @@ public struct MacApplication: Scene {
             SidebarCommands()
             CommandGroup(replacing: .appSettings) {
                 Button("Settings") {
-                    applicationState.environments.openSettings.send()
+                    environments.openSettings.send()
                 }
                 .keyboardShortcut(",", modifiers: [.command])
             }
@@ -128,20 +99,16 @@ public struct MacApplication: Scene {
         }
         .windowResizability(.contentMinSize)
         .defaultSize(width: 700, height: 500)
-
-        WindowGroup(for: TailscaleSSHPresentedSession.self) { $session in
-            TailscaleSSHTerminalWindow(session: session)
-                .environmentObject(peerStore)
-        }
-        .defaultSize(width: 880, height: 560)
-        .commands {
-            TerminalCommands()
-        }
     }
 
     private func initialize() async {
         guard !isInitialized else { return }
         isInitialized = true
+        showMenuBarExtra = await SharedPreferences.showMenuBarExtra.get()
+        menuBarExtraSpeedMode = await SharedPreferences.menuBarExtraSpeedMode.get()
+        statusBarController = StatusBarController(environments: environments)
+        statusBarController?.updateVisibility(showMenuBarExtra)
+        statusBarController?.updateSpeedMode(menuBarExtraSpeedMode)
 
         if Variant.useSystemExtension {
             let shouldPresentCachedUpdate = await updateManager.loadCachedUpdate()

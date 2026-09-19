@@ -165,11 +165,7 @@ func (h *Outbound) Start(stage adapter.StartStage) error {
 }
 
 func (h *Outbound) fetchMyAddresses() {
-	interfaceMonitor := h.network.InterfaceMonitor()
-	if interfaceMonitor == nil {
-		return
-	}
-	myInterfaceNames := interfaceMonitor.MyInterfaces()
+	myInterfaceNames := h.network.InterfaceMonitor().MyInterfaces()
 	if len(myInterfaceNames) == 0 {
 		return
 	}

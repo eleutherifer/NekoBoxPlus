@@ -28,11 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import io.nekohasekai.sagernet.R
@@ -49,7 +45,6 @@ import androidx.preference.PreferenceDataStore
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import java.util.Locale
-import kotlin.math.roundToInt
 
 class SettingsFragment : ToolbarFragment(),
     OnPreferenceDataStoreChangeListener {
@@ -176,16 +171,6 @@ class SettingsFragment : ToolbarFragment(),
     @androidx.compose.runtime.Composable
     private fun SettingsContent() {
         val current = page
-        val mainActivity = activity as? MainActivity
-        val bottomBarScrollConnection = remember(mainActivity) {
-            object : NestedScrollConnection {
-                override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                    val dy = (-available.y).roundToInt()
-                    if (dy != 0) mainActivity?.driveBottomBar(dy)
-                    return Offset.Zero
-                }
-            }
-        }
         BackHandler(enabled = current != Page.Top, onBack = ::showTopLevel)
         Scaffold(
             modifier = Modifier.fillMaxSize(),
@@ -238,10 +223,7 @@ class SettingsFragment : ToolbarFragment(),
             AnimatedSettingsPage(
                 current = current,
                 direction = pageDirection,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .nestedScroll(bottomBarScrollConnection),
+                modifier = Modifier.fillMaxSize().padding(padding),
             )
         }
     }

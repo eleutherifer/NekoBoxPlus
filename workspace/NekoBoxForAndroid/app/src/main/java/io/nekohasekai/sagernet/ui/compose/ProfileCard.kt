@@ -10,8 +10,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
-import androidx.compose.foundation.text.TextAutoSize
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,12 +47,12 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
@@ -112,25 +110,6 @@ data class ProfileCardModel(
     val minimumHeightDp: Int,
 )
 
-internal fun shouldWrapDoubleProfileFooter(
-    availableWidth: Int,
-    statusWidth: Int,
-    trafficWidth: Int,
-    spacing: Int,
-    availableHeight: Int = 0,
-    statusHeight: Int = 0,
-    trafficHeight: Int = 0,
-    forceSecondLine: Boolean = false,
-): Boolean = statusWidth > 0 && trafficWidth > 0 &&
-    (forceSecondLine || statusWidth > availableWidth - trafficWidth - spacing ||
-        statusHeight > 0 && trafficHeight > 0 &&
-        availableHeight >= statusHeight + trafficHeight)
-
-internal fun doubleProfileMinimumHeightDp(
-    showAddress: Boolean,
-    showTraffic: Boolean,
-): Int = if (showAddress && showTraffic) 112 else 0
-
 private class ProfileCardFocusHandles {
     val body = FocusRequester()
     val edit = FocusRequester()
@@ -145,7 +124,7 @@ fun ProfileCard(
     model: ProfileCardModel,
     bodyFocusRequester: FocusRequester? = null,
     onClick: () -> Unit,
-    onStatusClick: (() -> Unit)?,
+    onStatusClick: () -> Unit,
     onEdit: () -> Unit,
     onUrlTest: () -> Unit,
     onShare: (ProfileShareAction) -> Unit,
@@ -200,8 +179,8 @@ fun ProfileCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .fillMaxHeight()
             .padding(2.dp)
+            .heightIn(min = model.minimumHeightDp.dp)
             .focusGroup()
             .tvFocusTarget()
             .focusRequester(bodyFocusRequester ?: focusHandles.body)
@@ -217,72 +196,53 @@ fun ProfileCard(
                 } else false
             }
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
+        shape = RectangleShape,
         colors = CardDefaults.cardColors(
             containerColor = containerColor,
         ),
         border = border,
         elevation = CardDefaults.cardElevation(defaultElevation = elevation),
     ) {
-        Box(
+        Row(
             Modifier
                 .fillMaxWidth()
-                .fillMaxHeight()
-                .heightIn(min = model.minimumHeightDp.dp),
+                .height(IntrinsicSize.Min),
         ) {
             Box(
                 Modifier
-                    .matchParentSize(),
-            ) {
-                Box(
-                    Modifier
-                        .width(8.dp)
-                        .fillMaxHeight()
-                        .background(
-                            if (model.selected && !model.borders) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                Color.Transparent
-                            },
-                        ),
+                    .width(8.dp)
+                    .fillMaxHeight()
+                    .background(
+                        if (model.selected && !model.borders) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            Color.Transparent
+                        },
+                    ),
+            )
+            if (double) {
+                DoubleProfileContent(
+                    model,
+                    onStatusClick,
+                    onEdit,
+                    onUrlTest,
+                    onShare,
+                    onDelete,
+                    onSelectionChange,
+                    focusHandles,
                 )
-            }
-            val contentModifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 8.dp)
-            Row(
-                if (double) {
-                    contentModifier
-                        .fillMaxHeight()
-                        .heightIn(min = model.minimumHeightDp.dp)
-                } else {
-                    contentModifier.height(IntrinsicSize.Min)
-                },
-            ) {
-                if (double) {
-                    DoubleProfileContent(
-                        model,
-                        onStatusClick,
-                        onEdit,
-                        onUrlTest,
-                        onShare,
-                        onDelete,
-                        onSelectionChange,
-                        focusHandles,
-                    )
-                } else {
-                    LinearProfileContent(
-                        model,
-                        compact,
-                        onStatusClick,
-                        onEdit,
-                        onUrlTest,
-                        onShare,
-                        onDelete,
-                        onSelectionChange,
-                        focusHandles,
-                    )
-                }
+            } else {
+                LinearProfileContent(
+                    model,
+                    compact,
+                    onStatusClick,
+                    onEdit,
+                    onUrlTest,
+                    onShare,
+                    onDelete,
+                    onSelectionChange,
+                    focusHandles,
+                )
             }
         }
     }
@@ -292,7 +252,7 @@ fun ProfileCard(
 private fun LinearProfileContent(
     model: ProfileCardModel,
     compact: Boolean,
-    onStatusClick: (() -> Unit)?,
+    onStatusClick: () -> Unit,
     onEdit: () -> Unit,
     onUrlTest: () -> Unit,
     onShare: (ProfileShareAction) -> Unit,
@@ -436,7 +396,7 @@ private fun LinearProfileContent(
                     modifier = Modifier
                         .weight(1f)
                         .focusProperties { canFocus = !televisionUi }
-                        .statusClick(onStatusClick),
+                        .clickable(onClick = onStatusClick),
                     color = Color(model.statusColor),
                     fontSize = 14.sp,
                     lineHeight = 16.sp,
@@ -448,7 +408,7 @@ private fun LinearProfileContent(
 }
 
 @Composable
-private fun CompactDetails(model: ProfileCardModel, onStatusClick: (() -> Unit)?) {
+private fun CompactDetails(model: ProfileCardModel, onStatusClick: () -> Unit) {
     val televisionUi = isTelevisionUi()
     Row(
         modifier = Modifier
@@ -469,7 +429,7 @@ private fun CompactDetails(model: ProfileCardModel, onStatusClick: (() -> Unit)?
                     .padding(start = 2.dp)
                     .widthIn(max = 140.dp)
                     .focusProperties { canFocus = !televisionUi }
-                    .statusClick(onStatusClick),
+                    .clickable(onClick = onStatusClick),
                 color = Color(model.statusColor),
                 fontSize = 10.sp,
                 lineHeight = 12.sp,
@@ -501,7 +461,7 @@ private fun CompactDetails(model: ProfileCardModel, onStatusClick: (() -> Unit)?
 @Composable
 private fun DoubleProfileContent(
     model: ProfileCardModel,
-    onStatusClick: (() -> Unit)?,
+    onStatusClick: () -> Unit,
     onEdit: () -> Unit,
     onUrlTest: () -> Unit,
     onShare: (ProfileShareAction) -> Unit,
@@ -510,16 +470,10 @@ private fun DoubleProfileContent(
     focusHandles: ProfileCardFocusHandles,
 ) {
     val televisionUi = isTelevisionUi()
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .fillMaxHeight(),
-    ) {
+    Box(Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight()
-                .heightIn(min = model.minimumHeightDp.dp)
                 .padding(start = 10.dp, top = 8.dp, end = 8.dp, bottom = 8.dp),
         ) {
             Row(verticalAlignment = Alignment.Top) {
@@ -557,16 +511,34 @@ private fun DoubleProfileContent(
                 )
             }
             Spacer(Modifier.height(3.dp))
-            DoubleProfileFooter(
-                model,
-                televisionUi,
-                onStatusClick,
-                modifier = if (model.minimumHeightDp > 0) {
-                    Modifier
-                } else {
-                    Modifier.fillMaxHeight()
-                },
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (model.statusVisible) {
+                    MarqueeText(
+                        text = model.status,
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .focusProperties { canFocus = !televisionUi }
+                            .clickable(onClick = onStatusClick),
+                        color = Color(model.statusColor),
+                        fontSize = 14.sp,
+                        lineHeight = 16.sp,
+                        textAlign = TextAlign.End,
+                    )
+                }
+                if (model.traffic.isNotEmpty()) {
+                    Text(
+                        model.traffic,
+                        modifier = Modifier.padding(start = 8.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 14.sp,
+                        lineHeight = 16.sp,
+                    )
+                }
+            }
         }
         if (model.batchSelection) {
             Checkbox(
@@ -587,96 +559,6 @@ private fun DoubleProfileContent(
                 focusRequester = focusHandles.overflow,
                 leftFocusRequester = focusHandles.body,
             )
-        }
-    }
-}
-
-@Composable
-private fun DoubleProfileFooter(
-    model: ProfileCardModel,
-    televisionUi: Boolean,
-    onStatusClick: (() -> Unit)?,
-    modifier: Modifier = Modifier,
-) {
-    val showStatus = model.statusVisible && model.status.isNotEmpty()
-    val showTraffic = model.traffic.isNotEmpty()
-    val spacing = 8.dp
-    Layout(
-        modifier = modifier.fillMaxWidth(),
-        content = {
-            if (showStatus) {
-                MarqueeText(
-                    text = model.status,
-                    modifier = Modifier
-                        .focusProperties { canFocus = !televisionUi }
-                        .statusClick(onStatusClick),
-                    color = Color(model.statusColor),
-                    fontSize = 14.sp,
-                    lineHeight = 16.sp,
-                    textAlign = TextAlign.End,
-                )
-            }
-            if (showTraffic) {
-                Text(
-                    model.traffic,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 14.sp,
-                    lineHeight = 16.sp,
-                    autoSize = TextAutoSize.StepBased(
-                        minFontSize = 10.sp,
-                        maxFontSize = 14.sp,
-                        stepSize = 1.sp,
-                    ),
-                    maxLines = 1,
-                )
-            }
-        },
-    ) { measurables, constraints ->
-        val looseConstraints = constraints.copy(minWidth = 0, minHeight = 0)
-        var index = 0
-        val status = if (showStatus) measurables[index++].measure(looseConstraints) else null
-        val traffic = if (showTraffic) measurables[index].measure(looseConstraints) else null
-        val spacingPx = spacing.roundToPx()
-        val naturalWidth = (status?.width ?: 0) + (traffic?.width ?: 0) +
-            if (status != null && traffic != null) spacingPx else 0
-        val width = if (constraints.hasBoundedWidth) {
-            constraints.maxWidth
-        } else {
-            naturalWidth.coerceAtLeast(constraints.minWidth)
-        }
-        val wrap = shouldWrapDoubleProfileFooter(
-            availableWidth = width,
-            statusWidth = status?.width ?: 0,
-            trafficWidth = traffic?.width ?: 0,
-            spacing = spacingPx,
-            availableHeight = constraints.minHeight,
-            statusHeight = status?.height ?: 0,
-            trafficHeight = traffic?.height ?: 0,
-            forceSecondLine = model.minimumHeightDp > 0,
-        )
-        val height = if (wrap) {
-            (traffic?.height ?: 0) + (status?.height ?: 0)
-        } else {
-            maxOf(status?.height ?: 0, traffic?.height ?: 0)
-        }
-        val constrainedHeight = height.coerceIn(constraints.minHeight, constraints.maxHeight)
-        layout(width, constrainedHeight) {
-            if (wrap) {
-                traffic?.placeRelative(0, 0)
-                status?.placeRelative(
-                    width - status.width,
-                    maxOf(traffic?.height ?: 0, constrainedHeight - status.height),
-                )
-            } else {
-                traffic?.placeRelative(
-                    0,
-                    (height - traffic.height) / 2,
-                )
-                status?.placeRelative(
-                    width - status.width,
-                    (height - status.height) / 2,
-                )
-            }
         }
     }
 }
@@ -704,14 +586,6 @@ private fun MarqueeText(
         maxLines = 1,
     )
 }
-
-private fun Modifier.statusClick(onClick: (() -> Unit)?): Modifier = then(
-    if (onClick == null) Modifier else Modifier.clickable(
-        interactionSource = null,
-        indication = null,
-        onClick = onClick,
-    ),
-)
 
 @Composable
 private fun ProfileOverflowMenu(

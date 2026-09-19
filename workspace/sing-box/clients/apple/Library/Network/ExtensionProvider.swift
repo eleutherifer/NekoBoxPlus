@@ -27,8 +27,7 @@ open class ExtensionProvider: NEPacketTunnelProvider {
 
     public var overridePreferences: OverridePreferences?
 
-    private func applyStartOptions(_ options: [String: NSObject]) throws {
-        try ApplicationLocale.apply(options["locale"] as? String)
+    private func applyStartOptions(_ options: [String: NSObject]) {
         tunnelOptions = options
         overridePreferences = OverridePreferences(
             includeAllNetworks: (options["includeAllNetworks"] as? NSNumber)?.boolValue ?? false,
@@ -81,24 +80,6 @@ open class ExtensionProvider: NEPacketTunnelProvider {
         private var locationDelegate: stubLocationDelegate?
     #endif
 
-    override public init() {
-        LibboxPrepareCrashSignalHandlers()
-        #if os(macOS)
-            if Variant.useSystemExtension {
-                NativeCrashReporter.installForCurrentProcess(
-                    basePath: FileManager.default.homeDirectoryForCurrentUser
-                        .appendingPathComponent("NativeCrash")
-                )
-            } else {
-                NativeCrashReporter.installForCurrentProcess()
-            }
-        #else
-            NativeCrashReporter.installForCurrentProcess()
-        #endif
-        LibboxReinstallCrashSignalHandlers()
-        super.init()
-    }
-
     override open func startTunnel(options startOptions: [String: NSObject]?) async throws {
         let basePath: String
         let workingPath: String
@@ -126,7 +107,7 @@ open class ExtensionProvider: NEPacketTunnelProvider {
         #if os(macOS)
             if Variant.useSystemExtension {
                 let socketPath = basePath + "/command.sock"
-                let machServiceName = AppConfiguration.systemExtensionMachServiceName
+                let machServiceName = AppConfiguration.appGroupID + ".system"
                 xpcService = CommandXPCService(socketPath: socketPath)
                 xpcListener = NSXPCListener(machServiceName: machServiceName)
                 xpcListener.delegate = xpcService
@@ -134,7 +115,6 @@ open class ExtensionProvider: NEPacketTunnelProvider {
         #endif
 
         let effectiveOptions = try resolveStartOptions(startOptions)
-        try applyStartOptions(effectiveOptions)
         if effectiveOptions["configContent"] == nil {
             throw ExtensionStartupError("(packet-tunnel) error: missing configContent in tunnel options")
         }
@@ -143,16 +123,15 @@ open class ExtensionProvider: NEPacketTunnelProvider {
         } catch {
             throw ExtensionStartupError("(packet-tunnel) error: persist start options: \(error.localizedDescription)")
         }
+
+        applyStartOptions(effectiveOptions)
+
         let options = LibboxSetupOptions()
         options.basePath = basePath
         options.workingPath = workingPath
         options.tempPath = tempPath
 
         options.logMaxLines = 3000
-        options.debug = Variant.inDebug
-        options.crashReportSource = "NetworkExtension"
-        options.appVersion = Bundle.application.versionNumber
-        options.appMarketingVersion = Bundle.application.version
 
         #if os(tvOS)
             if let port = effectiveOptions["commandServerPort"] as? NSNumber {
@@ -163,23 +142,23 @@ open class ExtensionProvider: NEPacketTunnelProvider {
             }
         #endif
 
-        #if os(macOS)
-            options.oomKillerEnabled = (effectiveOptions["oomKillerEnabled"] as? NSNumber)?.boolValue ?? false
-            let oomMemoryLimitMB = (effectiveOptions["oomMemoryLimitMB"] as? NSNumber)?.int64Value ?? 0
-            options.oomMemoryLimit = oomMemoryLimitMB * 1024 * 1024
-            options.oomKillerDisabled = !((effectiveOptions["oomKillerKillConnections"] as? NSNumber)?.boolValue ?? false)
-        #else
-            options.oomKillerEnabled = true
-        #endif
-        options.powerReportEnabled = (effectiveOptions["powerReportEnabled"] as? NSNumber)?.boolValue ?? false
-
         var setupError: NSError?
         LibboxSetup(options, &setupError)
         if let setupError {
             throw ExtensionStartupError("(packet-tunnel) error: setup service: \(setupError.localizedDescription)")
         }
-        LibboxPromoteOOMDraft()
-        LibboxPromotePowerReportDraft()
+
+        let stderrPath = URL(fileURLWithPath: tempPath, isDirectory: true).appendingPathComponent("stderr.log").path
+        var stderrError: NSError?
+        LibboxRedirectStderr(stderrPath, &stderrError)
+        if let stderrError {
+            throw ExtensionStartupError("(packet-tunnel) redirect stderr error: \(stderrError.localizedDescription)")
+        }
+
+        #if !os(macOS)
+            let ignoreMemoryLimit = (effectiveOptions["ignoreMemoryLimit"] as? NSNumber)?.boolValue ?? false
+            LibboxSetMemoryLimit(!ignoreMemoryLimit)
+        #endif
 
         var error: NSError?
         commandServer = LibboxNewCommandServer(platformInterface, platformInterface, &error)
@@ -200,6 +179,7 @@ open class ExtensionProvider: NEPacketTunnelProvider {
             }
         #endif
 
+        writeMessage("(packet-tunnel): Here I stand")
         do {
             try await startService()
         } catch {
@@ -210,7 +190,6 @@ open class ExtensionProvider: NEPacketTunnelProvider {
             #endif
             throw error
         }
-        writeMessage("(packet-tunnel): Here I stand")
         #if os(macOS)
             if Variant.useSystemExtension {
                 xpcService.markServiceReady()
@@ -223,9 +202,9 @@ open class ExtensionProvider: NEPacketTunnelProvider {
         #endif
     }
 
-    func writeMessage(_ message: String, level: LogLevel = .error) {
+    func writeMessage(_ message: String) {
         if let commandServer {
-            commandServer.writeMessage(Int32(level.rawValue), message: message)
+            commandServer.writeMessage(2, message: message)
         }
     }
 
@@ -312,7 +291,7 @@ open class ExtensionProvider: NEPacketTunnelProvider {
     override open func handleAppMessage(_ messageData: Data) async -> Data? {
         do {
             let options = try ExtensionStartOptions.decode(messageData)
-            try applyStartOptions(options)
+            applyStartOptions(options)
             try persistStartOptions(options)
             try await reloadService()
             return nil

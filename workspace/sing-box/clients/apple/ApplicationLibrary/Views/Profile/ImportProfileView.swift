@@ -67,12 +67,8 @@
             .alert($viewModel.alert)
             .navigationTitle("Import Profile")
             .onChange(of: viewModel.importSucceeded) { newValue in
-                guard newValue else {
-                    return
-                }
-                if let onComplete {
-                    onComplete()
-                } else {
+                if newValue {
+                    onComplete?()
                     dismiss()
                 }
             }

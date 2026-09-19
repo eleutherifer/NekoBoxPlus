@@ -13,24 +13,24 @@ public struct DownloadTrafficCard: View {
                 DashboardCardHeader(icon: "arrow.down.circle.fill", title: "Download")
 
                 if Variant.screenshotMode {
-                    Text(verbatim: "249 MB/s")
+                    Text("249 MB/s")
                         .font(.title2)
                         .fontWeight(.medium)
-                    Text(verbatim: "5.6 GB")
+                    Text("5.6 GB")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 } else if let message = commandClient.status, message.trafficAvailable {
-                    Text(verbatim: "\(LibboxFormatBytes(message.downlink))/s")
+                    Text("\(LibboxFormatBytes(message.downlink))/s")
                         .font(.title2)
                         .fontWeight(.medium)
                     Text(LibboxFormatBytes(message.downlinkTotal))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 } else {
-                    Text(verbatim: "...")
+                    Text("...")
                         .font(.title2)
                         .fontWeight(.medium)
-                    Text(verbatim: "...")
+                    Text("...")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }

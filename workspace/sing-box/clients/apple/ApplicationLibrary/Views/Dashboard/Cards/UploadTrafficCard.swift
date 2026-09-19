@@ -13,24 +13,24 @@ public struct UploadTrafficCard: View {
                 DashboardCardHeader(icon: "arrow.up.circle.fill", title: "Upload")
 
                 if Variant.screenshotMode {
-                    Text(verbatim: "38 B/s")
+                    Text("38 B/s")
                         .font(.title2)
                         .fontWeight(.medium)
-                    Text(verbatim: "52 MB")
+                    Text("52 MB")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 } else if let message = commandClient.status, message.trafficAvailable {
-                    Text(verbatim: "\(LibboxFormatBytes(message.uplink))/s")
+                    Text("\(LibboxFormatBytes(message.uplink))/s")
                         .font(.title2)
                         .fontWeight(.medium)
                     Text(LibboxFormatBytes(message.uplinkTotal))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 } else {
-                    Text(verbatim: "...")
+                    Text("...")
                         .font(.title2)
                         .fontWeight(.medium)
-                    Text(verbatim: "...")
+                    Text("...")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }

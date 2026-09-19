@@ -42,8 +42,8 @@ func getConfigs(server *Server, logFactory log.Factory) func(w http.ResponseWrit
 			logLevel = log.LevelError
 		}
 		render.JSON(w, r, &configSchema{
-			Mode:        server.clashMode.Mode(),
-			ModeList:    server.clashMode.ModeList(),
+			Mode:        server.mode,
+			ModeList:    server.modeList,
 			BindAddress: "*",
 			LogLevel:    log.FormatLevel(logLevel),
 		})
@@ -60,7 +60,7 @@ func patchConfigs(server *Server) func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if newConfig.Mode != "" {
-			server.clashMode.SetMode(newConfig.Mode)
+			server.SetMode(newConfig.Mode)
 		}
 		render.NoContent(w, r)
 	}

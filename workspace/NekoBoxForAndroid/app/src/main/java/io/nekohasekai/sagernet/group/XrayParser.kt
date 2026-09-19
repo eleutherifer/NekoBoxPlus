@@ -1,7 +1,6 @@
 package io.nekohasekai.sagernet.group
 
 import android.annotation.SuppressLint
-import io.nekohasekai.sagernet.CONNECTION_TEST_URL
 import io.nekohasekai.sagernet.fmt.AbstractBean
 import io.nekohasekai.sagernet.fmt.http.HttpBean
 import io.nekohasekai.sagernet.fmt.hysteria.HysteriaBean
@@ -19,8 +18,6 @@ import io.nekohasekai.sagernet.ktx.isIpAddressV6
 import org.json.JSONArray
 import org.json.JSONObject
 import org.json.JSONTokener
-import java.math.BigDecimal
-import java.math.RoundingMode
 import java.net.URI
 import java.util.Base64
 import java.util.Locale
@@ -34,6 +31,7 @@ import java.util.Locale
 internal object XrayParser {
     private val supportedProtocols =
         setOf("http", "socks", "shadowsocks", "vmess", "vless", "trojan", "hysteria", "wireguard")
+    private val convertibleBalancerStrategies = setOf("random", "leastping", "roundrobin", "leastload")
     private val durationPattern = Regex("^(?:\\d+(?:\\.\\d+)?(?:ns|us|µs|ms|s|m|h))+$")
     private const val superscriptDigits = "⁰¹²³⁴⁵⁶⁷⁸⁹"
 
@@ -48,13 +46,7 @@ internal object XrayParser {
         val interval: String?,
     )
 
-    data class BalancerOptions(
-        val convert: Boolean = true,
-        val fallbackTestURL: String = CONNECTION_TEST_URL,
-    )
-
-    // Resolve preferences only after recognizing Xray, keeping other import formats independent.
-    fun parse(text: String, options: () -> BalancerOptions = { BalancerOptions() }): List<AbstractBean>? {
+    fun parse(text: String): List<AbstractBean>? {
         val root = runCatching { JSONTokener(text).nextValue() }.getOrNull() ?: return null
         val configs =
             when (root) {
@@ -73,7 +65,6 @@ internal object XrayParser {
             outboundsByConfig += config to outbounds
         }
         if (!sawProtocol) return null
-        val balancerOptions = options()
 
         return buildList {
             for ((config, outbounds) in outboundsByConfig) {
@@ -100,23 +91,34 @@ internal object XrayParser {
                     bean.initializeDefaultValues()
                 }
 
-                if (!balancerOptions.convert) {
-                    addAll(parsedBeans)
-                    continue
-                }
-
+                val duplicateTags = parsedOutbounds.filter { it.tag.isNotBlank() }
+                    .groupingBy(ParsedOutbound::tag)
+                    .eachCount()
+                    .filterValues { it > 1 }
+                    .keys
                 val taggedOutbounds = parsedOutbounds.filter { it.tag.isNotBlank() }.sortedBy(ParsedOutbound::tag)
-                // JSONObject uses source identity, so duplicate tags do not consume unrelated outbounds.
-                val convertedSources = mutableSetOf<JSONObject>()
+                val convertedTags = mutableSetOf<String>()
+                val retainedByUnsafeBalancer = mutableSetOf<String>()
+                var retainAllForUnsafeBalancer = false
                 val converted = mutableListOf<ProxySetBean>()
                 val balancers = config.optJSONObject("routing")
                     ?.optJSONArray("balancers")
-                    ?.let { array -> (0 until array.length()).mapNotNull(array::optJSONObject) }
+                    ?.objectsOrNull()
                     .orEmpty()
+                val duplicateBalancerTags = balancers.map { it.optString("tag") }
+                    .filter(String::isNotBlank)
+                    .groupingBy { it }
+                    .eachCount()
+                    .filterValues { it > 1 }
+                    .keys
 
-                for ((index, balancer) in balancers.withIndex()) {
+                for (balancer in balancers) {
                     val selectors = balancer.optJSONArray("selector")?.strings().orEmpty()
-                    val selected = taggedOutbounds.filter { outbound -> selectors.any(outbound.tag::startsWith) }
+                    val selected = if (selectors.isEmpty()) {
+                        emptyList()
+                    } else {
+                        taggedOutbounds.filter { outbound -> selectors.any(outbound.tag::startsWith) }
+                    }
                     val strategyObject = balancer.optJSONObject("strategy")
                     val strategy = strategyObject
                         ?.optString("type")
@@ -126,26 +128,47 @@ internal object XrayParser {
                         .replace("_", "")
                         .ifBlank { "random" }
                     val fallbackTag = balancer.optString("fallbackTag")
-                    val fallback = taggedOutbounds.filter { fallbackTag.isNotBlank() && it.tag == fallbackTag }
-                    val members = (selected + fallback).distinctBy { it.source }.filter { it.beans.isNotEmpty() }
-                    if (members.isEmpty()) continue
+                    val fallback = fallbackTag.takeIf(String::isNotBlank)?.let { tag ->
+                        taggedOutbounds.singleOrNull { it.tag == tag }
+                    }
+                    val members = if (fallback == null || fallback in selected) selected else selected + fallback
+                    val safe =
+                        balancer.optString("tag").isNotBlank() &&
+                            balancer.optString("tag") !in duplicateBalancerTags &&
+                            (!balancer.has("strategy") || balancer.isNull("strategy") || strategyObject != null) &&
+                            selectors.isNotEmpty() &&
+                            selected.isNotEmpty() &&
+                            strategy in convertibleBalancerStrategies &&
+                            (fallbackTag.isBlank() || fallback != null) &&
+                            members.none { it.tag in duplicateTags } &&
+                            members.all { it.source.optString("protocol").lowercase(Locale.ROOT) in supportedProtocols && it.beans.isNotEmpty() }
+
+                    if (!safe) {
+                        if (selectors.isEmpty()) retainAllForUnsafeBalancer = true
+                        retainedByUnsafeBalancer += selected.map(ParsedOutbound::tag)
+                        continue
+                    }
 
                     val memberBeans = members.flatMap(ParsedOutbound::beans)
-                    convertedSources += members.map(ParsedOutbound::source)
+                    convertedTags += members.map(ParsedOutbound::tag)
                     converted += ProxySetBean().apply {
-                        name = remarks ?: balancer.optString("tag").ifBlank { "Xray balancer ${index + 1}" }
+                        name = remarks ?: balancer.optString("tag")
                         mode = ProxySetBean.MODE_URL_TEST
                         type = ProxySetBean.TYPE_LIST
                         setEmbeddedProfiles(memberBeans)
-                        testURL = balancerOptions.fallbackTestURL.takeIf(::isHttpURL) ?: CONNECTION_TEST_URL
-                        applyProbeSettings(config, members.map(ParsedOutbound::tag), strategy)
+                        applyProbeSettings(config, members.map(ParsedOutbound::tag))
                         initializeDefaultValues()
                     }
                 }
 
                 addAll(converted)
                 parsedOutbounds.forEach { outbound ->
-                    if (outbound.source !in convertedSources) {
+                    if (
+                        retainAllForUnsafeBalancer ||
+                        outbound.tag.isBlank() ||
+                        outbound.tag !in convertedTags ||
+                        outbound.tag in retainedByUnsafeBalancer
+                    ) {
                         addAll(outbound.beans)
                     }
                 }
@@ -153,46 +176,29 @@ internal object XrayParser {
         }
     }
 
-    private fun ProxySetBean.applyProbeSettings(config: JSONObject, memberTags: List<String>, strategy: String) {
-        val observatory = config.optJSONObject("observatory")
-        val burst = config.optJSONObject("burstObservatory")
-        val ping = burst?.optJSONObject("pingConfig")
-        val standard = observatory?.let {
-            probeSettings(
-                it.optJSONArray("subjectSelector")?.strings().orEmpty(),
-                it.optString("probeURL").ifBlank { it.optString("probeUrl") },
-                it.optString("probeInterval"), memberTags,
-            )
-        }
-        val burstSettings = burst?.let {
-            probeSettings(
-                it.optJSONArray("subjectSelector")?.strings().orEmpty(),
-                ping?.optString("destination").orEmpty(),
-                ping?.optString("interval").orEmpty(), memberTags,
-            )
-        }
-        val candidates = if (strategy == "leastload") {
-            listOfNotNull(burstSettings, standard)
-        } else {
-            listOfNotNull(standard, burstSettings)
-        }
-        candidates.firstNotNullOfOrNull { it.url }?.let { testURL = it }
-        candidates.firstNotNullOfOrNull { it.interval }?.let { testInterval = it }
-        if (durationNanos(testInterval)!! > durationNanos(testIdleTimeout)!!) testIdleTimeout = testInterval
-    }
-
-    private fun durationNanos(value: String): Long? {
-        if (!durationPattern.matches(value)) return null
-        val units = mapOf(
-            "ns" to 1L, "us" to 1_000L, "µs" to 1_000L, "ms" to 1_000_000L,
-            "s" to 1_000_000_000L, "m" to 60_000_000_000L, "h" to 3_600_000_000_000L,
-        )
-        return runCatching {
-            Regex("(\\d+(?:\\.\\d+)?)(ns|us|µs|ms|s|m|h)").findAll(value)
-                .fold(BigDecimal.ZERO) { total, match ->
-                    total + match.groupValues[1].toBigDecimal() * units.getValue(match.groupValues[2]).toBigDecimal()
-                }.setScale(0, RoundingMode.DOWN).longValueExact().takeIf { it > 0 }
-        }.getOrNull()
+    private fun ProxySetBean.applyProbeSettings(config: JSONObject, memberTags: List<String>) {
+        val candidates = buildList {
+            config.optJSONObject("observatory")?.let { observatory ->
+                probeSettings(
+                    observatory.optJSONArray("subjectSelector")?.strings().orEmpty(),
+                    observatory.optString("probeURL").ifBlank { observatory.optString("probeUrl") },
+                    observatory.optString("probeInterval"),
+                    memberTags,
+                )?.let(::add)
+            }
+            config.optJSONObject("burstObservatory")?.let { observatory ->
+                val ping = observatory.optJSONObject("pingConfig")
+                probeSettings(
+                    observatory.optJSONArray("subjectSelector")?.strings().orEmpty(),
+                    ping?.optString("destination").orEmpty(),
+                    ping?.optString("interval").orEmpty(),
+                    memberTags,
+                )?.let(::add)
+            }
+        }.distinct()
+        if (candidates.size != 1) return
+        candidates.single().url?.let { testURL = it }
+        candidates.single().interval?.let { testInterval = it }
     }
 
     private fun probeSettings(
@@ -203,7 +209,7 @@ internal object XrayParser {
     ): ProbeSettings? {
         if (selectors.isEmpty() || memberTags.any { tag -> selectors.none(tag::startsWith) }) return null
         val mappedURL = url.takeIf(::isHttpURL)
-        val mappedInterval = interval.takeIf { durationNanos(it) != null }
+        val mappedInterval = interval.takeIf { durationPattern.matches(it) }
         return if (mappedURL == null && mappedInterval == null) null else ProbeSettings(mappedURL, mappedInterval)
     }
 

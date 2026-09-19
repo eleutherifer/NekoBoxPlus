@@ -3,168 +3,76 @@ package libcore
 import (
 	"context"
 	"errors"
-	"net"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
-	M "github.com/sagernet/sing/common/metadata"
 )
 
-type fakeReadyOutbound struct {
-	tag          string
-	dependencies []string
-	wait         func(context.Context) error
+type fakeOpenVPNEndpoint struct {
+	adapter.OpenVPNEndpoint
+	status  atomic.Pointer[adapter.OpenVPNStatus]
+	updated chan struct{}
 }
 
-func (o *fakeReadyOutbound) Type() string           { return "fake" }
-func (o *fakeReadyOutbound) Tag() string            { return o.tag }
-func (o *fakeReadyOutbound) Network() []string      { return []string{"tcp"} }
-func (o *fakeReadyOutbound) Dependencies() []string { return o.dependencies }
-func (o *fakeReadyOutbound) DialContext(context.Context, string, M.Socksaddr) (net.Conn, error) {
-	return nil, errors.New("not used")
-}
-func (o *fakeReadyOutbound) ListenPacket(context.Context, M.Socksaddr) (net.PacketConn, error) {
-	return nil, errors.New("not used")
-}
-func (o *fakeReadyOutbound) WaitReady(ctx context.Context) error { return o.wait(ctx) }
+func (e *fakeOpenVPNEndpoint) OpenVPNStatus() adapter.OpenVPNStatus { return *e.status.Load() }
+func (e *fakeOpenVPNEndpoint) StatusUpdated() <-chan struct{}       { return e.updated }
 
-type fakeReadyGroup struct {
-	*fakeReadyOutbound
-	selected string
+type fakeOpenConnectEndpoint struct {
+	adapter.OpenConnectEndpoint
+	status  atomic.Pointer[adapter.OpenConnectStatus]
+	updated chan struct{}
 }
 
-func (g *fakeReadyGroup) Now() string   { return g.selected }
-func (g *fakeReadyGroup) All() []string { return []string{g.selected} }
-
-type fakeReadyOutboundManager struct {
-	adapter.OutboundManager
-	outbounds map[string]adapter.Outbound
+func (e *fakeOpenConnectEndpoint) OpenConnectStatus() adapter.OpenConnectStatus {
+	return *e.status.Load()
 }
+func (e *fakeOpenConnectEndpoint) StatusUpdated() <-chan struct{} { return e.updated }
 
-func (m *fakeReadyOutboundManager) Outbound(tag string) (adapter.Outbound, bool) {
-	outbound, loaded := m.outbounds[tag]
-	return outbound, loaded
-}
-
-func TestWaitURLTestOutboundReadyUsesGenericReadiness(t *testing.T) {
-	called := false
-	outbound := &fakeReadyOutbound{tag: "ready", wait: func(context.Context) error {
-		called = true
-		return nil
-	}}
-	manager := &fakeReadyOutboundManager{outbounds: map[string]adapter.Outbound{"ready": outbound}}
-	if err := waitURLTestOutboundReady(t.Context(), manager, outbound); err != nil {
+func TestWaitOpenVPNReadyWaitsForConnection(t *testing.T) {
+	endpoint := &fakeOpenVPNEndpoint{updated: make(chan struct{})}
+	endpoint.status.Store(&adapter.OpenVPNStatus{State: adapter.OpenVPNStateConnecting})
+	go func() {
+		time.Sleep(10 * time.Millisecond)
+		endpoint.status.Store(&adapter.OpenVPNStatus{State: adapter.OpenVPNStateConnected})
+		close(endpoint.updated)
+	}()
+	if err := waitOpenVPNReady(t.Context(), endpoint); err != nil {
 		t.Fatal(err)
 	}
-	if !called {
-		t.Fatal("generic readiness was not checked")
-	}
 }
 
-func TestWaitURLTestOutboundReadyTraversesGroupAndDependencies(t *testing.T) {
-	var order []string
-	dependency := &fakeReadyOutbound{tag: "dependency", wait: func(context.Context) error {
-		order = append(order, "dependency")
-		return nil
-	}}
-	selected := &fakeReadyOutbound{
-		tag:          "selected",
-		dependencies: []string{"dependency"},
-		wait: func(context.Context) error {
-			order = append(order, "selected")
-			return nil
-		},
-	}
-	group := &fakeReadyGroup{
-		fakeReadyOutbound: &fakeReadyOutbound{tag: "group", wait: func(context.Context) error {
-			t.Fatal("group readiness should not replace selected outbound readiness")
-			return nil
-		}},
-		selected: "selected",
-	}
-	manager := &fakeReadyOutboundManager{outbounds: map[string]adapter.Outbound{
-		"dependency": dependency,
-		"selected":   selected,
-		"group":      group,
-	}}
-	if err := waitURLTestOutboundReady(t.Context(), manager, group); err != nil {
+func TestWaitOpenConnectReadyWaitsForConnection(t *testing.T) {
+	endpoint := &fakeOpenConnectEndpoint{updated: make(chan struct{})}
+	endpoint.status.Store(&adapter.OpenConnectStatus{State: adapter.OpenConnectStateConnecting})
+	go func() {
+		time.Sleep(10 * time.Millisecond)
+		endpoint.status.Store(&adapter.OpenConnectStatus{State: adapter.OpenConnectStateConnected})
+		close(endpoint.updated)
+	}()
+	if err := waitOpenConnectReady(t.Context(), endpoint); err != nil {
 		t.Fatal(err)
 	}
-	if len(order) != 2 || order[0] != "dependency" || order[1] != "selected" {
-		t.Fatalf("readiness order = %v", order)
-	}
 }
 
-func TestWaitURLTestOutboundReadyTimeoutStopsBeforeProbe(t *testing.T) {
-	outbound := &fakeReadyOutbound{tag: "blocked", wait: func(ctx context.Context) error {
-		<-ctx.Done()
-		return context.Cause(ctx)
-	}}
-	manager := &fakeReadyOutboundManager{outbounds: map[string]adapter.Outbound{"blocked": outbound}}
-	started := time.Now()
-	err := waitURLTestOutboundReadyTimeout(t.Context(), manager, outbound, 20*time.Millisecond)
-	if !errors.Is(err, context.DeadlineExceeded) {
+func TestWaitOpenVPNReadyHonorsContext(t *testing.T) {
+	endpoint := &fakeOpenVPNEndpoint{updated: make(chan struct{})}
+	endpoint.status.Store(&adapter.OpenVPNStatus{State: adapter.OpenVPNStateConnecting})
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Millisecond)
+	defer cancel()
+	if err := waitOpenVPNReady(ctx, endpoint); !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("error = %v", err)
 	}
-	if elapsed := time.Since(started); elapsed > time.Second {
-		t.Fatalf("readiness timeout returned too late: %v", elapsed)
-	}
 }
 
-func TestRunURLTestAfterOutboundReadyStartsFreshProbeBudget(t *testing.T) {
-	const timeout = 100 * time.Millisecond
-	outbound := &fakeReadyOutbound{tag: "delayed", wait: func(ctx context.Context) error {
-		select {
-		case <-ctx.Done():
-			return context.Cause(ctx)
-		case <-time.After(60 * time.Millisecond):
-			return nil
-		}
-	}}
-	manager := &fakeReadyOutboundManager{outbounds: map[string]adapter.Outbound{"delayed": outbound}}
-	latency, err := runURLTestAfterOutboundReady(
-		t.Context(),
-		manager,
-		outbound,
-		int32(timeout/time.Millisecond),
-		1,
-		0,
-		func(ctx context.Context) (int32, error) {
-			deadline, loaded := ctx.Deadline()
-			if !loaded {
-				t.Fatal("probe context has no deadline")
-			}
-			remaining := time.Until(deadline)
-			if remaining < 80*time.Millisecond {
-				t.Fatalf("probe inherited readiness budget: %v remaining", remaining)
-			}
-			if remaining > timeout {
-				t.Fatalf("probe timeout was inflated: %v remaining", remaining)
-			}
-			return 42, nil
-		},
-	)
-	if err != nil || latency != 42 {
-		t.Fatalf("latency = %d, error = %v", latency, err)
-	}
-}
-
-func TestRunURLTestAfterOutboundReadyDoesNotProbeOnTimeout(t *testing.T) {
-	outbound := &fakeReadyOutbound{tag: "blocked", wait: func(ctx context.Context) error {
-		<-ctx.Done()
-		return context.Cause(ctx)
-	}}
-	manager := &fakeReadyOutboundManager{outbounds: map[string]adapter.Outbound{"blocked": outbound}}
-	probeCalled := false
-	_, err := runURLTestAfterOutboundReady(t.Context(), manager, outbound, 20, 1, 0, func(context.Context) (int32, error) {
-		probeCalled = true
-		return 42, nil
+func TestWaitOpenConnectReadyReturnsTerminalError(t *testing.T) {
+	endpoint := &fakeOpenConnectEndpoint{updated: make(chan struct{})}
+	endpoint.status.Store(&adapter.OpenConnectStatus{
+		State: adapter.OpenConnectStateError,
+		Error: "authentication failed",
 	})
-	if !errors.Is(err, context.DeadlineExceeded) {
+	if err := waitOpenConnectReady(t.Context(), endpoint); err == nil || err.Error() != "OpenConnect client failed: authentication failed" {
 		t.Fatalf("error = %v", err)
-	}
-	if probeCalled {
-		t.Fatal("probe started after readiness timeout")
 	}
 }

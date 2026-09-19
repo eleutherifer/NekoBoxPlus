@@ -77,15 +77,11 @@ import androidx.compose.ui.window.DialogProperties
 import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile
 import io.nekohasekai.sfa.Application
 import io.nekohasekai.sfa.R
-import io.nekohasekai.sfa.compose.base.UiEvent
-import io.nekohasekai.sfa.compose.base.rememberApplyServiceChangeNotifier
 import io.nekohasekai.sfa.compose.shared.AppSelectionCard
 import io.nekohasekai.sfa.compose.shared.PackageCache
 import io.nekohasekai.sfa.compose.shared.SortMode
 import io.nekohasekai.sfa.compose.shared.buildDisplayPackages
-import io.nekohasekai.sfa.compose.topbar.LocalScaffoldPadding
 import io.nekohasekai.sfa.compose.topbar.OverrideTopBar
-import io.nekohasekai.sfa.constant.Status
 import io.nekohasekai.sfa.database.Settings
 import io.nekohasekai.sfa.ktx.clipboardText
 import io.nekohasekai.sfa.vendor.PackageQueryManager
@@ -110,14 +106,10 @@ private sealed class ScanResult {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PerAppProxyScreen(
-    onBack: () -> Unit,
-    serviceStatus: Status = Status.Stopped,
-) {
+fun PerAppProxyScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val coroutineScope = rememberCoroutineScope()
-    val notifyApplyChange = rememberApplyServiceChangeNotifier(serviceStatus)
 
     var proxyMode by remember { mutableStateOf(Settings.perAppProxyMode) }
     var sortMode by remember { mutableStateOf(SortMode.NAME) }
@@ -172,10 +164,7 @@ fun PerAppProxyScreen(
 
     fun saveSelectedApplications(newUids: Set<Int>) {
         coroutineScope.launch {
-            withContext(Dispatchers.IO) {
-                Settings.perAppProxyList = buildPackageList(newUids)
-            }
-            notifyApplyChange(UiEvent.ApplyServiceChange.Mode.Reload)
+            Settings.perAppProxyList = buildPackageList(newUids)
         }
     }
 
@@ -334,10 +323,7 @@ fun PerAppProxyScreen(
                     onModeChange = { mode ->
                         proxyMode = mode
                         coroutineScope.launch {
-                            withContext(Dispatchers.IO) {
-                                Settings.perAppProxyMode = mode
-                            }
-                            notifyApplyChange(UiEvent.ApplyServiceChange.Mode.Reload)
+                            Settings.perAppProxyMode = mode
                         }
                     },
                     onSortModeChange = { mode ->
@@ -421,12 +407,8 @@ fun PerAppProxyScreen(
         )
     }
 
-    val scaffoldPadding = LocalScaffoldPadding.current
-
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(scaffoldPadding),
+        modifier = Modifier.fillMaxSize(),
     ) {
         AnimatedVisibility(
             visible = isLoading,

@@ -247,23 +247,26 @@ func (s *desktopService) SetInsecureModeEnabled(ctx context.Context, request *Se
 	if !insecureModeAvailable() {
 		return nil, status.Error(codes.FailedPrecondition, "insecure mode is not available on this platform")
 	}
-	err = authorizeSetInsecureMode(ctx, identity, request.Enabled)
-	if err != nil {
-		return nil, err
+	if request.Enabled {
+		return nil, status.Error(codes.PermissionDenied, "enabling insecure mode requires an elevated service command")
 	}
 	s.daemon.lifecycleAccess.Lock()
 	defer s.daemon.lifecycleAccess.Unlock()
 	if s.daemon.closed {
 		return nil, os.ErrClosed
 	}
+	err = authorizeDisableInsecureMode(identity)
+	if err != nil {
+		return nil, err
+	}
 	wasEnabled := s.daemon.insecureModeEnabled()
 	err = updateDaemonSettings(workingDirectory, func(settings *daemonSettings) {
-		settings.InsecureModeEnabled = request.Enabled
+		settings.InsecureModeEnabled = false
 	})
 	if err != nil {
 		return nil, err
 	}
-	if wasEnabled && !request.Enabled && s.daemon.startedService.Instance() != nil {
+	if wasEnabled && s.daemon.startedService.Instance() != nil {
 		var ownerUserID string
 		ownerUserID, err = loadOwner()
 		if err != nil {

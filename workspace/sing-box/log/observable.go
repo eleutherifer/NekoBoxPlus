@@ -24,7 +24,6 @@ type defaultFactory struct {
 	file              *os.File
 	filePath          string
 	platformWriters   atomic.Pointer[[]PlatformWriter]
-	needConsole       bool
 	needObservable    bool
 	level             Level
 	subscriber        *observable.Subscriber[Entry]
@@ -59,7 +58,6 @@ func NewDefaultFactory(
 		},
 		writer:         writer,
 		filePath:       filePath,
-		needConsole:    writer != io.Discard || filePath != "",
 		needObservable: needObservable,
 		level:          LevelTrace,
 		subscriber:     observable.NewSubscriber[Entry](128),
@@ -83,7 +81,6 @@ func (f *defaultFactory) Start() error {
 			f.writer = logFile
 			f.file = logFile
 		}
-		f.needConsole = f.writer != io.Discard
 	}
 	if f.needObservable {
 		f.observer = observable.NewObserver[Entry](f.subscriber, 64)
@@ -147,7 +144,19 @@ func (f *defaultFactory) UnSubscribe(sub observable.Subscription[Entry]) {
 }
 
 func (f *defaultFactory) output(ctx context.Context, level Level, tag string, message string, timestamp time.Time) {
-	if level <= f.level && (f.needConsole || level == LevelPanic || level == LevelFatal) {
+	if f.needObservable {
+		formatted, formattedSimple := f.formatter.FormatWithSimple(ctx, level, tag, message, timestamp)
+		if level <= f.level {
+			if level == LevelPanic {
+				panic(formatted)
+			}
+			f.writer.Write([]byte(formatted))
+			if level == LevelFatal {
+				os.Exit(1)
+			}
+		}
+		f.subscriber.Emit(Entry{level, formattedSimple})
+	} else if level <= f.level {
 		formatted := f.formatter.Format(ctx, level, tag, message, timestamp)
 		if level == LevelPanic {
 			panic(formatted)
@@ -156,9 +165,6 @@ func (f *defaultFactory) output(ctx context.Context, level Level, tag string, me
 		if level == LevelFatal {
 			os.Exit(1)
 		}
-	}
-	if f.needObservable {
-		f.subscriber.Emit(Entry{level, f.formatter.FormatSimple(ctx, tag, message)})
 	}
 	platformWriters := f.loadPlatformWriters()
 	if len(platformWriters) > 0 {

@@ -10,7 +10,7 @@ import (
 )
 
 func systemGateways(interfaceIndex int) []netip.Addr {
-	rib, err := route.FetchRIB(unix.AF_UNSPEC, route.RIBType(unix.NET_RT_FLAGS), unix.RTF_GATEWAY)
+	rib, err := route.FetchRIB(unix.AF_UNSPEC, route.RIBTypeRoute, 0)
 	if err != nil {
 		return nil
 	}

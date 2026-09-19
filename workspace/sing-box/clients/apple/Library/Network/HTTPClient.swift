@@ -4,7 +4,11 @@ import Libbox
 public class HTTPClient {
     private static var userAgent: String {
         var userAgent = Variant.applicationName
-        userAgent += " (sing-box "
+        userAgent += "/"
+        userAgent += Bundle.main.version
+        userAgent += " (Build "
+        userAgent += Bundle.main.versionNumber
+        userAgent += "; sing-box "
         userAgent += LibboxVersion()
         userAgent += "; language "
         userAgent += Locale.current.identifier
@@ -19,15 +23,12 @@ public class HTTPClient {
         client.modernTLS()
     }
 
-    public func getString(_ url: String?, headers: [String: String] = [:]) throws -> String {
+    public func getString(_ url: String?) throws -> String {
         #if DEBUG
             precondition(!Thread.isMainThread, "HTTPClient.getString(...) must not be called on the main thread")
         #endif
         let request = client.newRequest()!
         request.setUserAgent(HTTPClient.userAgent)
-        for (key, value) in headers {
-            request.setHeader(key, value: value)
-        }
         try request.setURL(url)
         let response = try request.execute()
         let content = try response.getContent()

@@ -9,7 +9,6 @@ import (
 	"github.com/sagernet/sing-box/common/trafficcontrol"
 	"github.com/sagernet/sing-box/common/urltest"
 	C "github.com/sagernet/sing-box/constant"
-	"github.com/sagernet/sing-box/experimental/clashmode"
 	"github.com/sagernet/sing-box/experimental/deprecated"
 	"github.com/sagernet/sing-box/experimental/locale"
 	"github.com/sagernet/sing-box/log"
@@ -26,7 +25,7 @@ type Instance struct {
 	cancel                context.CancelFunc
 	instance              *box.Box
 	connectionManager     adapter.ConnectionManager
-	clashMode             *clashmode.Manager
+	clashServer           adapter.ClashServer
 	trafficManager        *trafficcontrol.Manager
 	cacheFile             adapter.CacheFile
 	pauseManager          pause.Manager
@@ -39,7 +38,6 @@ type Instance struct {
 func (s *StartedService) CheckConfig(ctx context.Context, configContent string) error {
 	selectedLocale := locale.FromContext(ctx)
 	ctx, _ = locale.ContextWithLocale(s.ctx, selectedLocale.Locale)
-	ctx = service.ExtendContext(ctx)
 	options, err := parseConfig(ctx, configContent)
 	if err != nil {
 		return err
@@ -132,7 +130,7 @@ func (s *StartedService) newInstance(ctx context.Context, profileContent string,
 	}
 	i.instance = boxInstance
 	i.connectionManager = service.FromContext[adapter.ConnectionManager](ctx)
-	i.clashMode = service.PtrFromContext[clashmode.Manager](ctx)
+	i.clashServer = service.FromContext[adapter.ClashServer](ctx)
 	i.trafficManager = service.PtrFromContext[trafficcontrol.Manager](ctx)
 	i.pauseManager = service.FromContext[pause.Manager](ctx)
 	i.cacheFile = service.FromContext[adapter.CacheFile](ctx)
@@ -147,7 +145,7 @@ func attachInstance(ctx context.Context) *Instance {
 	return &Instance{
 		ctx:                   ctx,
 		connectionManager:     service.FromContext[adapter.ConnectionManager](ctx),
-		clashMode:             service.PtrFromContext[clashmode.Manager](ctx),
+		clashServer:           service.FromContext[adapter.ClashServer](ctx),
 		trafficManager:        service.PtrFromContext[trafficcontrol.Manager](ctx),
 		pauseManager:          service.FromContext[pause.Manager](ctx),
 		cacheFile:             service.FromContext[adapter.CacheFile](ctx),

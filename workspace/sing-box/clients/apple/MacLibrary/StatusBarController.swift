@@ -42,7 +42,7 @@ public class StatusBarController: NSObject, NSMenuDelegate {
     private var outboundOrderByGroup: [String: [String]] = [:]
     private var groupsItem: NSMenuItem?
     private var profilesItem: NSMenuItem?
-    private var currentGroups: [OutboundGroup] = []
+    private var currentGroups: [LibboxOutboundGroup] = []
     private var isURLTestingAll = false
     private var urlTestingGroups = Set<String>()
 
@@ -50,6 +50,15 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         self.environments = environments
         super.init()
         observeProfile()
+        Task {
+            await initialize()
+        }
+    }
+
+    private func initialize() async {
+        let showMenuBarExtra = await SharedPreferences.showMenuBarExtra.get()
+        speedMode = await MenuBarExtraSpeedMode(rawValue: SharedPreferences.menuBarExtraSpeedMode.get()) ?? .enabled
+        updateVisibility(showMenuBarExtra)
     }
 
     public func updateVisibility(_ show: Bool) {
@@ -235,7 +244,7 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         }
     }
 
-    private func updateGroupsMenu(_ groups: [OutboundGroup]?) {
+    private func updateGroupsMenu(_ groups: [LibboxOutboundGroup]?) {
         currentGroups = groups ?? []
         guard let submenu = groupsItem?.submenu else { return }
 
@@ -253,7 +262,12 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         let newGroupOrder = selectableGroups.map(\.tag)
         var newOutboundOrderByGroup: [String: [String]] = [:]
         for group in selectableGroups {
-            newOutboundOrderByGroup[group.tag] = group.items.map(\.tag)
+            var tags: [String] = []
+            let items = group.getItems()!
+            while items.hasNext() {
+                tags.append(items.next()!.tag)
+            }
+            newOutboundOrderByGroup[group.tag] = tags
         }
 
         let structureSame = newGroupOrder == groupOrder
@@ -276,7 +290,7 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         updateURLTestAvailability()
     }
 
-    private func rebuildGroupsMenu(_ selectableGroups: [OutboundGroup], submenu: NSMenu) {
+    private func rebuildGroupsMenu(_ selectableGroups: [LibboxOutboundGroup], submenu: NSMenu) {
         submenu.removeAllItems()
         urlTestGroupViews.removeAll()
         groupMenuItems.removeAll()
@@ -318,11 +332,13 @@ public class StatusBarController: NSObject, NSMenuDelegate {
             urlTestGroupViews[group.tag] = groupURLTestView
 
             var outboundItemsByTag: [String: NSMenuItem] = [:]
-            var outboundData: [(OutboundGroupItem, NSMenuItem)] = []
+            var outboundData: [(LibboxOutboundGroupItem, NSMenuItem)] = []
             var maxTagWidth: CGFloat = 0
             var maxDelayWidth: CGFloat = 0
 
-            for outbound in group.items {
+            let items = group.getItems()!
+            while items.hasNext() {
+                let outbound = items.next()!
                 let outboundItem = NSMenuItem(
                     title: outbound.tag,
                     action: #selector(selectOutbound(_:)),
@@ -359,7 +375,7 @@ public class StatusBarController: NSObject, NSMenuDelegate {
                     attributes: [.font: font, .paragraphStyle: style]
                 )
                 if delay > 0 {
-                    let color = NSColor.delayColor(for: delay)
+                    let color = NSColor.delayColor(for: UInt16(delay))
                     let delayStart = (fullText as NSString).length - (delayText as NSString).length
                     attrString.addAttribute(
                         .foregroundColor,
@@ -378,18 +394,20 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         }
     }
 
-    private func updateGroupMenuItems(_ selectableGroups: [OutboundGroup]) -> Bool {
+    private func updateGroupMenuItems(_ selectableGroups: [LibboxOutboundGroup]) -> Bool {
         let font = NSFont.menuFont(ofSize: 0)
         let attrs: [NSAttributedString.Key: Any] = [.font: font]
 
         for group in selectableGroups {
             guard let outboundItemsByTag = groupOutboundItems[group.tag] else { return false }
 
-            var outboundData: [(OutboundGroupItem, NSMenuItem)] = []
+            var outboundData: [(LibboxOutboundGroupItem, NSMenuItem)] = []
             var maxTagWidth: CGFloat = 0
             var maxDelayWidth: CGFloat = 0
 
-            for outbound in group.items {
+            let items = group.getItems()!
+            while items.hasNext() {
+                let outbound = items.next()!
                 guard let outboundItem = outboundItemsByTag[outbound.tag] else { return false }
                 outboundItem.state = group.selected == outbound.tag ? .on : .off
 
@@ -419,7 +437,7 @@ public class StatusBarController: NSObject, NSMenuDelegate {
                     attributes: [.font: font, .paragraphStyle: style]
                 )
                 if delay > 0 {
-                    let color = NSColor.delayColor(for: delay)
+                    let color = NSColor.delayColor(for: UInt16(delay))
                     let delayStart = (fullText as NSString).length - (delayText as NSString).length
                     attrString.addAttribute(
                         .foregroundColor,
@@ -495,7 +513,7 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         let shouldConnect = speedMode != .disabled && environments.extensionProfile?.status.isConnectedStrict == true
         if shouldConnect {
             if commandClient == nil {
-                commandClient = CommandClient(.status, localOnly: true)
+                commandClient = CommandClient(.status)
                 commandClient!.statusPublisher
                     .receive(on: DispatchQueue.main)
                     .sink { [weak self] status in
@@ -1058,30 +1076,11 @@ extension NSColor {
         case 0:
             return .systemGray
         case ..<800:
-            return dynamic(
-                light: NSColor(red: 0.239, green: 0.506, blue: 0.408, alpha: 1),
-                dark: NSColor(red: 0.486, green: 0.722, blue: 0.620, alpha: 1)
-            )
+            return .systemGreen
         case 800 ..< 1500:
-            return dynamic(
-                light: NSColor(red: 0.659, green: 0.455, blue: 0.184, alpha: 1),
-                dark: NSColor(red: 0.827, green: 0.643, blue: 0.369, alpha: 1)
-            )
+            return .systemYellow
         default:
-            return dynamic(
-                light: NSColor(red: 0.761, green: 0.369, blue: 0.196, alpha: 1),
-                dark: NSColor(red: 0.859, green: 0.541, blue: 0.384, alpha: 1)
-            )
-        }
-    }
-
-    private static func dynamic(light: NSColor, dark: NSColor) -> NSColor {
-        NSColor(name: nil) { appearance in
-            if appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua {
-                dark
-            } else {
-                light
-            }
+            return .systemOrange
         }
     }
 }

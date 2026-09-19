@@ -11,7 +11,6 @@ public struct MainView: View {
     @StateObject private var viewModel: MainViewModel
     @State private var showCardManagement = false
     @State private var cardConfigurationVersion = 0
-    @State private var remoteServers: [RemoteServer] = []
     @State private var settingsNavigationPath = NavigationPath()
     @State private var pendingSettingsPage: SettingsPage?
     @State private var didConfigureScreenshotWindow = false
@@ -19,10 +18,6 @@ public struct MainView: View {
 
     private let profileEditor: (Binding<String>, Bool) -> AnyView = { text, isEditable in
         AnyView(ProfileEditorWrapperView(text: text, isEditable: isEditable))
-    }
-
-    private let ghosttyConfigEditor: (Binding<String>) -> AnyView = { text in
-        AnyView(GhosttyConfigEditorWrapperView(text: text))
     }
 
     private let screenshotDefaultPixelHeight: CGFloat = 1000
@@ -93,32 +88,25 @@ public struct MainView: View {
         })
         .onAppear {
             viewModel.onAppear(environments: environments)
-            Task { await reloadRemoteServers() }
         }
         .alert($viewModel.alert)
         .globalChecks()
         .toolbar {
-            if environments.remoteServer != nil || !remoteServers.isEmpty {
-                ToolbarItem(placement: .navigation) {
-                    remoteControlPicker
-                }
-            }
-            if environments.remoteServer != nil {
-                ToolbarItem(placement: .navigation) {
-                    disconnectButton
-                }
-            } else {
-                ToolbarItem(placement: .navigation) {
-                    StartStopButton()
-                }
+            ToolbarItem(placement: .navigation) {
+                StartStopButton()
             }
             if viewModel.selection == .dashboard {
                 ToolbarItem(placement: .automatic) {
-                    Button {
-                        showCardManagement = true
+                    Menu {
+                        Button {
+                            showCardManagement = true
+                        } label: {
+                            Label("Dashboard Items", systemImage: "square.grid.2x2")
+                        }
                     } label: {
-                        Label("Dashboard Items", systemImage: "square.grid.2x2")
+                        Label("Others", systemImage: "line.3.horizontal.circle")
                     }
+                    .menuIndicator(.hidden)
                 }
             }
         }
@@ -162,45 +150,13 @@ public struct MainView: View {
         .environment(\.importProfile, $viewModel.importProfile)
         .environment(\.importRemoteProfile, $viewModel.importRemoteProfile)
         .environment(\.profileEditor, profileEditor)
-        .environment(\.ghosttyConfigEditor, ghosttyConfigEditor)
         .handlesExternalEvents(preferring: [], allowing: ["*"])
-        .onOpenURL { url in
-            viewModel.openURL(url, environments: environments)
-        }
+        .onOpenURL(perform: viewModel.openURL)
         .sheet(isPresented: $showCardManagement, onDismiss: {
             cardConfigurationVersion += 1
         }, content: {
             CardManagementSheet()
                 .frame(minWidth: 400, minHeight: 400)
         })
-        .onReceive(NotificationCenter.default.publisher(for: .remoteServersUpdated)) { _ in
-            Task { @MainActor in
-                await reloadRemoteServers()
-            }
-        }
-    }
-
-    private var remoteControlPicker: some View {
-        Menu {
-            RemoteControlMenuItems(servers: remoteServers)
-        } label: {
-            Text(environments.remoteServer?.displayName ?? String(localized: "Local Device"))
-        }
-    }
-
-    private var disconnectButton: some View {
-        Button {
-            environments.exitRemoteControl()
-        } label: {
-            HStack(spacing: 8) {
-                RemoteUptimeText(commandClient: environments.commandClient)
-                Label("Disconnect", systemImage: "antenna.radiowaves.left.and.right.slash")
-            }
-        }
-        .labelStyle(.iconOnly)
-    }
-
-    private func reloadRemoteServers() async {
-        remoteServers = await (try? RemoteServerManager.list()) ?? []
     }
 }

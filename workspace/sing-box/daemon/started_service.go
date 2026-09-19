@@ -23,6 +23,7 @@ import (
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/memory"
 	"github.com/sagernet/sing/common/observable"
+	"github.com/sagernet/sing/common/x/list"
 	"github.com/sagernet/sing/service"
 
 	"github.com/gofrs/uuid/v5"
@@ -46,6 +47,7 @@ type StartedService struct {
 	// platform adapter.PlatformInterface
 	handler           PlatformHandler
 	debug             bool
+	logMaxLines       int
 	oomKillerEnabled  bool
 	oomKillerDisabled bool
 	oomMemoryLimit    uint64
@@ -62,7 +64,7 @@ type StartedService struct {
 	serviceStatusSubscriber *observable.Subscriber[*ServiceStatus]
 	serviceStatusObserver   *observable.Observer[*ServiceStatus]
 	logAccess               sync.RWMutex
-	logLines                logRing
+	logLines                list.List[*log.Entry]
 	logSubscriber           *observable.Subscriber[*log.Entry]
 	logObserver             *observable.Observer[*log.Entry]
 	instance                *Instance
@@ -97,7 +99,7 @@ func NewStartedService(options ServiceOptions) *StartedService {
 		// platform:                options.Platform,
 		handler:           options.Handler,
 		debug:             options.Debug,
-		logLines:          logRing{maxLines: options.LogMaxLines},
+		logMaxLines:       options.LogMaxLines,
 		oomKillerEnabled:  options.OOMKillerEnabled,
 		oomKillerDisabled: options.OOMKillerDisabled,
 		oomMemoryLimit:    options.OOMMemoryLimit,
@@ -138,7 +140,7 @@ func (s *StartedService) GetVersion(ctx context.Context, empty *emptypb.Empty) (
 
 func (s *StartedService) resetLogs() {
 	s.logAccess.Lock()
-	s.logLines.reset()
+	s.logLines = list.List[*log.Entry]{}
 	s.logAccess.Unlock()
 	s.logSubscriber.Emit(nil)
 }
@@ -275,8 +277,8 @@ func (s *StartedService) StartOrReloadService(ctx context.Context, profileConten
 		return err
 	}
 	instance.urlTestHistoryStorage.AddUpdateHook(s.urlTestSubscriber)
-	if instance.clashMode != nil {
-		instance.clashMode.AddUpdateHook(s.clashModeSubscriber)
+	if instance.clashServer != nil {
+		instance.clashServer.AddModeUpdateHook(s.clashModeSubscriber)
 	}
 	s.serviceAccess.Lock()
 	s.instance = instance
@@ -376,8 +378,12 @@ func (s *StartedService) SubscribeServiceStatus(empty *emptypb.Empty, server grp
 }
 
 func (s *StartedService) SubscribeLog(empty *emptypb.Empty, server grpc.ServerStreamingServer[Log]) error {
+	var savedLines []*log.Entry
 	s.logAccess.Lock()
-	savedLines := s.logLines.array()
+	savedLines = make([]*log.Entry, 0, s.logLines.Len())
+	for element := s.logLines.Front(); element != nil; element = element.Next() {
+		savedLines = append(savedLines, element.Value)
+	}
 	subscription, done, err := s.logObserver.Subscribe()
 	s.logAccess.Unlock()
 	if err != nil {
@@ -629,14 +635,14 @@ func (s *StartedService) GetClashModeStatus(ctx context.Context, empty *emptypb.
 		s.serviceAccess.RUnlock()
 		return nil, os.ErrInvalid
 	}
-	clashMode := s.instance.clashMode
+	clashServer := s.instance.clashServer
 	s.serviceAccess.RUnlock()
-	if clashMode == nil {
+	if clashServer == nil {
 		return nil, status.Error(codes.NotFound, "clash mode not available")
 	}
 	return &ClashModeStatus{
-		ModeList:    clashMode.ModeList(),
-		CurrentMode: clashMode.Mode(),
+		ModeList:    clashServer.ModeList(),
+		CurrentMode: clashServer.Mode(),
 	}, nil
 }
 
@@ -659,12 +665,12 @@ func (s *StartedService) SubscribeClashMode(empty *emptypb.Empty, server grpc.Se
 		s.serviceAccess.RLock()
 		var message *ClashMode
 		if s.serviceStatus.Status == ServiceStatus_STARTED {
-			clashMode := s.instance.clashMode
-			if clashMode == nil {
+			clashServer := s.instance.clashServer
+			if clashServer == nil {
 				s.serviceAccess.RUnlock()
 				return status.Error(codes.NotFound, "clash mode not available")
 			}
-			message = &ClashMode{Mode: clashMode.Mode()}
+			message = &ClashMode{Mode: clashServer.Mode()}
 		} else {
 			message = &ClashMode{}
 		}
@@ -694,12 +700,12 @@ func (s *StartedService) SetClashMode(ctx context.Context, request *ClashMode) (
 		s.serviceAccess.RUnlock()
 		return nil, os.ErrInvalid
 	}
-	clashMode := s.instance.clashMode
+	clashServer := s.instance.clashServer
 	s.serviceAccess.RUnlock()
-	if clashMode == nil {
+	if clashServer == nil {
 		return nil, status.Error(codes.NotFound, "clash mode not available")
 	}
-	clashMode.SetMode(request.Mode)
+	clashServer.SetMode(request.Mode)
 	return &emptypb.Empty{}, nil
 }
 
@@ -2086,7 +2092,10 @@ func (s *StartedService) mustEmbedUnimplementedStartedServiceServer() {
 func (s *StartedService) WriteMessage(level log.Level, message string) {
 	item := &log.Entry{Level: level, Message: message}
 	s.logAccess.Lock()
-	s.logLines.push(item)
+	s.logLines.PushBack(item)
+	if s.logLines.Len() > s.logMaxLines {
+		s.logLines.Remove(s.logLines.Front())
+	}
 	s.logAccess.Unlock()
 	s.logSubscriber.Emit(item)
 	if s.debug {
@@ -2097,7 +2106,7 @@ func (s *StartedService) WriteMessage(level log.Level, message string) {
 func (s *StartedService) SavedLog() []*log.Entry {
 	s.logAccess.RLock()
 	defer s.logAccess.RUnlock()
-	return s.logLines.array()
+	return s.logLines.Array()
 }
 
 func (s *StartedService) Instance() *Instance {

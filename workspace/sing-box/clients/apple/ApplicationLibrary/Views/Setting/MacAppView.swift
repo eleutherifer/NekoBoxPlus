@@ -23,22 +23,20 @@ public struct AppView: View {
 
     @State private var isLoading = true
     @State private var selectedLanguage: String?
-    @State private var cacheSize: Int64 = 0
-    @State private var cacheSizeText = ""
 
     #if os(macOS)
         @State private var startAtLogin = false
         @Environment(\.showMenuBarExtra) private var showMenuBarExtra
         @Environment(\.menuBarExtraSpeedMode) private var menuBarExtraSpeedMode
         @State private var menuBarExtraInBackground = false
-        @State private var systemExtensionInstalled = false
         @State private var helperStatusLoaded = false
         @State private var rootHelperRegistrationStatus: SMAppService.Status = .notRegistered
         @EnvironmentObject private var environments: ExtensionEnvironments
         @EnvironmentObject private var updateManager: UpdateManager
         @State private var updateTrack: UpdateTrack = .stable
-        @State private var githubToken = ""
         @State private var checkUpdateEnabled = false
+        @State private var cacheSize: Int64 = 0
+        @State private var cacheSizeText = ""
     #endif
 
     @State private var alert: AlertState?
@@ -54,27 +52,14 @@ public struct AppView: View {
                 }
             } else {
                 FormView {
-                    #if os(tvOS)
-                        FormNavigationLink {
-                            LanguagePickerView(selection: $selectedLanguage)
-                        } label: {
-                            HStack {
-                                Text("Language")
-                                Spacer()
-                                Text(selectedLanguageName)
-                                    .foregroundStyle(.secondary)
-                            }
+                    Picker("Language", selection: $selectedLanguage) {
+                        ForEach(Self.supportedLanguages, id: \.code) { language in
+                            Text(language.name).tag(language.code)
                         }
-                    #else
-                        Picker("Language", selection: $selectedLanguage) {
-                            ForEach(Self.supportedLanguages, id: \.code) { language in
-                                Text(language.name).tag(language.code)
-                            }
-                        }
-                        .onChangeCompat(of: selectedLanguage) { newValue in
-                            updateLanguage(newValue)
-                        }
-                    #endif
+                    }
+                    .onChangeCompat(of: selectedLanguage) { newValue in
+                        updateLanguage(newValue)
+                    }
 
                     #if os(macOS)
                         FormToggle("Start At Login", "Launch the application when the system is logged in. If enabled at the same time as `Show in Menu Bar` and `Keep Menu Bar in Background`, the application interface will not be opened automatically.", $startAtLogin) { newValue in
@@ -111,47 +96,34 @@ public struct AppView: View {
                                 }
                         }
 
-                    #endif
-
-                    FormTextItem("Cache Size", cacheSizeText)
-                    if cacheSize > 0 {
-                        FormButton(role: .destructive) {
-                            Task.detached {
-                                let cacheDir = FilePath.cacheDirectory
-                                let workingDir = FilePath.workingDirectory
-                                if let contents = try? FileManager.default.contentsOfDirectory(
-                                    at: cacheDir,
-                                    includingPropertiesForKeys: nil
-                                ) {
-                                    for item in contents {
-                                        if item.lastPathComponent == workingDir.lastPathComponent {
-                                            continue
+                        if Variant.useSystemExtension {
+                            FormTextItem("Cache Size", cacheSizeText)
+                            if cacheSize > 0 {
+                                // Safe: System Extension's working directory is in its own container
+                                // (/var/root/Library/Containers/…), not under the app's cacheDirectory.
+                                FormButton(role: .destructive) {
+                                    Task.detached {
+                                        let cacheDir = FilePath.cacheDirectory
+                                        if let contents = try? FileManager.default.contentsOfDirectory(
+                                            at: cacheDir,
+                                            includingPropertiesForKeys: nil
+                                        ) {
+                                            for item in contents {
+                                                try? FileManager.default.removeItem(at: item)
+                                            }
                                         }
-                                        try? FileManager.default.removeItem(at: item)
+                                        await MainActor.run {
+                                            cacheSize = 0
+                                            cacheSizeText = ByteCountFormatter.string(fromByteCount: 0, countStyle: .file)
+                                        }
                                     }
-                                }
-                                await MainActor.run {
-                                    cacheSize = 0
-                                    cacheSizeText = ByteCountFormatter.string(fromByteCount: 0, countStyle: .file)
+                                } label: {
+                                    Label("Clear Cache", systemImage: "trash")
+                                        .foregroundColor(.red)
                                 }
                             }
-                        } label: {
-                            Label("Clear Cache", systemImage: "trash")
-                                .foregroundColor(.red)
                         }
-                    }
 
-                    #if !os(tvOS)
-                        Section("Tailscale") {
-                            FormNavigationLink {
-                                GhosttyConfigurationView()
-                            } label: {
-                                Text("Ghostty Configuration")
-                            }
-                        }
-                    #endif
-
-                    #if os(macOS)
                         if Variant.useSystemExtension {
                             Section("Update Settings") {
                                 Picker("Update Track", selection: $updateTrack) {
@@ -162,17 +134,6 @@ public struct AppView: View {
                                     Task {
                                         await updateManager.updateTrackChanged(to: newValue)
                                     }
-                                }
-
-                                FormItem(String(localized: "GitHub Token")) {
-                                    SecureField("GitHub Token", text: $githubToken, prompt: Text("Get higher GitHub API rate limits"))
-                                        .multilineTextAlignment(.trailing)
-                                        .onChangeCompat(of: githubToken) { newValue in
-                                            Task {
-                                                let token = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
-                                                await SharedPreferences.githubToken.set(token.isEmpty ? nil : token)
-                                            }
-                                        }
                                 }
 
                                 Toggle("Automatic Update Check", isOn: $checkUpdateEnabled)
@@ -234,7 +195,7 @@ public struct AppView: View {
                                         HStack {
                                             Label("Update", systemImage: "arrow.down.circle")
                                             Spacer()
-                                            Text(verbatim: "v\(info.versionName)")
+                                            Text("v\(info.versionName)")
                                                 .foregroundStyle(.secondary)
                                         }
                                     }
@@ -242,29 +203,19 @@ public struct AppView: View {
                             }
 
                             Section("System Extension") {
-                                if systemExtensionInstalled {
-                                    FormButton {
-                                        Task {
-                                            await updateSystemExtension()
-                                        }
-                                    } label: {
-                                        Label("Update", systemImage: "arrow.down.doc.fill")
+                                FormButton {
+                                    Task {
+                                        await updateSystemExtension()
                                     }
-                                    FormButton(role: .destructive) {
-                                        Task {
-                                            await uninstallSystemExtension()
-                                        }
-                                    } label: {
-                                        Label("Uninstall", systemImage: "trash.fill").foregroundColor(.red)
+                                } label: {
+                                    Label("Update", systemImage: "arrow.down.doc.fill")
+                                }
+                                FormButton(role: .destructive) {
+                                    Task {
+                                        await uninstallSystemExtension()
                                     }
-                                } else {
-                                    FormButton {
-                                        Task {
-                                            await installSystemExtension()
-                                        }
-                                    } label: {
-                                        Label("Install", systemImage: "lock.doc.fill")
-                                    }
+                                } label: {
+                                    Label("Uninstall", systemImage: "trash.fill").foregroundColor(.red)
                                 }
                             }
 
@@ -280,12 +231,7 @@ public struct AppView: View {
                                                 try HelperServiceManager.registerRootHelper()
                                                 refreshHelperStatus()
                                             } catch {
-                                                refreshHelperStatus()
-                                                if rootHelperRegistrationStatus == .requiresApproval {
-                                                    HelperServiceManager.openApprovalSettings()
-                                                } else {
-                                                    alert = AlertState(action: "update helper service", error: error)
-                                                }
+                                                alert = AlertState(action: "update helper service", error: error)
                                             }
                                         }
                                     } label: {
@@ -300,7 +246,7 @@ public struct AppView: View {
                                     }
                                 } else if rootHelperRegistrationStatus == .requiresApproval {
                                     FormButton {
-                                        HelperServiceManager.openApprovalSettings()
+                                        openHelperSettings()
                                     } label: {
                                         Label("Enable", systemImage: "switch.2")
                                     }
@@ -330,14 +276,6 @@ public struct AppView: View {
         .alert($alert)
         #if os(macOS)
             .alert($updateManager.alert)
-            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-                guard Variant.useSystemExtension, helperStatusLoaded else {
-                    return
-                }
-                Task {
-                    await refreshHelperStatusUntilSettled()
-                }
-            }
         #endif
             .navigationTitle("App")
         #if os(iOS)
@@ -351,10 +289,8 @@ public struct AppView: View {
             startAtLogin = SMAppService.mainApp.status == .enabled
             menuBarExtraInBackground = await SharedPreferences.menuBarExtraInBackground.get()
             if Variant.useSystemExtension {
-                systemExtensionInstalled = await SystemExtension.isInstalled()
                 let trackString = await SharedPreferences.updateTrack.get()
                 updateTrack = UpdateTrack.resolved(from: trackString)
-                githubToken = await SharedPreferences.githubToken.get()
                 checkUpdateEnabled = await SharedPreferences.checkUpdateEnabled.get()
             }
         #endif
@@ -363,54 +299,18 @@ public struct AppView: View {
             if Variant.useSystemExtension {
                 refreshHelperStatus()
                 helperStatusLoaded = true
+                refreshCacheSize()
             }
         #endif
-        refreshCacheSize()
     }
 
-    #if os(tvOS)
-
-        private var selectedLanguageName: String {
-            Self.supportedLanguages.first { $0.code == selectedLanguage }?.name
-                ?? String(localized: "System Default")
-        }
-
-        private struct LanguagePickerView: View {
-            @Binding var selection: String?
-            @State private var alert: AlertState?
-
-            var body: some View {
-                FormView {
-                    ForEach(AppView.supportedLanguages, id: \.code) { language in
-                        Button {
-                            selection = language.code
-                            ApplicationLocale.setSelectedIdentifier(language.code)
-                            alert = AlertState(
-                                title: String(localized: "Restart Required"),
-                                message: String(localized: "Language will be changed after restarting the app.")
-                            )
-                        } label: {
-                            HStack {
-                                Text(language.name)
-                                Spacer()
-                                Image(systemName: "checkmark")
-                                    .opacity(selection == language.code ? 1 : 0)
-                            }
-                        }
-                    }
-                }
-                .alert($alert)
-                .navigationTitle("Language")
-            }
-        }
-
-    #endif
-
     private static func currentLanguage() -> String? {
-        guard let selectedIdentifier = ApplicationLocale.selectedIdentifier else {
+        guard let languages = UserDefaults.standard.array(forKey: "AppleLanguages") as? [String],
+              let first = languages.first
+        else {
             return nil
         }
-        let current = canonicalLanguageCode(selectedIdentifier)
+        let current = canonicalLanguageCode(first)
         for language in supportedLanguages {
             guard let code = language.code else {
                 continue
@@ -422,17 +322,17 @@ public struct AppView: View {
         return nil
     }
 
-    #if !os(tvOS)
-
-        private func updateLanguage(_ language: String?) {
-            ApplicationLocale.setSelectedIdentifier(language)
-            alert = AlertState(
-                title: String(localized: "Restart Required"),
-                message: String(localized: "Language will be changed after restarting the app.")
-            )
+    private func updateLanguage(_ language: String?) {
+        if let language {
+            UserDefaults.standard.set([Self.canonicalLanguageCode(language)], forKey: "AppleLanguages")
+        } else {
+            UserDefaults.standard.removeObject(forKey: "AppleLanguages")
         }
-
-    #endif
+        alert = AlertState(
+            title: String(localized: "Restart Required"),
+            message: String(localized: "Language will be changed after restarting the app.")
+        )
+    }
 
     private static func configuredLanguageCodes() -> [String] {
         let rawCodes: [String]
@@ -484,21 +384,6 @@ public struct AppView: View {
             }
         }
 
-        private func installSystemExtension() async {
-            do {
-                let result = try await SystemExtension.install()
-                await SharedPreferences.rootHelperPromptPending.set(true)
-                if result == .willCompleteAfterReboot {
-                    alert = AlertState(errorMessage: String(localized: "Need Reboot"))
-                    return
-                }
-                systemExtensionInstalled = true
-                NotificationCenter.default.post(name: .systemExtensionInstalled, object: nil)
-            } catch {
-                alert = AlertState(action: "install system extension", error: error)
-            }
-        }
-
         private func updateSystemExtension() async {
             do {
                 if let result = try await SystemExtension.install(forceUpdate: true) {
@@ -525,7 +410,6 @@ public struct AppView: View {
                 if let result = try await SystemExtension.uninstall() {
                     switch result {
                     case .completed:
-                        systemExtensionInstalled = false
                         alert = AlertState(
                             title: String(localized: "Uninstall"),
                             message: String(localized: "System Extension removed.")
@@ -547,12 +431,7 @@ public struct AppView: View {
                 try action()
                 refreshHelperStatus()
             } catch {
-                refreshHelperStatus()
-                if rootHelperRegistrationStatus == .requiresApproval {
-                    HelperServiceManager.openApprovalSettings()
-                } else {
-                    alert = AlertState(action: actionName, error: error)
-                }
+                alert = AlertState(action: actionName, error: error)
             }
         }
 
@@ -560,51 +439,45 @@ public struct AppView: View {
             rootHelperRegistrationStatus = HelperServiceManager.rootHelperStatus
         }
 
-        /// SMAppService.status keeps reporting requiresApproval for a while after the user turns the
-        /// daemon on in System Settings, so a single read on activation can still be stale.
-        private func refreshHelperStatusUntilSettled() async {
-            let previousStatus = rootHelperRegistrationStatus
-            refreshHelperStatus()
-            guard previousStatus == .requiresApproval else {
+        private func openHelperSettings() {
+            if #available(macOS 13.0, *) {
+                SMAppService.openSystemSettingsLoginItems()
                 return
             }
-            for _ in 0 ..< 5 {
-                guard rootHelperRegistrationStatus == .requiresApproval else {
-                    return
-                }
-                try? await Task.sleep(for: .seconds(1))
-                refreshHelperStatus()
+            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.users?LoginItems"),
+               NSWorkspace.shared.open(url)
+            {
+                return
             }
+            NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/System Preferences.app"))
+        }
+
+        private func refreshCacheSize() {
+            Task.detached {
+                let size = Self.calculateDirSize(FilePath.cacheDirectory)
+                await MainActor.run {
+                    cacheSize = size
+                    cacheSizeText = ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
+                }
+            }
+        }
+
+        private static func calculateDirSize(_ dir: URL) -> Int64 {
+            guard let enumerator = FileManager.default.enumerator(
+                at: dir,
+                includingPropertiesForKeys: [.fileSizeKey],
+                options: [.skipsHiddenFiles]
+            ) else {
+                return 0
+            }
+            var size: Int64 = 0
+            for case let fileURL as URL in enumerator {
+                if let fileSize = try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize {
+                    size += Int64(fileSize)
+                }
+            }
+            return size
         }
 
     #endif
-
-    private func refreshCacheSize() {
-        Task.detached {
-            let total = Self.calculateDirSize(FilePath.cacheDirectory)
-            let working = Self.calculateDirSize(FilePath.workingDirectory)
-            let size = max(total - working, 0)
-            await MainActor.run {
-                cacheSize = size
-                cacheSizeText = ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
-            }
-        }
-    }
-
-    private static func calculateDirSize(_ dir: URL) -> Int64 {
-        guard let enumerator = FileManager.default.enumerator(
-            at: dir,
-            includingPropertiesForKeys: [.fileSizeKey],
-            options: [.skipsHiddenFiles]
-        ) else {
-            return 0
-        }
-        var size: Int64 = 0
-        for case let fileURL as URL in enumerator {
-            if let fileSize = try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize {
-                size += Int64(fileSize)
-            }
-        }
-        return size
-    }
 }

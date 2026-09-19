@@ -1,4 +1,3 @@
-import ApplicationLibrary
 import Foundation
 import Library
 import SwiftUI
@@ -7,8 +6,6 @@ import SwiftUI
 struct Application: App {
     @UIApplicationDelegateAdaptor private var appDelegate: ApplicationDelegate
     @StateObject private var environments = ExtensionEnvironments()
-    @StateObject private var peerStore = TailscaleSSHPeerStore()
-    @StateObject private var tailscaleViewModel = TailscaleStatusViewModel()
 
     init() {
         ScreenshotLocalization.applyIfNeeded()
@@ -17,10 +14,7 @@ struct Application: App {
     var body: some Scene {
         WindowGroup {
             MainView()
-                .tailscaleStatusSubscription(tailscaleViewModel, environments: environments, peerStore: peerStore)
                 .environmentObject(environments)
-                .environmentObject(peerStore)
-                .environmentObject(tailscaleViewModel)
         }
     }
 }

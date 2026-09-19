@@ -1,56 +1,12 @@
 package masque
 
 import (
-	"net/netip"
 	"testing"
 	"time"
 
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing/common/json/badoption"
 )
-
-func TestParseMASQUEAddresses(t *testing.T) {
-	tests := []struct {
-		name      string
-		config    option.MASQUEConfig
-		want      []netip.Prefix
-		wantError bool
-	}{
-		{
-			name:   "valid",
-			config: option.MASQUEConfig{IPv4: "192.0.2.1", IPv6: "2001:db8::1"},
-			want:   []netip.Prefix{netip.MustParsePrefix("192.0.2.1/32"), netip.MustParsePrefix("2001:db8::1/128")},
-		},
-		{name: "missing IPv4", config: option.MASQUEConfig{IPv6: "2001:db8::1"}, wantError: true},
-		{name: "missing IPv6", config: option.MASQUEConfig{IPv4: "192.0.2.1"}, wantError: true},
-		{name: "malformed IPv4", config: option.MASQUEConfig{IPv4: "invalid", IPv6: "2001:db8::1"}, wantError: true},
-		{name: "malformed IPv6", config: option.MASQUEConfig{IPv4: "192.0.2.1", IPv6: "invalid"}, wantError: true},
-		{name: "IPv6 in IPv4 field", config: option.MASQUEConfig{IPv4: "2001:db8::1", IPv6: "2001:db8::1"}, wantError: true},
-		{name: "IPv4 in IPv6 field", config: option.MASQUEConfig{IPv4: "192.0.2.1", IPv6: "192.0.2.1"}, wantError: true},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			addresses, err := parseMASQUEAddresses(&test.config)
-			if test.wantError {
-				if err == nil {
-					t.Fatal("expected error")
-				}
-				return
-			}
-			if err != nil {
-				t.Fatal(err)
-			}
-			if len(addresses) != len(test.want) {
-				t.Fatalf("got %d addresses, want %d", len(addresses), len(test.want))
-			}
-			for index := range addresses {
-				if addresses[index] != test.want[index] {
-					t.Fatalf("address %d is %s, want %s", index, addresses[index], test.want[index])
-				}
-			}
-		})
-	}
-}
 
 func TestResolveTransportOptions(t *testing.T) {
 	tests := []struct {

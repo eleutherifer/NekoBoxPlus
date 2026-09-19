@@ -3,7 +3,6 @@ package endpoint
 import (
 	"context"
 	"os"
-	"slices"
 	"sync"
 
 	"github.com/sagernet/sing-box/adapter"
@@ -12,13 +11,11 @@ import (
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
-	"github.com/sagernet/sing/service"
 )
 
 var _ adapter.EndpointManager = (*Manager)(nil)
 
 type Manager struct {
-	ctx           context.Context
 	logger        log.ContextLogger
 	registry      adapter.EndpointRegistry
 	access        sync.Mutex
@@ -28,9 +25,8 @@ type Manager struct {
 	endpointByTag map[string]adapter.Endpoint
 }
 
-func NewManager(ctx context.Context, logger log.ContextLogger, registry adapter.EndpointRegistry) *Manager {
+func NewManager(logger log.ContextLogger, registry adapter.EndpointRegistry) *Manager {
 	return &Manager{
-		ctx:           ctx,
 		logger:        logger,
 		registry:      registry,
 		endpointByTag: make(map[string]adapter.Endpoint),
@@ -39,30 +35,17 @@ func NewManager(ctx context.Context, logger log.ContextLogger, registry adapter.
 
 func (m *Manager) Start(stage adapter.StartStage) error {
 	m.access.Lock()
+	defer m.access.Unlock()
 	if m.started && m.stage >= stage {
-		m.access.Unlock()
 		panic("already started")
 	}
 	m.started = true
 	m.stage = stage
-	endpoints := slices.Clone(m.endpoints)
-	m.access.Unlock()
 	if stage == adapter.StartStateStart {
 		// started with outbound manager
 		return nil
 	}
-	if stage == adapter.StartStatePostStart {
-		// Domain peers may resolve through another endpoint at post-start. Follow
-		// detour dependencies, including those hidden behind an outbound/selector.
-		var err error
-		endpoints, err = orderEndpointDependencies(endpoints, service.FromContext[adapter.OutboundManager](m.ctx))
-		if err != nil {
-			return err
-		}
-	}
-	// Do not hold access while calling endpoints: bootstrap DNS can look up a
-	// detour through OutboundManager, which calls back into Manager.Get.
-	for _, endpoint := range endpoints {
+	for _, endpoint := range m.endpoints {
 		name := "endpoint/" + endpoint.Type() + "[" + endpoint.Tag() + "]"
 		done := adapter.LogElapsed(m.logger, stage, " ", name)
 		err := adapter.LegacyStart(endpoint, stage)
@@ -72,49 +55,6 @@ func (m *Manager) Start(stage adapter.StartStage) error {
 		}
 	}
 	return nil
-}
-
-func orderEndpointDependencies(endpoints []adapter.Endpoint, manager adapter.OutboundManager) ([]adapter.Endpoint, error) {
-	byTag := make(map[string]adapter.Endpoint, len(endpoints))
-	for _, endpoint := range endpoints {
-		byTag[endpoint.Tag()] = endpoint
-	}
-	state := make(map[string]uint8)
-	ordered := make([]adapter.Endpoint, 0, len(endpoints))
-	var visit func(adapter.Outbound) error
-	visit = func(outbound adapter.Outbound) error {
-		tag := outbound.Tag()
-		switch state[tag] {
-		case 1:
-			return E.New("circular endpoint dependency: ", tag)
-		case 2:
-			return nil
-		}
-		state[tag] = 1
-		for _, dependency := range outbound.Dependencies() {
-			var next adapter.Outbound = byTag[dependency]
-			if next == nil && manager != nil {
-				next, _ = manager.Outbound(dependency)
-			}
-			if next == nil {
-				return E.New("endpoint dependency not found: ", dependency)
-			}
-			if err := visit(next); err != nil {
-				return err
-			}
-		}
-		state[tag] = 2
-		if endpoint, loaded := byTag[tag]; loaded {
-			ordered = append(ordered, endpoint)
-		}
-		return nil
-	}
-	for _, endpoint := range endpoints {
-		if err := visit(endpoint); err != nil {
-			return nil, err
-		}
-	}
-	return ordered, nil
 }
 
 func (m *Manager) Close() error {

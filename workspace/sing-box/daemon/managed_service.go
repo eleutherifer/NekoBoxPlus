@@ -6,6 +6,7 @@ import (
 	"unsafe"
 
 	"github.com/sagernet/sing-box/service/oomkiller"
+	"github.com/sagernet/sing/common/memory"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -17,20 +18,20 @@ var _ ManagedServiceServer = (*ManagedService)(nil)
 type ManagedService struct {
 	handler     ManagedHandler
 	debug       bool
-	oomRecorder *oomkiller.Recorder
+	oomReporter oomkiller.OOMReporter
 }
 
 type ManagedServiceOptions struct {
 	Handler     ManagedHandler
 	Debug       bool
-	OOMRecorder *oomkiller.Recorder
+	OOMReporter oomkiller.OOMReporter
 }
 
 func NewManagedService(options ManagedServiceOptions) *ManagedService {
 	return &ManagedService{
 		handler:     options.Handler,
 		debug:       options.Debug,
-		oomRecorder: options.OOMRecorder,
+		oomReporter: options.OOMReporter,
 	}
 }
 
@@ -86,10 +87,10 @@ func (s *ManagedService) TriggerDebugCrash(ctx context.Context, request *DebugCr
 }
 
 func (s *ManagedService) TriggerOOMReport(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, error) {
-	if s.oomRecorder == nil {
-		return nil, status.Error(codes.Unavailable, "OOM recorder not available")
+	if s.oomReporter == nil {
+		return nil, status.Error(codes.Unavailable, "OOM reporter not available")
 	}
-	return &emptypb.Empty{}, s.oomRecorder.WriteReport()
+	return &emptypb.Empty{}, s.oomReporter.WriteReport(memory.Total())
 }
 
 func (s *ManagedService) mustEmbedUnimplementedManagedServiceServer() {

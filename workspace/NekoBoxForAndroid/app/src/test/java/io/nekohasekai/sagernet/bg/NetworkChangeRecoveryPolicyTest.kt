@@ -5,16 +5,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class NetworkChangeRecoveryPolicyTest {
-    @Test
-    fun resetsAfterLossWithoutReconnectEnabled() {
-        val policy = NetworkChangeRecoveryPolicy()
-        policy.onNetworkChanged("wlan0", 1, false, false, true)
-        assertTrue(policy.onNetworkChanged(null, null, false, false, true).reset)
-        val recovery = policy.onNetworkChanged("wlan0", 1, false, false, true)
-        assertTrue(recovery.reset)
-        assertFalse(recovery.reconnect)
-    }
-
 
     @Test
     fun initialNetworkDoesNotRecover() {
@@ -208,58 +198,6 @@ class NetworkChangeRecoveryPolicyTest {
         )
 
         assertFalse(decision.changed)
-        assertFalse(decision.reconnect)
-        assertFalse(decision.reset)
-    }
-
-    @Test
-    fun validationRestorationOnSameNetworkResetsWithoutReconnect() {
-        val policy = NetworkChangeRecoveryPolicy()
-
-        policy.onNetworkChanged(
-            interfaceName = "wlan0",
-            networkHandle = 100L,
-            isVpnNetwork = false,
-            reconnectEnabled = true,
-            resetEnabled = true,
-            validated = false,
-        )
-        val decision = policy.onNetworkChanged(
-            interfaceName = "wlan0",
-            networkHandle = 100L,
-            isVpnNetwork = false,
-            reconnectEnabled = true,
-            resetEnabled = true,
-            validated = true,
-        )
-
-        assertTrue(decision.changed)
-        assertFalse(decision.reconnect)
-        assertTrue(decision.reset)
-    }
-
-    @Test
-    fun validationLossOnSameNetworkDoesNotReset() {
-        val policy = NetworkChangeRecoveryPolicy()
-
-        policy.onNetworkChanged(
-            interfaceName = "wlan0",
-            networkHandle = 100L,
-            isVpnNetwork = false,
-            reconnectEnabled = true,
-            resetEnabled = true,
-            validated = true,
-        )
-        val decision = policy.onNetworkChanged(
-            interfaceName = "wlan0",
-            networkHandle = 100L,
-            isVpnNetwork = false,
-            reconnectEnabled = true,
-            resetEnabled = true,
-            validated = false,
-        )
-
-        assertTrue(decision.changed)
         assertFalse(decision.reconnect)
         assertFalse(decision.reset)
     }

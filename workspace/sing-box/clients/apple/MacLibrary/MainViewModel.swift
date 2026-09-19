@@ -40,11 +40,8 @@ public class MainViewModel: BaseViewModel {
         selection = .settings
     }
 
-    public func openURL(_ url: URL, environments: ExtensionEnvironments) {
-        if url.schemeAction == "taildrop" {
-            environments.pendingTaildropEndpointTag = url.schemeQueryValue("endpoint") ?? ""
-            selection = .tools
-        } else if url.host == "import-remote-profile" {
+    public func openURL(_ url: URL) {
+        if url.host == "import-remote-profile" {
             var error: NSError?
             importRemoteProfile = LibboxParseRemoteProfileImportLink(url.absoluteString, &error)
             if let error {

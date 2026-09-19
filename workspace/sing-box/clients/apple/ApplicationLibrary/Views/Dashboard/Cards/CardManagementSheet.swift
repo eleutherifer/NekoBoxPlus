@@ -199,11 +199,11 @@ import SwiftUI
                 Spacer()
 
                 if !isProfileCard {
-                    Toggle(isOn: Binding(
+                    Toggle("", isOn: Binding(
                         get: { isEnabled },
                         set: { _ in onToggle() }
-                    )) {}
-                        .labelsHidden()
+                    ))
+                    .labelsHidden()
                 }
 
                 Button {
@@ -212,6 +212,7 @@ import SwiftUI
                     Image(systemName: "line.3.horizontal")
                         .font(.system(size: 20))
                 }
+                .buttonStyle(.plain)
                 .actionButtonStyle()
                 .focused(focusedCard, equals: card)
             }
@@ -245,11 +246,7 @@ private struct CardRow: View {
     private var isToggleEnabled: Binding<Bool> {
         Binding(
             get: { isProfileCard || isEnabled },
-            set: {
-                _ in if !isProfileCard {
-                    onToggle()
-                }
-            }
+            set: { _ in if !isProfileCard { onToggle() } }
         )
     }
 

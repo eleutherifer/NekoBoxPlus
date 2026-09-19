@@ -2,44 +2,12 @@ import Foundation
 import Library
 
 enum WorkingDirectoryManager {
-    static var extensionBasePath: String {
-        "/var/root/Library/Containers/\(AppConfiguration.systemExtensionBundleID)/Data"
-    }
-
-    static var extensionWorkingDirectoryPath: String {
-        (extensionBasePath as NSString).appendingPathComponent("Working")
-    }
-
-    static var tempDirectoryPath: String {
-        "/var/root/Library/Containers/\(AppConfiguration.systemExtensionBundleID)/Data/Temp"
-    }
-
-    static var helperBasePath: String {
-        "/var/root/Library/Containers/\(AppConfiguration.rootHelperBundleID)/Data"
-    }
-
-    static var helperWorkingDirectoryPath: String {
-        (helperBasePath as NSString).appendingPathComponent("Working")
-    }
-
-    static var helperTempDirectoryPath: String {
-        (helperBasePath as NSString).appendingPathComponent("Temp")
-    }
-
-    static var helperNativeCrashBasePath: String {
-        (helperBasePath as NSString).appendingPathComponent("NativeCrash")
-    }
-
-    static var extensionNativeCrashBasePath: String {
-        "/var/root/Library/Containers/\(AppConfiguration.systemExtensionBundleID)/Data/NativeCrash"
-    }
-
-    static var extensionOOMReportsPath: String {
-        (extensionWorkingDirectoryPath as NSString).appendingPathComponent("oom_reports")
+    private static var workingDirectoryPath: String {
+        "/var/root/Library/Containers/\(AppConfiguration.systemExtensionBundleID)/Data/Working"
     }
 
     static func getSize() -> Int64 {
-        let path = extensionWorkingDirectoryPath
+        let path = workingDirectoryPath
         guard FileManager.default.fileExists(atPath: path) else {
             return 0
         }
@@ -60,7 +28,7 @@ enum WorkingDirectoryManager {
     }
 
     static func clean() throws {
-        let path = extensionWorkingDirectoryPath
+        let path = workingDirectoryPath
         guard FileManager.default.fileExists(atPath: path) else {
             return
         }

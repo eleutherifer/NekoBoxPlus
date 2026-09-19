@@ -36,12 +36,7 @@
                 }
 
                 if updateManager.isDownloading {
-                    if updateManager.isInstalling {
-                        ProgressView()
-                            .progressViewStyle(.linear)
-                    } else {
-                        ProgressView(value: updateManager.downloadProgress)
-                    }
+                    ProgressView(value: updateManager.downloadProgress)
                 }
 
                 HStack(spacing: 12) {

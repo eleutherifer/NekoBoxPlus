@@ -22,12 +22,8 @@ import (
 )
 
 func NewInstanceURLTest(config, tag, link string, timeout int32, standard int32, attempts int32, pause int32, hardened bool, localTransport LocalDNSTransport) (latency int32, err error) {
-	return runWithPanicError("NewInstanceURLTest", func() (int32, error) {
-		return newInstanceURLTest(config, tag, link, timeout, standard, attempts, pause, hardened, localTransport)
-	})
-}
+	defer device.DeferPanicToError("NewInstanceURLTest", func(err_ error) { err = err_ })
 
-func newInstanceURLTest(config, tag, link string, timeout int32, standard int32, attempts int32, pause int32, hardened bool, localTransport LocalDNSTransport) (latency int32, err error) {
 	instance, err := newSingBoxInstance(config, localTransport, true)
 	if err != nil {
 		return -1, fmt.Errorf("create service: %w", err)
@@ -74,7 +70,10 @@ func (b *BoxInstance) urlTest(tag, link string, timeout int32, attempts int32, p
 	if err != nil {
 		return -1, err
 	}
-	return runURLTestAfterOutboundReady(b.ctx, b.Outbound(), detour, timeout, attempts, pause, func(ctx context.Context) (int32, error) {
+	return runURLTestAttempts(b.ctx, timeout, attempts, pause, func(ctx context.Context) (int32, error) {
+		if err = waitURLTestOutboundReady(ctx, b.Outbound(), detour); err != nil {
+			return -1, err
+		}
 		testDialer := N.Dialer(&fallbackURLTestDialer{
 			Dialer:         detour,
 			localTransport: b.localDNS,
@@ -98,9 +97,8 @@ func (b *BoxInstance) urlTest(tag, link string, timeout int32, attempts int32, p
 }
 
 func UrlTest(i *BoxInstance, link string, timeout int32, standard int32, attempts int32, pause int32, hardened bool) (latency int32, err error) {
-	return runWithPanicError("box.UrlTest", func() (int32, error) {
-		return urlTest(i, link, timeout, standard, attempts, pause, hardened, true)
-	})
+	defer device.DeferPanicToError("box.UrlTest", func(err_ error) { err = err_ })
+	return urlTest(i, link, timeout, standard, attempts, pause, hardened, true)
 }
 
 func urlTest(i *BoxInstance, link string, timeout int32, standard int32, attempts int32, pause int32, hardened bool, enforceInstanceMinTimeout bool) (latency int32, err error) {
@@ -116,16 +114,15 @@ func urlTest(i *BoxInstance, link string, timeout int32, standard int32, attempt
 	}
 
 	parentCtx := context.Background()
-	var (
-		outboundManager adapter.OutboundManager
-		detour          adapter.Outbound
-	)
 	if instance != nil {
 		parentCtx = instance.ctx
-		outboundManager = instance.Outbound()
-		detour = outboundManager.Default()
 	}
-	return runURLTestAfterOutboundReady(parentCtx, outboundManager, detour, timeout, attempts, pause, func(ctx context.Context) (int32, error) {
+	return runURLTestAttempts(parentCtx, timeout, attempts, pause, func(ctx context.Context) (int32, error) {
+		if instance != nil {
+			if err = waitURLTestOutboundReady(ctx, instance.Outbound(), instance.Outbound().Default()); err != nil {
+				return -1, err
+			}
+		}
 		connections := newURLTestConnectionSet()
 		result, err := runURLTestAsync(ctx, "HTTP URLTest", func() (int32, error) {
 			return runHTTPURLTest(ctx, instance, connections, link, time.Duration(timeout)*time.Millisecond, urlTestStandard(standard), hardened)
@@ -309,7 +306,10 @@ func runURLTestAsync[T any](ctx context.Context, name string, run func() (T, err
 	var zero T
 	resultChan := make(chan asyncURLTestResult[T], 1)
 	go func() {
-		value, runErr := runWithPanicError(name, run)
+		defer device.DeferPanicToError(name, func(panicErr error) {
+			resultChan <- asyncURLTestResult[T]{err: panicErr}
+		})
+		value, runErr := run()
 		resultChan <- asyncURLTestResult[T]{value: value, err: runErr}
 	}()
 
@@ -542,10 +542,13 @@ type urlTestDialResult struct {
 func runURLTestDialAsync(ctx context.Context, name string, dial func(context.Context) (net.Conn, error)) (net.Conn, error) {
 	resultChan := make(chan urlTestDialResult)
 	go func() {
-		conn, err := runWithPanicError(name, func() (net.Conn, error) {
-			return dial(ctx)
-		})
-		result := urlTestDialResult{conn: conn, err: err}
+		var result urlTestDialResult
+		func() {
+			defer device.DeferPanicToError(name, func(panicErr error) {
+				result.err = panicErr
+			})
+			result.conn, result.err = dial(ctx)
+		}()
 		select {
 		case resultChan <- result:
 		case <-ctx.Done():

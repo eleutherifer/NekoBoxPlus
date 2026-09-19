@@ -23,8 +23,6 @@
     <string name="action">Action</string>
     <string name="action_start">Start</string>
     <string name="action_deselect">Deselect</string>
-    <string name="action_reload">Reload</string>
-    <string name="action_restart">Restart</string>
     <string name="expand">Expand</string>
     <string name="collapse">Collapse</string>
     <string name="expand_all">Expand All</string>
@@ -84,6 +82,7 @@
     <string name="reset_order">Reset order</string>
 
     <!-- Connections -->
+    <string name="empty_connections">No connections</string>
     <string name="search_connections">Search connections…</string>
     <string name="close_connections_confirm">Close all connections?</string>
     <string name="connection_state_all">All</string>
@@ -261,8 +260,6 @@
     <string name="location_permission_title">Location permission</string>
     <string name="location_permission_description">Your profile contains &lt;strong&gt;&lt;tt&gt;wifi_ssid&lt;/tt&gt; or &lt;tt&gt;wifi_bssid&lt;/tt&gt; routing rules&lt;/strong&gt;. To make them work, sing-box uses the &lt;strong&gt;location&lt;/strong&gt; permission &lt;strong&gt;in the background&lt;/strong&gt; to get information about the connected Wi-Fi network. The information will be used &lt;strong&gt;for routing purposes only&lt;/strong&gt;.</string>
     <string name="location_permission_background_description">On Android 10 and up, &lt;strong&gt;background location&lt;/strong&gt; permission is required. Select &lt;strong&gt;Allow all the time&lt;/strong&gt; to grant the permission.</string>
-    <string name="local_network_permission_title">Local network permission</string>
-    <string name="local_network_permission_description">Android 17 and later versions require the local network permission to access your Wi-Fi or Ethernet network. Android requests it as nearby devices.</string>
     <string name="notification_permission_title">Notification permission</string>
     <string name="notification_permission_required_description">sing-box is unable to show real-time network speeds without the permission to send notifications. Please grant the permission or disable real-time network speeds notification before starting the service.</string>
     <string name="root_access_required">Root access required</string>
@@ -276,8 +273,6 @@
     <string name="update_source">Update Source</string>
     <string name="update_source_github">GitHub</string>
     <string name="update_source_fdroid">F-Droid</string>
-    <string name="github_token">GitHub Token</string>
-    <string name="github_token_description">Get higher GitHub API rate limits</string>
     <string name="update_track">Update Track</string>
     <string name="update_track_stable">Stable</string>
     <string name="update_track_beta">Beta</string>
@@ -428,197 +423,6 @@
     <string name="content_description_pause_logs">Pause logs</string>
     <string name="content_description_collapse_search">Collapse search</string>
     <string name="content_description_search_logs">Search logs</string>
-    <string name="content_description_more_options">More options</string>
-
-    <!-- Tools -->
-    <string name="title_tools">Tools</string>
-    <string name="title_network">Network</string>
-    <string name="network_quality">Network Quality</string>
-    <string name="network_quality_url">URL</string>
-    <string name="network_quality_serial">Serial</string>
-    <string name="network_quality_http3">HTTP/3</string>
-    <string name="network_quality_max_runtime">Max Runtime</string>
-    <string name="network_quality_max_runtime_30s">30s</string>
-    <string name="network_quality_max_runtime_60s">60s</string>
-    <string name="network_quality_start">Start Test</string>
-    <string name="network_quality_cancel">Cancel Test</string>
-    <string name="network_quality_idle_latency">Idle Latency</string>
-    <string name="network_quality_download">Download</string>
-    <string name="network_quality_upload">Upload</string>
-    <string name="network_quality_download_rpm">Download RPM</string>
-    <string name="network_quality_upload_rpm">Upload RPM</string>
-    <string name="network_quality_confidence_high">Confidence High</string>
-    <string name="network_quality_confidence_medium">Confidence Medium</string>
-    <string name="network_quality_confidence_low">Confidence Low</string>
-    <string name="network_quality_metered_title">Metered Connection</string>
-    <string name="network_quality_metered_message">You\'re on a metered connection. This test will use a significant amount of data.</string>
-    <string name="network_quality_metered_continue">Continue</string>
-    <string name="tool_configuration">Configuration</string>
-    <string name="tool_results">Results</string>
-    <string name="tool_outbound">Outbound</string>
-    <string name="tool_default_outbound">Default</string>
-
-    <!-- Tailscale -->
-    <string name="tailscale" translatable="false">Tailscale</string>
-    <string name="tailscale_with_tag" translatable="false">Tailscale: %s</string>
-    <string name="tailscale_endpoints">Endpoints</string>
-
-    <string name="tailscale_status">Status</string>
-    <string name="tailscale_state">State</string>
-    <string name="tailscale_network">Network</string>
-    <string name="tailscale_magic_dns" translatable="false">MagicDNS</string>
-    <string name="tailscale_hostname">Hostname</string>
-    <string name="tailscale_open_auth_url">Open Auth URL</string>
-    <string name="tailscale_open_auth_url_qr_code">Show Auth URL QR Code</string>
-    <string name="tailscale_this_device">This Device</string>
-    <string name="tailscale_logout">Log out</string>
-    <string name="tailscale_connected">Connected</string>
-    <string name="tailscale_not_connected">Not Connected</string>
-    <string name="tailscale_addresses">Tailscale Addresses</string>
-    <string name="tailscale_details">Details</string>
-    <string name="tailscale_key_expiry">Key Expiry</string>
-    <string name="tailscale_os" translatable="false">OS</string>
-    <string name="tailscale_exit_node">Exit Node</string>
-    <string name="tailscale_active">Active</string>
-    <string name="tailscale_ipv4" translatable="false">IPv4</string>
-    <string name="tailscale_ipv6" translatable="false">IPv6</string>
-    <string name="tailscale_ping">Ping</string>
-    <string name="tailscale_ping_start">Start</string>
-    <string name="tailscale_ping_stop">Stop</string>
-    <string name="tailscale_ping_direct">Direct connection</string>
-    <string name="tailscale_ping_derp">DERP-relayed connection</string>
-    <string name="tailscale_ping_peer_relay">Peer relay connection</string>
-    <string name="tailscale_ping_endpoint">Endpoint</string>
-    <string name="tailscale_ping_derp_region">DERP region</string>
-    <string name="tailscale_ping_peer_relay_address">Peer relay</string>
-    <string name="tailscale_ping_connecting">Connecting…</string>
-    <string name="tailscale_ping_no_data">No data</string>
-    <string name="tailscale_shared_in">Shared in</string>
-    <string name="tailscale_expired">Expired</string>
-    <string name="tailscale_expires_relative">Expires %1$s</string>
-    <string name="tailscale_key_expiry_disabled">Key expiry disabled</string>
-    <string name="tailscale_last_seen">Last Seen</string>
-    <string name="tailscale_ssh" translatable="false">SSH</string>
-    <string name="tailscale_available">Available</string>
-    <string name="tailscale_yes">Yes</string>
-
-    <!-- Tailscale SSH -->
-    <string name="tailscale_ssh_connect">Connect via SSH</string>
-    <string name="tailscale_ssh_options">SSH Options</string>
-    <string name="tailscale_ssh_username">Username</string>
-    <string name="tailscale_ssh_terminal_type">Terminal Type</string>
-    <string name="tailscale_ssh_remember_options">Remember SSH Options</string>
-    <string name="tailscale_ssh_quick_connect">Quick Connect</string>
-    <string name="tailscale_ssh_quick_connect_description">If enabled, you can quickly connect to this peer via the context menu (long press) on the Tailscale entry in Tools and on peer entries in the peer list.\n\nThis peer will also appear in the New Session menu when connected to other peers via SSH.</string>
-    <string name="tailscale_ssh_terminal_hint">You can customize the terminal appearance in Settings → Ghostty Configuration.</string>
-    <string name="tailscale_ssh_connect_button">Connect</string>
-    <string name="tailscale_ssh_connecting">Connecting…</string>
-    <string name="tailscale_ssh_no_sessions">No active sessions</string>
-    <string name="terminal_session_ended">Session ended</string>
-    <string name="terminal_press_any_key">press any key</string>
-    <string name="tailscale_ssh_new_session">New session</string>
-    <string name="tailscale_ssh_close_session">Close session</string>
-    <string name="terminal_notification_channel">Terminal notifications</string>
-
-    <!-- Terminal Configuration -->
-    <string name="tailscale_terminal_config">Ghostty Configuration</string>
-    <string name="tailscale_terminal_light_theme">Light Theme</string>
-    <string name="tailscale_terminal_dark_theme">Dark Theme</string>
-    <string name="tailscale_terminal_font_config">Font</string>
-    <string name="tailscale_terminal_font">Font Family</string>
-    <string name="tailscale_terminal_font_size">Font Size</string>
-    <string name="tailscale_terminal_font_system">System Fonts</string>
-    <string name="tailscale_terminal_font_imported">Imported Fonts</string>
-    <string name="tailscale_terminal_import_font">Import from File</string>
-    <string name="tailscale_terminal_manage_fonts">Manage Imported Fonts</string>
-    <string name="tailscale_terminal_manage_fonts_done">Done</string>
-    <string name="tailscale_terminal_search_themes">Search themes</string>
-    <string name="tailscale_terminal_light_config">Light Configuration</string>
-    <string name="tailscale_terminal_dark_config">Dark Configuration</string>
-    <string name="tailscale_terminal_theme">Theme</string>
-    <string name="tailscale_terminal_custom_config">Custom Configuration</string>
-    <string name="tailscale_terminal_edit_custom_config">Edit Custom Configuration</string>
-    <string name="tailscale_terminal_light_custom_config">Light Custom Configuration</string>
-    <string name="tailscale_terminal_dark_custom_config">Dark Custom Configuration</string>
-    <string name="tailscale_terminal_font_follow_theme">Follow Theme</string>
-    <string name="tailscale_terminal_import_config">Import from File</string>
-
-    <!-- Taildrop -->
-    <string name="taildrop" translatable="false">Taildrop</string>
-    <plurals name="taildrop_file_count">
-        <item quantity="one">%1$d file</item>
-        <item quantity="other">%1$d files</item>
-    </plurals>
-    <string name="taildrop_send">Send</string>
-    <string name="taildrop_receive">Receive</string>
-    <string name="taildrop_files">Files</string>
-    <string name="taildrop_to">to %1$s</string>
-    <string name="taildrop_from">from %1$s</string>
-    <string name="taildrop_save">Save</string>
-    <string name="taildrop_share">Share</string>
-    <string name="taildrop_delete">Delete</string>
-    <string name="taildrop_drop_zone">Drop files here to send, or tap to select</string>
-    <string name="taildrop_done">Done</string>
-    <string name="taildrop_no_targets">No devices can receive files</string>
-    <string name="taildrop_no_files_selected">No files selected</string>
-    <string name="taildrop_connecting">Connecting…</string>
-    <string name="taildrop_dismiss">Dismiss</string>
-    <string name="taildrop_open_app">Open sing-box</string>
-    <string name="taildrop_notification_title">Sending files</string>
-
-    <!-- STUN Test -->
-    <string name="stun_test">STUN Test</string>
-    <string name="stun_server">Server</string>
-    <string name="stun_start">Start Test</string>
-    <string name="stun_cancel">Cancel Test</string>
-    <string name="stun_external_address">External Address</string>
-    <string name="stun_latency">Latency</string>
-    <string name="stun_nat_mapping">NAT Mapping</string>
-    <string name="stun_nat_filtering">NAT Filtering</string>
-    <string name="stun_nat_type_detection">NAT Type Detection</string>
-    <string name="stun_nat_not_supported">Not supported by server</string>
-
-    <!-- Shared Report -->
-    <string name="report_empty">Empty</string>
-    <string name="report_section_reports">Reports</string>
-    <string name="report_section_files">Files</string>
-    <string name="report_delete_all">Delete All</string>
-    <string name="report_delete">Delete</string>
-    <string name="report_share">Share</string>
-    <string name="report_share_with_config">Share With Configuration</string>
-    <string name="report_with_config">With Configuration</string>
-    <string name="report_with_log">With Log</string>
-    <string name="report_share_privacy_warning">Logs and configuration files may contain private content and should not be made public.</string>
-    <string name="report_share_privacy_warning_config">Configuration files may contain private content and should not be made public.</string>
-    <string name="report_with_age_encryption">Encrypt with age for Project S</string>
-    <string name="report_age_encryption_description">[age](https://github.com/filosottile/age) is a modern and secure asymmetric encryption tool. When enabled, the zip file is encrypted with this project\'s public key so it can be posted publicly, e.g. in GitHub issues.</string>
-    <string name="report_metadata">Metadata</string>
-    <string name="report_configuration">Configuration</string>
-    <string name="report_origin_local">Local</string>
-    <string name="service_not_started">Service not started</string>
-    <string name="service_reload_required">Reload service to apply changes</string>
-    <string name="service_restart_required">Restart service to apply changes</string>
-
-    <!-- Crash Report -->
-    <string name="crash_report">Crash Report</string>
-    <string name="crash_report_go_log">Go Crash Log</string>
-    <string name="crash_report_jvm_log">JVM Crash Log</string>
-    <string name="crash_report_description">You will receive a report when a crash occurs.</string>
-
-    <!-- OOM Report -->
-    <string name="oom_report">OOM Report</string>
-    <string name="oom_report_description">When memory limit is enabled, you will receive a report if the service memory exceeds the limit. You can also manually trigger report collection.</string>
-    <string name="oom_report_fetch">Fetch Memory Report</string>
-    <string name="oom_report_enable_memory_limit">Enable Memory Limit</string>
-    <string name="oom_report_enable_memory_limit_description">Provide a soft memory limit for the service. The service will perform multiple processes to try to stay within this memory limit.</string>
-    <string name="oom_report_memory_limit">Memory Limit</string>
-    <string name="oom_report_kill_connections">Kill Connections</string>
-    <string name="oom_report_kill_connections_description">Kill all connections to free memory when the service memory exceeds the limit.</string>
-
-    <!-- Power Report -->
-    <string name="power_report">Power Report</string>
-    <string name="power_report_enable">Enable Power Report</string>
-    <string name="power_report_enable_description">A report is saved for each service run</string>
 
     <!-- Xposed Module -->
     <string name="xposed_description">Privileged Enhancement for sing-box</string>
@@ -656,87 +460,4 @@
     <string name="privilege_module_restart_notification_title">Reboot required</string>
     <string name="privilege_module_restart_notification_message">LSPosed module updated. Reboot to apply changes.</string>
     <string name="privilege_module_restart_channel">LSPosed Module</string>
-
-    <!-- Remote Control -->
-    <string name="remote_control">Remote Control</string>
-    <string name="remote_servers">Servers</string>
-    <string name="remote_no_servers">No servers</string>
-    <string name="remote_new_server">New Server</string>
-    <string name="remote_edit_server">Edit Server</string>
-    <string name="remote_local_device">Local Device</string>
-    <string name="remote_manage_servers">Manage Servers…</string>
-    <string name="remote_secret">Secret</string>
-    <string name="remote_optional">Optional</string>
-    <string name="remote_connecting">Connecting…</string>
-    <string name="remote_disconnect">Disconnect</string>
-    <string name="remote_invalid_url">Invalid server URL: %1$s, expected host:port, http://host:port or https://host:port</string>
-    <string name="remote_connect_failed">Failed to connect to remote server %1$s</string>
-    <string name="remote_disconnected_from">Disconnected from remote server %1$s</string>
-    <string name="remote_checking">Checking…</string>
-    <string name="remote_available">Available</string>
-    <string name="remote_unavailable">Unavailable</string>
-
-    <string name="title_services">Services</string>
-    <string name="title_usbip">USB/IP</string>
-    <string name="usbip_with_tag">USB/IP: %1$s</string>
-    <string name="usbip_no_server">No usbip-server found</string>
-    <string name="usbip_no_devices">Pick a USB device to share it through this usbip-server.</string>
-    <string name="usbip_no_usb_devices">No USB devices connected</string>
-    <string name="usbip_connect_device">Connect USB device</string>
-    <string name="usbip_detach">Detach</string>
-    <string name="usbip_state_attaching">Attaching…</string>
-    <string name="usbip_state_ready">Ready</string>
-    <string name="usbip_state_error">Error</string>
-    <string name="usbip_state_idle">Idle</string>
-    <string name="usbip_state_attached">Attached</string>
-    <string name="usbip_state_unavailable">Unavailable</string>
-    <string name="usbip_identity">Identity</string>
-    <string name="usbip_connection">Connection</string>
-    <string name="usbip_class_interfaces">Class &amp; Interfaces</string>
-    <string name="usbip_product">Product</string>
-    <string name="usbip_serial">Serial number</string>
-    <string name="usbip_version">Version</string>
-    <string name="usbip_bus_id">Bus ID</string>
-    <string name="usbip_backend">Backend</string>
-    <string name="usbip_speed">Speed</string>
-    <string name="usbip_bus_device">Bus / Device</string>
-    <string name="usbip_device_class">Device class</string>
-    <string name="usbip_configuration">Configuration</string>
-    <string name="usbip_interface">Interface %1$d</string>
-    <string name="usbip_notification_title">USB/IP sharing</string>
-    <plurals name="usbip_notification_text">
-        <item quantity="one">Sharing %1$d USB device</item>
-        <item quantity="other">Sharing %1$d USB devices</item>
-    </plurals>
-
-    <string name="openconnect" translatable="false">OpenConnect</string>
-    <string name="openconnect_with_tag" translatable="false">OpenConnect: %1$s</string>
-    <string name="openvpn" translatable="false">OpenVPN</string>
-    <string name="openvpn_with_tag" translatable="false">OpenVPN: %1$s</string>
-    <string name="endpoint_status">Status</string>
-    <string name="endpoint_state">State</string>
-    <string name="endpoint_authentication">Authentication</string>
-    <string name="endpoint_open_auth_url">Open Auth URL</string>
-    <string name="endpoint_open_auth_url_qr_code">Show Auth URL QR Code</string>
-    <string name="endpoint_server">Server</string>
-    <string name="endpoint_network">Network</string>
-    <string name="endpoint_cipher">Cipher</string>
-    <string name="endpoint_flavor">Flavor</string>
-    <string name="endpoint_transport">Transport</string>
-    <string name="endpoint_ipv4" translatable="false">IPv4</string>
-    <string name="endpoint_ipv6" translatable="false">IPv6</string>
-    <string name="endpoint_dns" translatable="false">DNS</string>
-    <string name="endpoint_mtu" translatable="false">MTU</string>
-    <string name="endpoint_connected">Connected</string>
-    <string name="endpoint_username">Username</string>
-    <string name="endpoint_password">Password</string>
-    <string name="endpoint_response">Response</string>
-    <string name="endpoint_submit">Submit</string>
-    <string name="endpoint_continue">Continue</string>
-    <string name="endpoint_verifying">Verifying</string>
-    <string name="endpoint_globalprotect_sso_unsupported_android">GlobalProtect SAML browser authentication is not supported on Android.</string>
-    <string name="endpoint_browser_cookie_missing">Browser authentication completed without the required VPN cookie.</string>
-    <string name="endpoint_browser_navigation_failed">Browser navigation failed: %1$s</string>
-    <string name="endpoint_browser_too_many_windows">The authentication page opened too many browser windows.</string>
-    <string name="endpoint_browser_profile_unavailable">Browser authentication is unavailable on this device.</string>
 </resources>

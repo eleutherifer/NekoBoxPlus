@@ -5,7 +5,7 @@ import NetworkExtension
 func runBlocking<T>(_ block: @escaping () async -> T) -> T {
     let semaphore = DispatchSemaphore(value: 0)
     let box = resultBox<T>()
-    Task.detached(priority: .userInitiated) {
+    Task.detached {
         let value = await block()
         box.result0 = value
         semaphore.signal()
@@ -17,7 +17,7 @@ func runBlocking<T>(_ block: @escaping () async -> T) -> T {
 func runBlocking<T>(_ tBlock: @escaping () async throws -> T) throws -> T {
     let semaphore = DispatchSemaphore(value: 0)
     let box = resultBox<T>()
-    Task.detached(priority: .userInitiated) {
+    Task.detached {
         do {
             let value = try await tBlock()
             box.result = .success(value)

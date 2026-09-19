@@ -46,7 +46,7 @@ class ServiceNotification(private val status: MutableLiveData<Status>, private v
 
     @OptIn(DelicateCoroutinesApi::class)
     private val commandClient =
-        CommandClient(GlobalScope, CommandClient.ConnectionType.Status, this, localOnly = true)
+        CommandClient(GlobalScope, CommandClient.ConnectionType.Status, this)
     private var receiverRegistered = false
 
     private val notificationBuilder by lazy {

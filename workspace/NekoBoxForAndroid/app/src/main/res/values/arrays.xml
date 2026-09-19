@@ -1635,8 +1635,4 @@
         <item>259200</item>
         <item>604800</item>
     </string-array>
-    <string-array name="subscription_xray_balancers_entries">
-        <item>@string/subscription_xray_balancers_convert</item>
-        <item>@string/subscription_xray_balancers_split</item>
-    </string-array>
 </resources>

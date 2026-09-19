@@ -54,9 +54,6 @@ internal data class GlobalSettingItem(
 internal fun globalSettingsFor(groupId: String): List<GlobalSettingItem> =
     GLOBAL_SETTINGS[groupId].orEmpty()
 
-internal fun maskedSecretSummary(value: String, notSet: String): String =
-    value.takeIf(String::isNotEmpty)?.let { "*".repeat(it.length) } ?: notSet
-
 @Composable
 internal fun GlobalSettingsGroupScreen(
     groupId: String,
@@ -131,7 +128,6 @@ internal fun GlobalSettingsGroupScreen(
                         item.key == "globalCustomConfig" && value.isNotBlank() ->
                             stringResource(R.string.lines, value.lineSequence().count())
                         item.fixedSummary != 0 -> stringResource(item.fixedSummary)
-                        item.key == "mixedPassword" -> maskedSecretSummary(value, notSet)
                         else -> value.ifBlank { notSet }
                     }
                     val title = stringResource(item.title)
@@ -278,7 +274,6 @@ private val GLOBAL_STRING_DEFAULTS = mapOf(
     "speedInterval" to "0",
     "profileTrafficUpdateInterval" to "0",
     "subscriptionTrafficUnit" to "0",
-    "subscriptionXrayBalancers" to "0",
     "serviceMode" to "vpn",
     "tunImplementation" to "0",
     "mtu" to "9000",
@@ -474,7 +469,6 @@ private val GLOBAL_SETTINGS: Map<String, List<GlobalSettingItem>> = mapOf(
         action("resetClashApiSecret", R.drawable.ic_settings_password, R.string.reset_clash_api_secret, R.string.reset_clash_api_secret_summary),
     ),
     "others" to listOf(
-        list("subscriptionXrayBalancers", R.drawable.ic_baseline_shuffle_24, R.string.subscription_xray_balancers, R.array.subscription_xray_balancers_entries, R.array.int_array_2),
         sw("hysteria2DisableChromeParrot", R.drawable.ic_baseline_visibility_off_24, R.string.hysteria2_disable_chrome_parrot, R.string.hysteria2_disable_chrome_parrot_summary),
         sw("globalAllowInsecure", R.drawable.ic_action_lock_open, R.string.global_allow_insecure),
         sw("allowInsecureOnRequest", R.drawable.ic_action_lock_open, R.string.allow_insecure_on_request_sum),

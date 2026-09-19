@@ -6,16 +6,13 @@ import androidx.compose.foundation.lazy.LazyListItemInfo
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
@@ -26,14 +23,10 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.LocalPinnableContainer
-import androidx.compose.ui.layout.PinnableContainer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-
 internal data class ReorderItemBounds(val key: Any, val top: Int, val size: Int)
 
 internal fun findReorderTarget(
@@ -59,22 +52,6 @@ internal fun findReorderTarget(
     }
 }
 
-internal fun calculateAutoScrollDelta(
-    draggedTop: Float,
-    draggedBottom: Float,
-    viewportStart: Int,
-    viewportEnd: Int,
-    maxStep: Float,
-): Float {
-    if (maxStep <= 0f) return 0f
-    val overflow = when {
-        draggedTop < viewportStart -> draggedTop - viewportStart
-        draggedBottom > viewportEnd -> draggedBottom - viewportEnd
-        else -> return 0f
-    }
-    return overflow.coerceIn(-maxStep, maxStep)
-}
-
 @Stable
 internal class ReorderableLazyListState(
     val listState: LazyListState,
@@ -86,11 +63,8 @@ internal class ReorderableLazyListState(
     private var dragStartOffset by mutableFloatStateOf(0f)
     private var dragAmount by mutableFloatStateOf(0f)
     private var lastKnownItemOffset by mutableFloatStateOf(0f)
-    private var draggedItemSize by mutableIntStateOf(0)
     private var lastTargetKey: Any? = null
-    private var lastMoveDirection = 0
-    private var pinnedHandle: PinnableContainer.PinnedHandle? = null
-    private var autoScrollJob: Job? = null
+    private var offsetAtLastMove: Int? = null
 
     val isDragging: Boolean
         get() = draggedKey != null
@@ -103,124 +77,68 @@ internal class ReorderableLazyListState(
         return dragStartOffset + dragAmount - currentOffset
     }
 
-    fun startDrag(key: Any, pinnableContainer: PinnableContainer?) {
+    fun startDrag(key: Any) {
         val item = itemInfo(key) ?: return
-        finishDrag()
         draggedKey = key
         dragStartOffset = item.offset.toFloat()
         lastKnownItemOffset = dragStartOffset
-        draggedItemSize = item.size
         dragAmount = 0f
         lastTargetKey = null
-        lastMoveDirection = 0
-        pinnedHandle = pinnableContainer?.pin()
+        offsetAtLastMove = null
     }
 
     fun dragBy(deltaY: Float) {
-        if (draggedKey == null) return
+        val key = draggedKey ?: return
         dragAmount += deltaY
-        updateDraggedItemInfo()
-        moveAcrossTarget(deltaY)
-        updateAutoScroll()
-    }
-
-    fun finishDrag() {
-        if (draggedKey == null) return
-        val handle = pinnedHandle
-        pinnedHandle = null
-        autoScrollJob?.cancel()
-        autoScrollJob = null
-        draggedKey = null
-        dragAmount = 0f
-        draggedItemSize = 0
-        lastTargetKey = null
-        lastMoveDirection = 0
-        handle?.release()
-        onMoveFinished()
-    }
-
-    fun dispose() = finishDrag()
-
-    private fun updateDraggedItemInfo() {
-        val key = draggedKey ?: return
-        itemInfo(key)?.let { item ->
-            lastKnownItemOffset = item.offset.toFloat()
-            draggedItemSize = item.size
-        }
-    }
-
-    private fun moveAcrossTarget(direction: Float) {
-        val key = draggedKey ?: return
-        if (direction == 0f || draggedItemSize <= 0) return
-        updateDraggedItemInfo()
-        val directionSign = if (direction > 0f) 1 else -1
-        if (lastMoveDirection != directionSign) {
+        val draggedItem = itemInfo(key) ?: return
+        if (offsetAtLastMove != null && draggedItem.offset != offsetAtLastMove) {
             lastTargetKey = null
-            lastMoveDirection = directionSign
+            offsetAtLastMove = null
         }
-        val translatedTop = dragStartOffset + dragAmount
-        val translatedCenter = translatedTop + draggedItemSize / 2f
+        lastKnownItemOffset = draggedItem.offset.toFloat()
+        val translatedTop = draggedItem.offset + translationY(key)
+        val translatedBottom = translatedTop + draggedItem.size
+        val translatedCenter = (translatedTop + translatedBottom) / 2f
 
         val targetKey = findReorderTarget(
             draggedKey = key,
-            draggedTop = lastKnownItemOffset.toInt(),
-            draggedSize = draggedItemSize,
+            draggedTop = draggedItem.offset,
+            draggedSize = draggedItem.size,
             translatedCenter = translatedCenter,
-            direction = direction,
+            direction = deltaY,
             items = listState.layoutInfo.visibleItemsInfo.map {
                 ReorderItemBounds(it.key, it.offset, it.size)
             },
         )
 
-        if (targetKey == null) {
-            lastTargetKey = null
-        } else if (targetKey != lastTargetKey) {
+        if (targetKey != null && targetKey != lastTargetKey) {
             lastTargetKey = targetKey
+            offsetAtLastMove = draggedItem.offset
             onMove(key, targetKey)
         }
+        autoScroll(translatedTop, translatedBottom)
+    }
+
+    fun finishDrag() {
+        if (draggedKey == null) return
+        draggedKey = null
+        dragAmount = 0f
+        lastTargetKey = null
+        offsetAtLastMove = null
+        onMoveFinished()
     }
 
     private fun itemInfo(key: Any): LazyListItemInfo? =
         listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == key }
 
-    private fun updateAutoScroll() {
+    private fun autoScroll(top: Float, bottom: Float) {
         val layout = listState.layoutInfo
-        val scrollDelta = calculateAutoScrollDelta(
-            draggedTop = dragStartOffset + dragAmount,
-            draggedBottom = dragStartOffset + dragAmount + draggedItemSize,
-            viewportStart = layout.viewportStartOffset,
-            viewportEnd = layout.viewportEndOffset,
-            maxStep = draggedItemSize / 3f,
-        )
-        if (scrollDelta == 0f) {
-            autoScrollJob?.cancel()
-            autoScrollJob = null
-            return
+        val overflow = when {
+            top < layout.viewportStartOffset -> top - layout.viewportStartOffset
+            bottom > layout.viewportEndOffset -> bottom - layout.viewportEndOffset
+            else -> 0f
         }
-        if (autoScrollJob?.isActive == true) return
-        val job = scope.launch {
-            while (draggedKey != null) {
-                val currentLayout = listState.layoutInfo
-                val currentDelta = calculateAutoScrollDelta(
-                    draggedTop = dragStartOffset + dragAmount,
-                    draggedBottom = dragStartOffset + dragAmount + draggedItemSize,
-                    viewportStart = currentLayout.viewportStartOffset,
-                    viewportEnd = currentLayout.viewportEndOffset,
-                    maxStep = draggedItemSize / 3f,
-                )
-                if (currentDelta == 0f) break
-                withFrameNanos { }
-                if (draggedKey == null) break
-                val consumed = listState.scrollBy(currentDelta)
-                if (consumed == 0f) break
-                lastKnownItemOffset -= consumed
-                moveAcrossTarget(consumed)
-            }
-        }
-        autoScrollJob = job
-        job.invokeOnCompletion {
-            if (autoScrollJob === job) autoScrollJob = null
-        }
+        if (overflow != 0f) scope.launch { listState.scrollBy(overflow) }
     }
 }
 
@@ -233,7 +151,7 @@ internal fun rememberReorderableLazyListState(
     val currentOnMove by rememberUpdatedState(onMove)
     val currentOnMoveFinished by rememberUpdatedState(onMoveFinished)
     val scope = androidx.compose.runtime.rememberCoroutineScope()
-    val state = remember(listState, scope) {
+    return remember(listState, scope) {
         ReorderableLazyListState(
             listState = listState,
             scope = scope,
@@ -241,28 +159,22 @@ internal fun rememberReorderableLazyListState(
             onMoveFinished = { currentOnMoveFinished() },
         )
     }
-    DisposableEffect(state) {
-        onDispose(state::dispose)
-    }
-    return state
 }
 
-@Composable
 internal fun Modifier.reorderableItem(
     state: ReorderableLazyListState,
     key: Any,
     enabled: Boolean = true,
 ): Modifier {
-    val pinnableContainer = LocalPinnableContainer.current
     val visualModifier = zIndex(if (state.isDragging(key)) 1f else 0f)
         .graphicsLayer {
             translationY = state.translationY(key)
             shadowElevation = if (state.isDragging(key)) 8.dp.toPx() else 0f
         }
     if (!enabled) return visualModifier
-    return visualModifier.pointerInput(key, pinnableContainer) {
+    return visualModifier.pointerInput(key) {
         detectDragGesturesAfterLongPress(
-            onDragStart = { state.startDrag(key, pinnableContainer) },
+            onDragStart = { state.startDrag(key) },
             onDragEnd = state::finishDrag,
             onDragCancel = state::finishDrag,
             onDrag = { change, amount ->

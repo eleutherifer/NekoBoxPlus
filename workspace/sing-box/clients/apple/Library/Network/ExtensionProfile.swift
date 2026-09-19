@@ -62,9 +62,6 @@ public class ExtensionProfile: ObservableObject {
                 self.connection = connection
                 self.status = connection.status
                 self.connectedDate = connection.connectedDate
-                if connection.status == .disconnected {
-                    Self.schedulePromoteOOMDraft()
-                }
                 #if os(iOS)
                     if #available(iOS 16.0, *) {
                         if connection.status == .connected || connection.status == .disconnected {
@@ -73,26 +70,6 @@ public class ExtensionProfile: ObservableObject {
                     }
                 #endif
             }
-        }
-    }
-
-    private static func schedulePromoteOOMDraft() {
-        Task.detached {
-            try? await Task.sleep(nanoseconds: 2 * NSEC_PER_SEC)
-            #if os(macOS)
-                if Variant.useSystemExtension {
-                    guard HelperServiceManager.rootHelperStatus == .enabled else {
-                        return
-                    }
-                    do {
-                        try RootHelperClient.shared.promoteOOMDraft()
-                    } catch {
-                        logger.warning("promote OOM draft: \(error.localizedDescription)")
-                    }
-                    return
-                }
-            #endif
-            LibboxPromoteOOMDraft()
         }
     }
 
@@ -199,9 +176,7 @@ public class ExtensionProfile: ObservableObject {
     }
 
     public func reloadService() async throws {
-        if isMock {
-            return
-        }
+        if isMock { return }
         let options = try await prepareStartOptions()
         let data = try ExtensionStartOptions.encode(options)
         guard let session = connection as? NETunnelProviderSession else {
@@ -229,7 +204,6 @@ public class ExtensionProfile: ObservableObject {
     private func prepareStartOptions() async throws -> [String: NSObject] {
         var options: [String: NSObject] = [
             "manualStart": NSNumber(value: true),
-            "locale": NSString(string: ApplicationLocale.preferredIdentifier),
         ]
 
         let profileID = await SharedPreferences.selectedProfileID.get()
@@ -242,12 +216,9 @@ public class ExtensionProfile: ObservableObject {
         let configContent = try await profile.readAsync()
         options["configContent"] = NSString(string: configContent)
 
-        #if os(macOS)
-            options["oomKillerEnabled"] = await NSNumber(value: SharedPreferences.oomKillerEnabled.get())
-            options["oomMemoryLimitMB"] = await NSNumber(value: SharedPreferences.oomMemoryLimitMB.get())
-            options["oomKillerKillConnections"] = await NSNumber(value: SharedPreferences.oomKillerKillConnections.get())
+        #if !os(macOS)
+            options["ignoreMemoryLimit"] = await NSNumber(value: SharedPreferences.ignoreMemoryLimit.get())
         #endif
-        options["powerReportEnabled"] = await NSNumber(value: SharedPreferences.powerReportEnabled.get())
         options["systemProxyEnabled"] = await NSNumber(value: SharedPreferences.systemProxyEnabled.get())
         options["excludeDefaultRoute"] = await NSNumber(value: SharedPreferences.excludeDefaultRoute.get())
         options["autoRouteUseSubRangesByDefault"] = await NSNumber(value: SharedPreferences.autoRouteUseSubRangesByDefault.get())
@@ -318,11 +289,7 @@ public class ExtensionProfile: ObservableObject {
         if managers.isEmpty {
             return nil
         }
-        let profile = ExtensionProfile(managers[0])
-        if profile.status == .disconnected {
-            schedulePromoteOOMDraft()
-        }
-        return profile
+        return ExtensionProfile(managers[0])
     }
 
     public static func install() async throws {

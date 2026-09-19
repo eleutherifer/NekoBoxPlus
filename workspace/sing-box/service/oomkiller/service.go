@@ -2,15 +2,22 @@ package oomkiller
 
 import (
 	"context"
+	"sync/atomic"
+	"time"
 
 	"github.com/sagernet/sing-box/adapter"
 	boxService "github.com/sagernet/sing-box/adapter/service"
 	boxConstant "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/service"
 )
+
+type OOMReporter interface {
+	WriteReport(memoryUsage uint64) error
+	WriteDraft(memoryUsage uint64) error
+	DiscardDraft() error
+}
 
 func RegisterService(registry *boxService.Registry) {
 	boxService.Register[option.OOMKillerServiceOptions](registry, boxConstant.TypeOOMKiller, NewService)
@@ -18,13 +25,16 @@ func RegisterService(registry *boxService.Registry) {
 
 type Service struct {
 	boxService.Adapter
-	ctx           context.Context
-	logger        log.ContextLogger
-	network       adapter.NetworkManager
-	connections   adapter.ConnectionManager
-	recorder      *Recorder
-	timerConfig   timerConfig
-	adaptiveTimer *adaptiveTimer
+	ctx            context.Context
+	logger         log.ContextLogger
+	network        adapter.NetworkManager
+	timerConfig    timerConfig
+	adaptiveTimer  *adaptiveTimer
+	lastReportTime atomic.Int64
+	//nolint:unused // touched only on darwin && cgo via writeOOMDraft/discardOOMDraft.
+	lastDraftTime atomic.Int64
+	//nolint:unused // touched only on darwin && cgo via writeOOMDraft/discardOOMDraft.
+	draftCancelled atomic.Bool
 }
 
 func NewService(ctx context.Context, logger log.ContextLogger, tag string, options option.OOMKillerServiceOptions) (adapter.Service, error) {
@@ -38,29 +48,27 @@ func NewService(ctx context.Context, logger log.ContextLogger, tag string, optio
 		ctx:         ctx,
 		logger:      logger,
 		network:     service.FromContext[adapter.NetworkManager](ctx),
-		connections: service.FromContext[adapter.ConnectionManager](ctx),
-		recorder:    service.FromContext[*Recorder](ctx),
 		timerConfig: config,
 	}, nil
 }
 
-func (s *Service) startTimer() error {
-	if !s.timerConfig.policyMode.hasTimerMode() {
-		return E.New("memory pressure monitoring is not available on this platform without memory_limit")
+func (s *Service) writeOOMReport(memoryUsage uint64) {
+	now := time.Now().Unix()
+	lastReport := s.lastReportTime.Load()
+	if now-lastReport < 3600 {
+		return
 	}
-	s.adaptiveTimer = newAdaptiveTimer(s.logger, s.network, s.connections, s.recorder, s.timerConfig)
-	if s.recorder != nil {
-		s.recorder.instanceStarted(s.timerConfig, s.adaptiveTimer.limitThresholds)
+	if !s.lastReportTime.CompareAndSwap(lastReport, now) {
+		return
 	}
-	s.adaptiveTimer.start()
-	return nil
-}
-
-func (s *Service) stopTimer() {
-	if s.adaptiveTimer != nil {
-		s.adaptiveTimer.stop()
+	reporter := service.FromContext[OOMReporter](s.ctx)
+	if reporter == nil {
+		return
 	}
-	if s.recorder != nil {
-		s.recorder.instanceStopped()
+	err := reporter.WriteReport(memoryUsage)
+	if err != nil {
+		s.logger.Warn("failed to write OOM report: ", err)
+	} else {
+		s.logger.Info("OOM report saved")
 	}
 }

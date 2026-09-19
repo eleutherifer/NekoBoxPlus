@@ -39,18 +39,16 @@ public struct ProfileCard: View {
         .disabled(viewModel.isUpdating)
         #if os(tvOS)
             .navigationDestination(isPresented: $viewModel.showNewProfile) {
-                NewProfileMenuView(onComplete: {
-                    viewModel.showNewProfile = false
-                })
-                .environmentObject(environments)
-                .onDisappear {
-                    environments.profileUpdate.send()
-                }
-                .toolbar {
-                    ToolbarItemGroup(placement: .topBarLeading) {
-                        BackButton()
+                NewProfileMenuView()
+                    .environmentObject(environments)
+                    .onDisappear {
+                        environments.profileUpdate.send()
                     }
-                }
+                    .toolbar {
+                        ToolbarItemGroup(placement: .topBarLeading) {
+                            BackButton()
+                        }
+                    }
             }
             .navigationDestination(isPresented: $viewModel.showProfilePicker) {
                 ProfilePickerSheet(
@@ -154,12 +152,8 @@ public struct ProfileCard: View {
             } label: {
                 Image(systemName: "plus")
                     .font(.system(size: 16))
-                    .frame(width: 44, height: 32)
-                    .contentShape(Rectangle())
             }
-            #if !os(tvOS)
             .buttonStyle(.plain)
-            #endif
             .actionButtonStyle()
         }
     }
@@ -212,12 +206,8 @@ public struct ProfileCard: View {
         } label: {
             Image(systemName: "pencil")
                 .font(.system(size: 16))
-                .frame(width: 44, height: 32)
-                .contentShape(Rectangle())
         }
-        #if !os(tvOS)
         .buttonStyle(.plain)
-        #endif
         .actionButtonStyle()
     }
 
@@ -237,14 +227,38 @@ public struct ProfileCard: View {
                         : .default,
                     value: viewModel.isUpdating
                 )
-                .frame(width: 44, height: 32)
-                .contentShape(Rectangle())
         }
-        #if !os(tvOS)
         .buttonStyle(.plain)
-        #endif
         .actionButtonStyle()
         .disabled(viewModel.isUpdating)
+    }
+
+    @ViewBuilder
+    private func qrCodeButton(for profile: ProfilePreview) -> some View {
+        #if os(iOS) || os(tvOS)
+            Button {
+                viewModel.showQRCode = true
+            } label: {
+                Image(systemName: "qrcode")
+                    .font(.system(size: 16))
+            }
+            .buttonStyle(.plain)
+            .actionButtonStyle()
+        #elseif os(macOS)
+            Button {
+                viewModel.showQRCode = true
+            } label: {
+                Image(systemName: "qrcode")
+                    .font(.system(size: 16))
+            }
+            .buttonStyle(.plain)
+            .actionButtonStyle()
+            .popover(isPresented: $viewModel.showQRCode, arrowEdge: .bottom) {
+                if let remoteURL = profile.remoteURL {
+                    QRCodeContentView(profileName: profile.name, remoteURL: remoteURL)
+                }
+            }
+        #endif
     }
 
     @ViewBuilder
@@ -268,6 +282,7 @@ public struct ProfileCard: View {
                 Image(systemName: "square.and.arrow.up")
                     .font(.system(size: 16))
             }
+            .buttonStyle(.plain)
             .actionButtonStyle()
         #else
             Menu {
@@ -346,7 +361,7 @@ public struct ProfileCard: View {
                         url = try await profile.origin.generateJSONShareFileAsync(name: "\(profile.name).json")
                     }
                     #if os(iOS)
-                        presentShareSheet(url)
+                        presentShareController(url)
                     #elseif os(macOS)
                         let anchorView = viewModel.shareButtonView ?? NSApp.keyWindow?.contentView ?? NSView()
                         NSSharingServicePicker(items: [url]).show(
@@ -385,6 +400,23 @@ public struct ProfileCard: View {
             }
         }
 
+        #if os(iOS)
+            private func presentShareController(_ item: URL) {
+                guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                      let rootViewController = windowScene.keyWindow?.rootViewController
+                else {
+                    return
+                }
+                var topViewController = rootViewController
+                while let presented = topViewController.presentedViewController {
+                    topViewController = presented
+                }
+                topViewController.present(
+                    UIActivityViewController(activityItems: [item], applicationActivities: nil),
+                    animated: true
+                )
+            }
+        #endif
     #endif
 
     private func prepareQRSShare(_ profile: ProfilePreview) {

@@ -109,28 +109,21 @@ public final class NewProfileViewModel: BaseViewModel {
             let profileConfigDirectory = FilePath.sharedDirectory.appendingPathComponent("configs", isDirectory: true)
             let profileConfig = profileConfigDirectory.appendingPathComponent("config_\(nextProfileID).json")
             try await BlockingIO.run {
-                let configContent: String
+                try FileManager.default.createDirectory(at: profileConfigDirectory, withIntermediateDirectories: true)
                 if fileImport {
                     guard let fileURL else {
                         throw NSError(domain: "NewProfileViewModel", code: 0, userInfo: [NSLocalizedDescriptionKey: String(localized: "Missing file")])
                     }
-                    configContent = try fileURL.withRequiredSecurityScopedAccess(
+                    try fileURL.withRequiredSecurityScopedAccess(
                         or: NSError(domain: "NewProfileViewModel", code: 0, userInfo: [NSLocalizedDescriptionKey: String(localized: "Missing access to selected file")])
                     ) {
-                        try String(contentsOf: fileURL)
+                        try String(contentsOf: fileURL).write(to: profileConfig, atomically: true, encoding: .utf8)
                     }
                 } else {
-                    configContent = "{}"
+                    try "{}".write(to: profileConfig, atomically: true, encoding: .utf8)
                 }
-                var error: NSError?
-                LibboxCheckConfig(configContent, &error)
-                if let error {
-                    throw error
-                }
-                try FileManager.default.createDirectory(at: profileConfigDirectory, withIntermediateDirectories: true)
-                try configContent.write(to: profileConfig, atomically: true, encoding: .utf8)
             }
-            savePath = "configs/config_\(nextProfileID).json"
+            savePath = profileConfig.relativePath
         } else if profileType == .icloud {
             let iCloudDirectory = FilePath.iCloudDirectory
             try await BlockingIO.run {
@@ -160,7 +153,7 @@ public final class NewProfileViewModel: BaseViewModel {
                 try FileManager.default.createDirectory(at: profileConfigDirectory, withIntermediateDirectories: true)
                 try remoteContent.write(to: profileConfig, atomically: true, encoding: .utf8)
             }
-            savePath = "configs/config_\(nextProfileID).json"
+            savePath = profileConfig.relativePath
             remoteURL = remotePath
             lastUpdated = .now
         }

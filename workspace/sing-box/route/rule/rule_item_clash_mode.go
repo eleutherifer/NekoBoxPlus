@@ -5,16 +5,15 @@ import (
 	"strings"
 
 	"github.com/sagernet/sing-box/adapter"
-	"github.com/sagernet/sing-box/experimental/clashmode"
 	"github.com/sagernet/sing/service"
 )
 
 var _ RuleItem = (*ClashModeItem)(nil)
 
 type ClashModeItem struct {
-	ctx       context.Context
-	clashMode *clashmode.Manager
-	mode      string
+	ctx         context.Context
+	clashServer adapter.ClashServer
+	mode        string
 }
 
 func NewClashModeItem(ctx context.Context, mode string) *ClashModeItem {
@@ -25,15 +24,15 @@ func NewClashModeItem(ctx context.Context, mode string) *ClashModeItem {
 }
 
 func (r *ClashModeItem) Start() error {
-	r.clashMode = service.PtrFromContext[clashmode.Manager](r.ctx)
+	r.clashServer = service.FromContext[adapter.ClashServer](r.ctx)
 	return nil
 }
 
 func (r *ClashModeItem) Match(metadata *adapter.InboundContext) bool {
-	if r.clashMode == nil {
+	if r.clashServer == nil {
 		return false
 	}
-	return strings.EqualFold(r.clashMode.Mode(), r.mode)
+	return strings.EqualFold(r.clashServer.Mode(), r.mode)
 }
 
 func (r *ClashModeItem) String() string {

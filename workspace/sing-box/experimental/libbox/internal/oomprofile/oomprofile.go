@@ -7,6 +7,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
@@ -51,27 +52,28 @@ type labelMap struct {
 	labelSet
 }
 
-func WriteFile(filePath string, name string) error {
+func WriteFile(destPath string, name string) (string, error) {
 	writer, ok := profileWriters[name]
 	if !ok {
-		return fmt.Errorf("unsupported profile %q", name)
+		return "", fmt.Errorf("unsupported profile %q", name)
 	}
+
+	filePath := filepath.Join(destPath, name+".pb")
 	file, err := os.Create(filePath)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer file.Close()
-	err = writer(file)
-	if err != nil {
+
+	if err := writer(file); err != nil {
 		_ = os.Remove(filePath)
-		return err
+		return "", err
 	}
-	err = file.Close()
-	if err != nil {
+	if err := file.Close(); err != nil {
 		_ = os.Remove(filePath)
-		return err
+		return "", err
 	}
-	return nil
+	return filePath, nil
 }
 
 var profileWriters = map[string]func(io.Writer) error{

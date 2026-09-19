@@ -42,10 +42,7 @@ func RegisterOutbound(registry *outbound.Registry) {
 	outbound.Register[JuicityOutboundOptions](registry, TypeJuicity, NewOutbound)
 }
 
-var (
-	_ adapter.Outbound                = (*Outbound)(nil)
-	_ adapter.InterfaceUpdateListener = (*Outbound)(nil)
-)
+var _ adapter.Outbound = (*Outbound)(nil)
 
 type Outbound struct {
 	outbound.Adapter
@@ -111,10 +108,6 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 
 func (o *Outbound) Close() error {
 	return o.client.CloseWithError(os.ErrClosed)
-}
-
-func (o *Outbound) InterfaceUpdated(context.Context) {
-	_ = o.client.CloseWithError(E.New("network changed"))
 }
 
 func (o *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {

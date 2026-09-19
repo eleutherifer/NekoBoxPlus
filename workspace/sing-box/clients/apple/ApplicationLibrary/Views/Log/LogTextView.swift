@@ -23,152 +23,106 @@ struct LogTextView: View {
     }
 }
 
-#if os(iOS) || os(macOS)
-    /// The logs array is a sliding window over a trimmed stream: entries are appended at
-    /// the tail and dropped from the head. Updates are applied as a prefix deletion plus
-    /// a tail append, so the text storage is never rebuilt while streaming.
-    private struct TextUpdate {
-        var replaceAll: Bool
-        var deletePrefixLength: Int
-        var insertSeparator: Bool
-        var appended: NSAttributedString
+@MainActor
+class LogCoordinator {
+    var lastLogsCount: Int = 0
+    var lastLog: LogEntry?
+    var lastSearchText: String = ""
+    var lastBackgroundColorHash: Int?
+    var buildVersion: Int = 0
+    var currentBuildTask: Task<Void, Never>?
+
+    deinit {
+        currentBuildTask?.cancel()
     }
 
-    @MainActor
-    class LogCoordinator {
-        // State of the content currently applied to the text storage. Only mutated
-        // when an update is actually applied, so cancelled builds cannot desync it.
-        fileprivate var appliedIDs: [UUID] = []
-        fileprivate var appliedLineLengths: [Int] = []
-        fileprivate var appliedSearchText = ""
-        fileprivate var appliedColorHash: Int?
-        private var buildVersion = 0
-        private var currentBuildTask: Task<Void, Never>?
+    func shouldUpdate(logs: [LogEntry], searchText: String, backgroundColorHash: Int) -> UpdateStrategy {
+        let currentCount = logs.count
+        let searchChanged = searchText != lastSearchText
+        let colorSchemeChanged = lastBackgroundColorHash != nil && lastBackgroundColorHash != backgroundColorHash
 
-        deinit {
-            currentBuildTask?.cancel()
+        lastBackgroundColorHash = backgroundColorHash
+
+        if colorSchemeChanged {
+            lastLogsCount = currentCount
+            lastLog = logs.last
+            lastSearchText = searchText
+            return .fullRebuild
         }
 
-        enum UpdateStrategy {
-            case noUpdate
-            case fullRebuild
-            case incremental(appendFrom: Int, dropFirst: Int)
+        if currentCount == lastLogsCount, currentCount > 0, !searchChanged {
+            if let lastLog = logs.last, let previousLastLog = self.lastLog {
+                if lastLog.id == previousLastLog.id {
+                    return .noUpdate
+                }
+            }
         }
 
-        fileprivate func strategy(logs: [LogEntry], searchText: String, backgroundColorHash: Int) -> UpdateStrategy {
-            if appliedColorHash != backgroundColorHash || searchText != appliedSearchText {
-                return .fullRebuild
-            }
-            if logs.isEmpty {
-                return appliedIDs.isEmpty ? .noUpdate : .fullRebuild
-            }
-            guard let lastAppliedID = appliedIDs.last else {
-                return .fullRebuild
-            }
-            guard let overlapIndex = logs.lastIndex(where: { $0.id == lastAppliedID }) else {
-                return .fullRebuild
-            }
-            let dropFirst = appliedIDs.count - (overlapIndex + 1)
-            guard dropFirst >= 0 else {
-                return .fullRebuild
-            }
-            if dropFirst == 0, overlapIndex == logs.count - 1 {
-                return .noUpdate
-            }
-            return .incremental(appendFrom: overlapIndex + 1, dropFirst: dropFirst)
+        let strategy: UpdateStrategy
+        if currentCount == 0 || searchChanged || lastLogsCount > currentCount {
+            strategy = .fullRebuild
+        } else if currentCount > lastLogsCount {
+            strategy = .incremental(from: lastLogsCount)
+        } else {
+            strategy = .fullRebuild
         }
 
-        fileprivate func scheduleUpdate(
+        lastLogsCount = currentCount
+        lastLog = logs.last
+        lastSearchText = searchText
+        return strategy
+    }
+
+    #if os(iOS) || os(macOS)
+        fileprivate func scheduleBuildTask(
             logs: [LogEntry],
-            strategy: UpdateStrategy,
             searchText: String,
-            backgroundColorHash: Int,
             monoFont: PlatformFont,
             defaultColor: PlatformColor,
             backgroundColor: PlatformColor,
-            applyUpdate: @escaping @MainActor (TextUpdate) -> Void
+            startIndex: Int?,
+            isViewValid: @escaping @MainActor () -> Bool,
+            applyUpdate: @escaping @MainActor (NSAttributedString, Bool) -> Void
         ) {
-            let startIndex: Int
-            let dropFirst: Int
-            let replaceAll: Bool
-            switch strategy {
-            case .noUpdate:
-                return
-            case .fullRebuild:
-                startIndex = 0
-                dropFirst = 0
-                replaceAll = true
-            case let .incremental(appendFrom, drop):
-                startIndex = appendFrom
-                dropFirst = drop
-                replaceAll = false
-            }
-
             currentBuildTask?.cancel()
             buildVersion += 1
             let version = buildVersion
-            let newIDs = logs.map(\.id)
 
             currentBuildTask = Task.detached(priority: .userInitiated) { [weak self] in
-                guard let built = try? await buildAttributedString(
+                guard let attributedString = try? await buildAttributedString(
                     logs: logs,
                     monoFont: monoFont,
                     defaultColor: defaultColor,
                     backgroundColor: backgroundColor,
                     searchText: searchText,
-                    startIndex: startIndex
+                    startIndex: startIndex ?? 0
                 ) else { return }
                 await MainActor.run {
-                    guard let self else { return }
+                    guard let self, isViewValid() else { return }
                     guard self.buildVersion == version else { return }
-                    let update: TextUpdate
-                    let newLineLengths: [Int]
-                    if replaceAll {
-                        update = TextUpdate(
-                            replaceAll: true,
-                            deletePrefixLength: 0,
-                            insertSeparator: false,
-                            appended: built.string
-                        )
-                        newLineLengths = built.lineLengths
-                    } else {
-                        var deleteLength = 0
-                        if dropFirst > 0 {
-                            deleteLength = self.appliedLineLengths.prefix(dropFirst).reduce(0, +) + dropFirst
-                        }
-                        update = TextUpdate(
-                            replaceAll: false,
-                            deletePrefixLength: deleteLength,
-                            insertSeparator: built.string.length > 0,
-                            appended: built.string
-                        )
-                        newLineLengths = Array(self.appliedLineLengths.dropFirst(dropFirst)) + built.lineLengths
-                    }
-                    applyUpdate(update)
-                    self.appliedIDs = newIDs
-                    self.appliedLineLengths = newLineLengths
-                    self.appliedSearchText = searchText
-                    self.appliedColorHash = backgroundColorHash
+                    applyUpdate(attributedString, startIndex != nil)
                     self.currentBuildTask = nil
                 }
             }
         }
-    }
+    #endif
 
-    private func buildAttributedString(
-        logs: [LogEntry],
-        monoFont: PlatformFont,
-        defaultColor: PlatformColor,
-        backgroundColor: PlatformColor,
-        searchText: String,
-        startIndex: Int
-    ) async throws -> (string: NSAttributedString, lineLengths: [Int]) {
+    enum UpdateStrategy {
+        case noUpdate
+        case fullRebuild
+        case incremental(from: Int)
+    }
+}
+
+#if os(iOS) || os(macOS)
+    private func buildAttributedString(logs: [LogEntry], monoFont: PlatformFont, defaultColor: PlatformColor, backgroundColor: PlatformColor, searchText: String, startIndex: Int = 0) async throws -> NSAttributedString {
         let result = NSMutableAttributedString()
-        var lineLengths: [Int] = []
         let highlightColor: PlatformColor = .systemYellow
         let cancellationCheckInterval = 50
 
-        for (offset, log) in logs[startIndex...].enumerated() {
+        let logsToProcess = logs[startIndex...]
+
+        for (offset, log) in logsToProcess.enumerated() {
             if offset % cancellationCheckInterval == 0 {
                 try Task.checkCancellation()
             }
@@ -196,30 +150,17 @@ struct LogTextView: View {
                 }
             }
 
-            lineLengths.append(nsAttributedString.length)
-            if offset > 0 {
+            result.append(nsAttributedString)
+
+            let isLastLog = (startIndex + offset) == (logs.count - 1)
+            if !isLastLog {
                 result.append(NSAttributedString(string: "\n", attributes: [
                     .foregroundColor: defaultColor,
                     .font: monoFont,
                 ]))
             }
-            result.append(nsAttributedString)
         }
-        return (result, lineLengths)
-    }
-
-    private extension NSTextStorage {
-        func apply(_ update: TextUpdate, separatorAttributes: [NSAttributedString.Key: Any]) {
-            if update.deletePrefixLength > 0 {
-                deleteCharacters(in: NSRange(location: 0, length: min(update.deletePrefixLength, length)))
-            }
-            if update.appended.length > 0 {
-                if update.insertSeparator, length > 0 {
-                    append(NSAttributedString(string: "\n", attributes: separatorAttributes))
-                }
-                append(update.appended)
-            }
-        }
+        return result
     }
 
     #if os(iOS)
@@ -258,50 +199,50 @@ struct LogTextView: View {
             let backgroundColor = UIColor.systemBackground.resolvedColor(with: textView.traitCollection)
             let backgroundColorHash = backgroundColor.hash
 
-            let strategy = context.coordinator.strategy(logs: logs, searchText: searchText, backgroundColorHash: backgroundColorHash)
+            let updateStrategy = context.coordinator.shouldUpdate(logs: logs, searchText: searchText, backgroundColorHash: backgroundColorHash)
+
+            let startIndex: Int?
+            switch updateStrategy {
+            case .noUpdate:
+                return
+            case .fullRebuild:
+                startIndex = nil
+            case let .incremental(from: index):
+                startIndex = index
+            }
+
             let shouldAutoScroll = shouldAutoScroll
-            context.coordinator.scheduleUpdate(
+            context.coordinator.scheduleBuildTask(
                 logs: logs,
-                strategy: strategy,
                 searchText: searchText,
-                backgroundColorHash: backgroundColorHash,
                 monoFont: Self.monoFont,
                 defaultColor: Self.defaultColor,
                 backgroundColor: backgroundColor,
-                applyUpdate: { [weak textView] update in
+                startIndex: startIndex,
+                isViewValid: { [weak textView] in textView?.window != nil },
+                applyUpdate: { [weak textView] attributedString, isIncremental in
                     guard let textView else { return }
-                    let wasPinnedToBottom = Self.isPinnedToBottom(textView)
-                    if update.replaceAll {
-                        textView.attributedText = update.appended
+                    if isIncremental {
+                        let textStorage = textView.textStorage
+                        if textStorage.length > 0 {
+                            textStorage.append(NSAttributedString(string: "\n", attributes: [
+                                .foregroundColor: Self.defaultColor,
+                                .font: Self.monoFont,
+                            ]))
+                        }
+                        textStorage.append(attributedString)
                     } else {
-                        textView.textStorage.apply(update, separatorAttributes: [
-                            .foregroundColor: Self.defaultColor,
-                            .font: Self.monoFont,
-                        ])
+                        textView.attributedText = attributedString
                     }
-                    if shouldAutoScroll, update.replaceAll || wasPinnedToBottom {
+                    if shouldAutoScroll {
                         Self.scrollToBottom(textView)
                     }
                 }
             )
         }
 
-        private static func isPinnedToBottom(_ textView: UITextView) -> Bool {
-            if textView.isTracking || textView.isDragging || textView.isDecelerating {
-                return false
-            }
-            let bottom = textView.contentSize.height - textView.bounds.height + textView.adjustedContentInset.bottom
-            return bottom <= 0 || textView.contentOffset.y >= bottom - 44
-        }
-
-        /// Must not touch `layoutManager` here: accessing it opts the view out of
-        /// TextKit 2, and TextKit 1 invalidates layout for the entire document on
-        /// every head trim. TextKit 2 only lays out the visible viewport, so both
-        /// appends and trims stay O(visible) regardless of log size.
         private static func scrollToBottom(_ textView: UITextView) {
-            if #available(iOS 16.0, *), let textLayoutManager = textView.textLayoutManager {
-                textLayoutManager.ensureLayout(for: NSTextRange(location: textLayoutManager.documentRange.endLocation))
-            }
+            textView.layoutManager.ensureLayout(for: textView.textContainer)
             textView.layoutIfNeeded()
             let bottom = textView.contentSize.height - textView.bounds.height + textView.adjustedContentInset.bottom
             if bottom > 0 {
@@ -331,9 +272,7 @@ struct LogTextView: View {
             scrollView.hasHorizontalScroller = false
             scrollView.autohidesScrollers = true
 
-            // TextKit 2: viewport-based layout keeps head trims and appends
-            // O(visible) instead of re-laying-out the whole document.
-            let textView = NSTextView(usingTextLayoutManager: true)
+            let textView = NSTextView()
             textView.isEditable = false
             textView.isSelectable = true
             textView.drawsBackground = false
@@ -359,44 +298,48 @@ struct LogTextView: View {
             let backgroundColor = NSColor.textBackgroundColor
             let backgroundColorHash = backgroundColor.hash
 
-            let strategy = context.coordinator.strategy(logs: logs, searchText: searchText, backgroundColorHash: backgroundColorHash)
+            let updateStrategy = context.coordinator.shouldUpdate(logs: logs, searchText: searchText, backgroundColorHash: backgroundColorHash)
+
+            let startIndex: Int?
+            switch updateStrategy {
+            case .noUpdate:
+                return
+            case .fullRebuild:
+                startIndex = nil
+            case let .incremental(from: index):
+                startIndex = index
+            }
+
             let shouldAutoScroll = shouldAutoScroll
-            context.coordinator.scheduleUpdate(
+            context.coordinator.scheduleBuildTask(
                 logs: logs,
-                strategy: strategy,
                 searchText: searchText,
-                backgroundColorHash: backgroundColorHash,
                 monoFont: Self.monoFont,
                 defaultColor: Self.defaultColor,
                 backgroundColor: backgroundColor,
-                applyUpdate: { [weak textView, weak textStorage] update in
+                startIndex: startIndex,
+                isViewValid: { [weak textView] in textView?.window != nil },
+                applyUpdate: { [weak textView, weak textStorage] attributedString, isIncremental in
                     guard let textView, let textStorage else { return }
-                    let wasPinnedToBottom = Self.isPinnedToBottom(textView)
-                    if update.replaceAll {
-                        textStorage.setAttributedString(update.appended)
-                    } else {
-                        textStorage.apply(update, separatorAttributes: [
-                            .foregroundColor: Self.defaultColor,
-                            .font: Self.monoFont,
-                        ])
-                    }
-                    if shouldAutoScroll, update.replaceAll || wasPinnedToBottom {
-                        // `layoutManager` must stay untouched (it would force a fallback
-                        // to TextKit 1); laying out just the document end is enough for
-                        // an accurate scroll target.
-                        if let textLayoutManager = textView.textLayoutManager {
-                            textLayoutManager.ensureLayout(for: NSTextRange(location: textLayoutManager.documentRange.endLocation))
+                    if isIncremental {
+                        if textStorage.length > 0 {
+                            textStorage.append(NSAttributedString(string: "\n", attributes: [
+                                .foregroundColor: Self.defaultColor,
+                                .font: Self.monoFont,
+                            ]))
                         }
+                        textStorage.append(attributedString)
+                    } else {
+                        textStorage.setAttributedString(attributedString)
+                    }
+                    if let textContainer = textView.textContainer {
+                        textView.layoutManager?.ensureLayout(for: textContainer)
+                    }
+                    if shouldAutoScroll {
                         textView.scrollToEndOfDocument(nil)
                     }
                 }
             )
-        }
-
-        private static func isPinnedToBottom(_ textView: NSTextView) -> Bool {
-            guard let scrollView = textView.enclosingScrollView else { return true }
-            let visibleRect = scrollView.contentView.bounds
-            return visibleRect.maxY >= textView.frame.height - 44
         }
 
         func makeCoordinator() -> LogCoordinator {

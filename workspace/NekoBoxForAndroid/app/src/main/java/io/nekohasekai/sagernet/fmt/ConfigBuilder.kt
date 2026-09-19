@@ -16,6 +16,10 @@ import io.nekohasekai.sagernet.fmt.hysteria.HysteriaBean
 import io.nekohasekai.sagernet.fmt.hysteria.buildSingBoxOutboundHysteriaBean
 import io.nekohasekai.sagernet.fmt.internal.ChainBean
 import io.nekohasekai.sagernet.fmt.internal.ProxySetBean
+import io.nekohasekai.sagernet.fmt.internal.buildSingBoxOutboundProxySetBean
+import io.nekohasekai.sagernet.fmt.internal.decodeEmbeddedProfiles
+import io.nekohasekai.sagernet.fmt.internal.filterInsecureProfiles
+import io.nekohasekai.sagernet.fmt.internal.hasEmbeddedProfiles
 import io.nekohasekai.sagernet.fmt.juicity.JuicityBean
 import io.nekohasekai.sagernet.fmt.juicity.buildSingBoxOutboundJuicityBean
 import io.nekohasekai.sagernet.fmt.masque.MasqueBean
@@ -516,15 +520,12 @@ fun buildConfig(
                 applyGroupForceUTLS: Boolean,
                 includeGroupProxyChain: Boolean,
             ): String {
-                val resolvedHops = profileResolver.resolveGraph(entity, includeGroupProxyChain)
-                val graph = if (resolvedHops.any { it.profile.requireBean() is ProxySetBean }) {
-                    planProfileOutbounds(resolvedHops, tagPlanner)
-                } else {
-                    null
-                }
-                val profileList = graph?.outbounds?.map { it.profile }
-                    ?: resolvedHops.map { it.profile }
-                val chunkStart = outbounds!!.size
+                val profileList =
+                    if (includeGroupProxyChain) {
+                        profileResolver.resolve(entity)
+                    } else {
+                        profileResolver.run { entity.resolveInternal() }
+                    }
                 val chainTrafficSet =
                     HashSet<ProxyEntity>().apply {
                         if (entity.type == ProxyEntity.TYPE_CHAIN || entity.type == ProxyEntity.TYPE_PROXY_SET) {
@@ -541,15 +542,34 @@ fun buildConfig(
                 var pastEntity: ProxyEntity? = null
                 val externalChainMap = LinkedHashMap<Int, ProxyEntity>()
                 externalIndexMap.add(IndexEntity(externalChainMap))
+                val chainOutbounds = ArrayList<SingBoxOption>()
                 val outboundsByTag = HashMap<String, SingBoxOption>()
-                val mappingInboundTags = HashMap<String, String>()
+                val mappingInboundTags = HashMap<Long, String>()
 
                 // chainTagOut: v2ray outbound tag for this chain
                 var chainTagOut = ""
                 val chainTag = "c-$chainId"
                 var muxApplied = false
+                var pastChainEntity: ProxyEntity? = null
 
                 val defaultServerDomainStrategy = serverDnsStrategy.orEmpty()
+                val isProxySet = entity.type == ProxyEntity.TYPE_PROXY_SET
+
+                fun ProxyEntity.resolveProxySetMembers(): List<ProxyEntity> {
+                    if (type != ProxyEntity.TYPE_PROXY_SET) return emptyList()
+                    val chain = profileResolver.run { this@resolveProxySetMembers.resolveInternal() }
+                    return if (chain.isEmpty()) emptyList() else chain.dropLast(1)
+                }
+
+                val reservedTags = HashMap<Long, String>()
+
+                fun reserveTag(proxyEntity: ProxyEntity): String {
+                    reservedTags[proxyEntity.id]?.let { return it }
+                    val tag = tagPlanner.readable(proxyEntity.displayName())
+                    reservedTags[proxyEntity.id] = tag
+                    return tag
+                }
+
                 fun SingBoxOption.setDetour(tag: String) {
                     // A profile-local ByeDPI outbound is already the fragmentation layer.
                     if (optionType() != "byedpi") {
@@ -600,27 +620,63 @@ fun buildConfig(
                     return detourTag
                 }
 
+                val proxySetMemberIds =
+                    LinkedHashSet<Long>().apply {
+                        for (proxyEntity in profileList) {
+                            if (proxyEntity.requireBean() is ProxySetBean) {
+                                for (member in proxyEntity.resolveProxySetMembers()) {
+                                    add(member.id)
+                                }
+                            }
+                        }
+                    }
+                val hasProxySet = proxySetMemberIds.isNotEmpty()
+
+                fun connectChainNode(
+                    previousEntity: ProxyEntity,
+                    currentTag: String,
+                ) {
+                    if (previousEntity.requireBean() is ProxySetBean) {
+                        for (member in previousEntity.resolveProxySetMembers()) {
+                            val memberTag = checkNotNull(reservedTags[member.id])
+                            outboundsByTag[memberTag]?.let {
+                                connectDetouredEndpointDomain(member, it, currentTag)
+                            }
+                        }
+                        return
+                    }
+                    if (previousEntity.needExternal()) {
+                        route.rules.add(
+                            Rule_DefaultOptions().apply {
+                                inbound = listOf(checkNotNull(mappingInboundTags[previousEntity.id]))
+                                outbound = currentTag
+                            },
+                        )
+                    } else {
+                        val previousTag = checkNotNull(reservedTags[previousEntity.id])
+                        outboundsByTag[previousTag]?.let {
+                            connectDetouredEndpointDomain(previousEntity, it, currentTag)
+                        }
+                    }
+                }
+
                 profileList.forEachIndexed { index, proxyEntity ->
                     val bean = proxyEntity.requireBean()
                     var currentIsEndpoint = false
-                    val planned = graph?.outbounds?.get(index)
-                    val isTerminal = if (planned != null) {
-                        bean !is ProxySetBean && planned.detour == null
-                    } else {
-                        index == profileList.lastIndex
-                    }
+                    val isProxySetMember = proxySetMemberIds.contains(proxyEntity.id) && bean !is ProxySetBean
+                    val isChainNode = !isProxySetMember
 
                     // tagOut: v2ray outbound tag for a profile
                     // profile2 (in) (global)   tag g-(id)
                     // profile1                 tag (chainTag)-(id)
                     // profile0 (out)           tag (chainTag)-(id) / single: "proxy"
-                    var tagOut = planned?.tag ?: "$chainTag-${proxyEntity.id}"
+                    var tagOut = if (hasProxySet) reserveTag(proxyEntity) else "$chainTag-${proxyEntity.id}"
 
                     // needGlobal: can only contain one?
                     var needGlobal = false
 
                     // first profile set as global
-                    if (graph == null && index == profileList.lastIndex) {
+                    if (!hasProxySet && index == profileList.lastIndex) {
                         needGlobal = true
                         tagOut = "g-" + proxyEntity.id
                         bypassDNSBeans += proxyEntity.requireBean()
@@ -665,7 +721,7 @@ fun buildConfig(
                         }
                     }
 
-                    if (graph == null && index == 0) {
+                    if (!hasProxySet && index == 0) {
                         tagOut = tagPlanner.readable(bean.displayName())
                     }
 
@@ -679,21 +735,33 @@ fun buildConfig(
                             null
                         }
 
-                    // Graph edges are linked after every member and plugin mapping exists.
-                    if (graph == null) {
-                        if (index > 0) {
-                            if (pastEntity!!.needExternal()) {
-                                route.rules.add(
-                                    Rule_DefaultOptions().apply {
-                                        inbound = listOf(pastInboundTag)
-                                        outbound = tagOut
-                                    },
-                                )
-                            } else {
-                                connectDetouredEndpointDomain(pastEntity, pastOutbound, tagOut)
+                    // chain rules
+                    if (!isProxySet) {
+                        if (hasProxySet) {
+                            if (isChainNode) {
+                                if (pastChainEntity != null) {
+                                    connectChainNode(pastChainEntity, tagOut)
+                                } else {
+                                    chainTagOut = tagOut
+                                }
                             }
                         } else {
-                            chainTagOut = tagOut
+                            if (index > 0) {
+                                // chain route/proxy rules
+                                if (pastEntity!!.needExternal()) {
+                                    route.rules.add(
+                                        Rule_DefaultOptions().apply {
+                                            inbound = listOf(pastInboundTag)
+                                            outbound = tagOut
+                                        },
+                                    )
+                                } else {
+                                    connectDetouredEndpointDomain(pastEntity, pastOutbound, tagOut)
+                                }
+                            } else {
+                                // index == 0 means last profile in chain / not chain
+                                chainTagOut = tagOut
+                            }
                         }
                     }
 
@@ -909,7 +977,16 @@ fun buildConfig(
                                     buildSingBoxOutboundSnellBean(bean)
                                 }
 
-                                is ProxySetBean -> checkNotNull(planned).buildProxySet()
+                                is ProxySetBean -> {
+                                    val memberTags = LinkedHashMap<Long, String>()
+                                    for (member in proxyEntity.resolveProxySetMembers()) {
+                                        val memberTag = reserveTag(member)
+                                        if (memberTag != tagOut) {
+                                            memberTags[member.id] = memberTag
+                                        }
+                                    }
+                                    buildSingBoxOutboundProxySetBean(bean, memberTags)
+                                }
 
                                 else -> {
                                     throw IllegalStateException("can't reach")
@@ -992,7 +1069,7 @@ fun buildConfig(
                     if (bean.canMapping() && proxyEntity.needExternal()) {
                         // With ss protect, don't use mapping
                         var needExternal = true
-                        if (isTerminal) {
+                        if (index == profileList.lastIndex) {
                             val pluginId =
                                 when (bean) {
                                     is HysteriaBean -> if (bean.protocolVersion == 1) "hysteria-plugin" else "hysteria2-plugin"
@@ -1014,20 +1091,16 @@ fun buildConfig(
                                     type = "direct"
                                     listen = LOCALHOST
                                     listen_port = mappingPort
-                                    tag = if (planned != null) {
-                                        tagPlanner.readable("$tagOut-mapping")
-                                    } else {
-                                        "$chainTag-mapping-${proxyEntity.id}"
-                                    }
+                                    tag = "$chainTag-mapping-${proxyEntity.id}"
 
                                     override_address = bean.serverAddress
                                     override_port = bean.serverPort
 
                                     pastInboundTag = tag
-                                    mappingInboundTags[tagOut] = tag
+                                    mappingInboundTags[proxyEntity.id] = tag
 
                                     // no chain rule and not outbound, so need to set to direct
-                                    if (isTerminal) {
+                                    if (index == profileList.lastIndex) {
                                         if (shouldApplyTrafficFragmentation(currentOutbound, bean)) {
                                             route.rules.add(
                                                 Rule_DefaultOptions().apply {
@@ -1054,40 +1127,51 @@ fun buildConfig(
                     if (!currentIsEndpoint) {
                         outbounds!!.add(currentOutbound)
                     }
+                    chainOutbounds.add(currentOutbound)
                     outboundsByTag[tagOut] = currentOutbound
                     pastOutbound = currentOutbound
                     pastEntity = proxyEntity
+                    if (!isProxySet && isChainNode) {
+                        pastChainEntity = proxyEntity
+                    }
                 }
 
-                if (graph != null) {
-                    chainTagOut = graph.entryTag
-                    for (planned in graph.outbounds) {
-                        val member = planned.profile
-                        if (member.requireBean() is ProxySetBean) continue
-                        val outbound = checkNotNull(outboundsByTag[planned.tag])
-                        val detour = planned.detour ?: trafficFragmentationTag?.takeIf {
-                            shouldApplyTrafficFragmentation(outbound, member.requireBean())
+                if (isProxySet) {
+                    val chainNodes =
+                        profileList.filter { proxyEntity ->
+                            val bean = proxyEntity.requireBean()
+                            !proxySetMemberIds.contains(proxyEntity.id) || bean is ProxySetBean
                         }
-                        if (detour != null) {
-                            if (member.needExternal()) {
-                                // A terminal plugin's direct/fragment rules were emitted above.
-                                if (planned.detour != null) {
-                                    route.rules.add(
-                                        Rule_DefaultOptions().apply {
-                                            inbound = listOf(checkNotNull(mappingInboundTags[planned.tag]))
-                                            this.outbound = detour
-                                        },
-                                    )
+                    if (chainNodes.isNotEmpty()) {
+                        chainTagOut = checkNotNull(reservedTags[chainNodes.first().id])
+                        for (nodeIndex in 1 until chainNodes.size) {
+                            val currentTag = checkNotNull(reservedTags[chainNodes[nodeIndex].id])
+                            connectChainNode(chainNodes[nodeIndex - 1], currentTag)
+                        }
+                        val lastChainNode = chainNodes.last()
+                        if (lastChainNode.requireBean() is ProxySetBean) {
+                            for (member in lastChainNode.resolveProxySetMembers()) {
+                                val memberTag = checkNotNull(reservedTags[member.id])
+                                val memberOutbound = outboundsByTag[memberTag] ?: continue
+                                if (shouldApplyTrafficFragmentation(memberOutbound, member.requireBean())) {
+                                    memberOutbound.setDetour(checkNotNull(trafficFragmentationTag))
                                 }
-                            } else {
-                                connectDetouredEndpointDomain(member, outbound, detour)
+                            }
+                        } else {
+                            val lastChainNodeTag = checkNotNull(reservedTags[lastChainNode.id])
+                            val lastOutbound = outboundsByTag[lastChainNodeTag]
+                            if (lastOutbound != null && shouldApplyTrafficFragmentation(lastOutbound, lastChainNode.requireBean())) {
+                                connectChainNode(lastChainNode, checkNotNull(trafficFragmentationTag))
                             }
                         }
-                    }
-                    // The default outbound must be the graph entry, even when it is a set.
-                    val entryIndex = outbounds!!.indexOfLast { it.optionTag() == graph.entryTag }
-                    if (entryIndex >= chunkStart) {
-                        outbounds!!.add(chunkStart, outbounds!!.removeAt(entryIndex))
+
+                        val proxySetTag = checkNotNull(reservedTags[entity.id])
+                        val chunkStart = (outbounds!!.size - profileList.size).coerceAtLeast(0)
+                        val proxySetIndex =
+                            outbounds!!.indexOfLast { it.optionTag() == proxySetTag }
+                        if (proxySetIndex in chunkStart..outbounds!!.lastIndex) {
+                            outbounds!!.add(chunkStart, outbounds!!.removeAt(proxySetIndex))
+                        }
                     }
                 }
 
@@ -1238,12 +1322,9 @@ fun buildConfig(
                                 domainList = rule.domains.listByLineOrComma()
                                 makeSingBoxRule(domainList, false)
                             }
-                            var ipList: List<String>? = null
                             if (rule.ip.isNotBlank()) {
-                                ipList = rule.ip.listByLineOrComma()
-                                makeSingBoxRule(ipList, true)
+                                makeSingBoxRule(rule.ip.listByLineOrComma(), true)
                             }
-                            val rulesetList = rule.ruleset.listByLineOrComma()
 
                             if (rule_set != null) generateRuleSet(rule_set, ruleSets)
 
@@ -1251,8 +1332,9 @@ fun buildConfig(
                             val rulesetTags = mutableListOf<Pair<String, Boolean>>()
 
                             // 处理远程ruleset
-                            if (rulesetList.isNotEmpty()) {
-                                rulesetList.forEach { origUrl ->
+                            if (rule.ruleset.isNotBlank()) {
+                                val rulesetUrls = rule.ruleset.listByLineOrComma()
+                                rulesetUrls.forEach { origUrl ->
                                     val (url, isIPRuleset) = processRulesetUrl(origUrl)
 
                                     val tag = generateRemoteRuleSet(url, ruleSets, DataStore.rulesUpdateInterval, mainProxyTag)
@@ -1316,7 +1398,7 @@ fun buildConfig(
                                 shouldCreateBaseRouteDnsRule(
                                     uidList = uidList,
                                     domainList = domainList,
-                                    hasIpCriteria = !ipList.isNullOrEmpty() || rulesetTags.any { it.second },
+                                    hasIpCriteria = rule.ip.isNotBlank() || rulesetTags.any { it.second },
                                     hasDomainRuleset = rulesetTags.any { !it.second },
                                     hasOtherRouteCriteria =
                                         rule.port.isNotBlank() ||
@@ -1330,7 +1412,6 @@ fun buildConfig(
                             userDNSRuleList +=
                                 buildRouteDnsRules(
                                     createDnsRule = rule.createDnsRule,
-                                    hasGeoIpOrRsipMatcher = hasGeoIpOrRsipMatcher(ipList, rulesetList),
                                     createBaseDnsRule = createBaseDnsRule,
                                     outbound = rule.outbound,
                                     uidList = uidList,

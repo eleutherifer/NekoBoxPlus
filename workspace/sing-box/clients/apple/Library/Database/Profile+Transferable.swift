@@ -152,7 +152,7 @@ public extension LibboxProfileContent {
         let profile = Profile(
             name: uniqueProfileName,
             type: ProfileType(rawValue: Int(type))!,
-            path: "configs/config_\(nextProfileID).json",
+            path: profileConfig.relativePath,
             remoteURL: remotePath,
             autoUpdate: autoUpdate,
             autoUpdateInterval: autoUpdateInterval,

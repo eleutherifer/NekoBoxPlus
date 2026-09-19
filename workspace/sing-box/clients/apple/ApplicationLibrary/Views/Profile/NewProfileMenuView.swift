@@ -11,19 +11,17 @@ public struct NewProfileMenuView: View {
     @State private var alert: AlertState?
     @State private var importRequest: NewProfileView.ImportRequest?
     @State private var localImportRequest: NewProfileView.LocalImportRequest?
-    @State private var manualCreateSucceeded = false
-    #if !os(tvOS)
+    #if os(tvOS)
+        @State private var importCompleted = false
+    #else
         @State private var showFileImporter = false
         @State private var showQRScanner = false
     #endif
     #if os(macOS)
         @State private var showNewProfile = false
     #endif
-    private var onComplete: (() -> Void)?
 
-    public init(onComplete: (() -> Void)? = nil) {
-        self.onComplete = onComplete
-    }
+    public init() {}
 
     public var body: some View {
         #if os(macOS)
@@ -68,14 +66,14 @@ public struct NewProfileMenuView: View {
             .sheet(isPresented: $showNewProfile) {
                 NewProfileView(onSuccess: { profile in
                     await SharedPreferences.selectedProfileID.set(profile.mustID)
-                    complete()
+                    dismiss()
                 })
                 .environmentObject(environments)
             }
             .sheet(item: $localImportRequest) { request in
                 NewProfileView(localImportRequest: request, onSuccess: { profile in
                     await SharedPreferences.selectedProfileID.set(profile.mustID)
-                    complete()
+                    dismiss()
                 })
                 .environmentObject(environments)
             }
@@ -88,7 +86,7 @@ public struct NewProfileMenuView: View {
             .sheet(item: $importRequest) { request in
                 NewProfileView(request, onSuccess: { profile in
                     await SharedPreferences.selectedProfileID.set(profile.mustID)
-                    complete()
+                    dismiss()
                 })
                 .environmentObject(environments)
             }
@@ -100,13 +98,13 @@ public struct NewProfileMenuView: View {
             if let request = importRequest {
                 NewProfileView(request, onSuccess: { profile in
                     await SharedPreferences.selectedProfileID.set(profile.mustID)
-                    complete()
+                    dismiss()
                 })
                 .environmentObject(environments)
             } else if let request = localImportRequest {
                 NewProfileView(localImportRequest: request, onSuccess: { profile in
                     await SharedPreferences.selectedProfileID.set(profile.mustID)
-                    complete()
+                    dismiss()
                 })
                 .environmentObject(environments)
             } else {
@@ -117,34 +115,29 @@ public struct NewProfileMenuView: View {
         #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
         #endif
-            .onChangeCompat(of: manualCreateSucceeded) { newValue in
-                if newValue {
-                    complete()
-                }
-            }
             .alert($alert)
-        #if !os(tvOS)
-            .fileImporter(
-                isPresented: $showFileImporter,
-                allowedContentTypes: [.profile, .json],
-                allowsMultipleSelection: false
-            ) { result in
-                handleFileImport(result)
-            }
-            .sheet(isPresented: $showQRScanner) {
-                QRScannerView { result in
-                    handleQRScanResult(result)
+        #if os(tvOS)
+            .onChange(of: importCompleted) { newValue in
+                if newValue {
+                    dismiss()
                 }
             }
+        #else
+            .fileImporter(
+                    isPresented: $showFileImporter,
+                    allowedContentTypes: [.profile, .json],
+                    allowsMultipleSelection: false
+                ) { result in
+                    handleFileImport(result)
+                }
         #endif
-    }
-
-    private func complete() {
-        if let onComplete {
-            onComplete()
-        } else {
-            dismiss()
+        #if !os(tvOS)
+        .sheet(isPresented: $showQRScanner) {
+            QRScannerView { result in
+                handleQRScanResult(result)
+            }
         }
+        #endif
     }
 
     private var menuContent: some View {
@@ -153,7 +146,7 @@ public struct NewProfileMenuView: View {
                 #if os(tvOS)
                     FormNavigationLink {
                         ImportProfileView(onComplete: {
-                            complete()
+                            importCompleted = true
                         })
                         .environmentObject(environments)
                     } label: {
@@ -185,11 +178,9 @@ public struct NewProfileMenuView: View {
                     }
                 #else
                     FormNavigationLink {
-                        // Capturing anything that holds the sheet's DismissAction here makes
-                        // SwiftUI on iOS 17 loop forever laying the pushed view out.
-                        NewProfileView(onSuccess: { [$manualCreateSucceeded] profile in
+                        NewProfileView(onSuccess: { profile in
                             await SharedPreferences.selectedProfileID.set(profile.mustID)
-                            $manualCreateSucceeded.wrappedValue = true
+                            dismiss()
                         })
                         .environmentObject(environments)
                     } label: {
@@ -230,7 +221,7 @@ public struct NewProfileMenuView: View {
                                 do {
                                     try await content.importProfile()
                                     environments.profileUpdate.send()
-                                    complete()
+                                    dismiss()
                                 } catch {
                                     alert = AlertState(action: "import profile", error: error)
                                 }
@@ -279,16 +270,9 @@ public struct NewProfileMenuView: View {
                     primaryButton: .default(String(localized: "Import")) {
                         Task {
                             do {
-                                try await BlockingIO.run {
-                                    var error: NSError?
-                                    LibboxCheckConfig(content.config, &error)
-                                    if let error {
-                                        throw error
-                                    }
-                                }
                                 try await content.importProfile()
                                 environments.profileUpdate.send()
-                                complete()
+                                dismiss()
                             } catch {
                                 alert = AlertState(action: "import profile", error: error)
                             }

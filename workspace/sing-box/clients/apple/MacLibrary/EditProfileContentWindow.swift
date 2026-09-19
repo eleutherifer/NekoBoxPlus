@@ -21,9 +21,7 @@ struct EditProfileContentWindow: View {
 
     var body: some View {
         Group {
-            if context == nil {
-                Color.clear
-            } else if viewModel.isLoading {
+            if viewModel.isLoading {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .task {
@@ -39,11 +37,6 @@ struct EditProfileContentWindow: View {
         .frame(minWidth: 600, minHeight: 400)
         .background(WindowAccessor { window in
             guard let window else { return }
-            window.isRestorable = false
-            if context == nil {
-                window.close()
-                return
-            }
             if windowState.window == nil {
                 windowState.window = window
                 windowState.onClose = { [weak viewModel] in

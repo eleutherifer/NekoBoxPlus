@@ -1,42 +1,13 @@
 package openvpn
 
 import (
-	"context"
-	"errors"
-	"fmt"
 	"slices"
 
 	"github.com/sagernet/sing-box/adapter"
 	ovpn "github.com/sagernet/sing-openvpn"
 )
 
-var (
-	_ adapter.OpenVPNEndpoint       = (*ClientEndpoint)(nil)
-	_ adapter.OutboundWithReadiness = (*ClientEndpoint)(nil)
-)
-
-func (c *ClientEndpoint) WaitReady(ctx context.Context) error {
-	for {
-		statusUpdated := c.StatusUpdated()
-		status := c.OpenVPNStatus()
-		switch status.State {
-		case adapter.OpenVPNStateConnected:
-			return nil
-		case adapter.OpenVPNStateAuthPending:
-			return errors.New("OpenVPN authentication is required")
-		case adapter.OpenVPNStateError:
-			if status.Error != "" {
-				return fmt.Errorf("OpenVPN client failed: %s", status.Error)
-			}
-			return errors.New("OpenVPN client failed")
-		}
-		select {
-		case <-ctx.Done():
-			return context.Cause(ctx)
-		case <-statusUpdated:
-		}
-	}
-}
+var _ adapter.OpenVPNEndpoint = (*ClientEndpoint)(nil)
 
 func (c *ClientEndpoint) OpenVPNStatus() adapter.OpenVPNStatus {
 	var status adapter.OpenVPNStatus

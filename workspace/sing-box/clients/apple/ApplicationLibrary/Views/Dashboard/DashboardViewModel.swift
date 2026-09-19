@@ -109,7 +109,7 @@ extension ExtensionProfile {
                     )
                 }
             #endif
-            return AlertState(action: "start service", error: nsError)
+            return AlertState(action: "fetch last disconnect error", error: nsError)
         }
     }
 

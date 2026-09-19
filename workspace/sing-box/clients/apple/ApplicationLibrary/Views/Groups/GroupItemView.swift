@@ -4,85 +4,61 @@ import SwiftUI
 @MainActor
 public struct GroupItemView: View {
     @EnvironmentObject private var listViewModel: GroupListViewModel
+    @Binding private var group: OutboundGroup
 
-    private let groupTag: String
-    private let selectable: Bool
-    private let isSelected: Bool
-    private let item: OutboundGroupItem
+    private let itemTag: String
+    private var item: OutboundGroupItem {
+        group.items.first { $0.tag == itemTag }!
+    }
 
-    public init(groupTag: String, selectable: Bool, isSelected: Bool, item: OutboundGroupItem) {
-        self.groupTag = groupTag
-        self.selectable = selectable
-        self.isSelected = isSelected
-        self.item = item
+    public init(_ group: Binding<OutboundGroup>, _ item: OutboundGroupItem) {
+        _group = group
+        itemTag = item.tag
     }
 
     public var body: some View {
         Button {
-            if selectable, !isSelected {
-                listViewModel.selectOutbound(groupTag: groupTag, outboundTag: item.tag)
+            if group.selectable, group.selected != item.tag {
+                listViewModel.selectOutbound(groupTag: group.tag, outboundTag: item.tag)
             }
         } label: {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text(item.tag)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.foreground)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                    #if os(tvOS)
-                        if isSelected {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(Color.accentColor)
-                        }
-                    #endif
-                }
-                HStack {
-                    Text(item.displayType)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+            HStack {
+                VStack {
+                    HStack {
+                        Text(item.tag)
+                            .font(.caption)
+                            .foregroundStyle(.foreground)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                        Spacer(minLength: 0)
+                    }
                     Spacer(minLength: 8)
+                    HStack {
+                        Text(item.displayType)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer(minLength: 0)
+                    }
+                }
+                Spacer(minLength: 0)
+                VStack {
+                    if group.selected == item.tag {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(Color.accentColor)
+                    }
+                    Spacer(minLength: 0)
                     if item.urlTestDelay > 0 {
                         Text(item.delayString)
-                            .font(.caption.monospacedDigit().weight(.semibold))
+                            .font(.caption)
                             .foregroundColor(item.delayColor)
                     }
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            #if !os(tvOS)
-                .padding(EdgeInsets(top: 10, leading: 12, bottom: 10, trailing: 12))
-                .contentShape(Rectangle())
-            #endif
         }
         #if !os(tvOS)
         .buttonStyle(.borderless)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(isSelected ? AnyShapeStyle(Color.accentColor.opacity(0.12)) : AnyShapeStyle(itemBackground))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(isSelected ? Color.accentColor : Color.urlTestNeutral, lineWidth: 1)
-        )
-        .animation(.easeOut(duration: 0.12), value: isSelected)
-        .contextMenu {
-            Button {
-                listViewModel.performURLTest(item.tag)
-            } label: {
-                Label("URLTest", systemImage: "bolt.fill")
-            }
-        }
-        #endif
-    }
-
-    private var itemBackground: Color {
-        #if os(iOS)
-            return Color(uiColor: .systemGroupedBackground)
-        #elseif os(macOS)
-            return Color(nsColor: .windowBackgroundColor)
-        #else
-            return Color.clear
+        .padding(16)
+        .cardStyle()
         #endif
     }
 }

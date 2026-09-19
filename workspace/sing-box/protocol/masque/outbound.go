@@ -173,11 +173,6 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 			fail(err)
 			return
 		}
-		addresses, err := parseMASQUEAddresses(appConfig)
-		if err != nil {
-			fail(err)
-			return
-		}
 		tunnel, err := masque.NewTunnel(ctx, logger, masque.TunnelOptions{
 			System: options.System,
 			Name:   options.Name,
@@ -188,8 +183,11 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 					},
 				}))
 			},
-			Dialer:                  outboundDialer,
-			Address:                 addresses,
+			Dialer: outboundDialer,
+			Address: []netip.Prefix{
+				netip.MustParsePrefix(appConfig.IPv4 + "/32"),
+				netip.MustParsePrefix(appConfig.IPv6 + "/128"),
+			},
 			AllowedAddress:          options.AllowedIPs,
 			H3Endpoint:              h3Endpoint,
 			H2Endpoint:              h2Endpoint,
@@ -217,25 +215,6 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		}
 	}
 	return outbound, nil
-}
-
-func parseMASQUEAddresses(config *option.MASQUEConfig) ([]netip.Prefix, error) {
-	ipv4, err := netip.ParseAddr(config.IPv4)
-	if err != nil {
-		return nil, E.New("invalid MASQUE IPv4 address: ", err)
-	} else if !ipv4.Is4() {
-		return nil, E.New("invalid MASQUE IPv4 address: ", ipv4)
-	}
-	ipv6, err := netip.ParseAddr(config.IPv6)
-	if err != nil {
-		return nil, E.New("invalid MASQUE IPv6 address: ", err)
-	} else if !ipv6.Is6() || ipv6.Is4In6() {
-		return nil, E.New("invalid MASQUE IPv6 address: ", ipv6)
-	}
-	return []netip.Prefix{
-		netip.PrefixFrom(ipv4, 32),
-		netip.PrefixFrom(ipv6, 128),
-	}, nil
 }
 
 func resolveTransportOptions(options option.MASQUEOutboundOptions) (string, uint32, time.Duration, error) {

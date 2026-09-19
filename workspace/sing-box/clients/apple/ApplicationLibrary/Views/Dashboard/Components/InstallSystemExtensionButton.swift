@@ -24,12 +24,10 @@
 
         private func installSystemExtension() async {
             do {
-                let result = try await SystemExtension.install()
-                await SharedPreferences.rootHelperPromptPending.set(true)
-                if result == .willCompleteAfterReboot {
-                    alert = AlertState(errorMessage: String(localized: "Need Reboot"))
-                } else {
-                    NotificationCenter.default.post(name: .systemExtensionInstalled, object: nil)
+                if let result = try await SystemExtension.install() {
+                    if result == .willCompleteAfterReboot {
+                        alert = AlertState(errorMessage: String(localized: "Need Reboot"))
+                    }
                 }
                 await callback()
             } catch {

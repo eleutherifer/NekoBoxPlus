@@ -129,7 +129,7 @@ func (t *DNSTransport) updateDNSServers(routeConfig *router.Config, dnsConfig *n
 			}
 			myResolvers = append(myResolvers, myResolver)
 		}
-		routes[mDNS.CanonicalName(domain.WithTrailingDot())] = myResolvers
+		routes[domain.WithTrailingDot()] = myResolvers
 	}
 	hosts := make(map[string][]netip.Addr)
 	for domain, addresses := range dnsConfig.Hosts {
@@ -275,23 +275,12 @@ func (t *DNSTransport) PreferredDomain(domain string) bool {
 	if t.acceptSearchDomain && len(searchDomains) > 0 && mDNS.CountLabel(domain) == 1 {
 		return true
 	}
-	canonicalDomain := mDNS.CanonicalName(domain)
 	for suffix := range routes {
-		if matchDomainSuffix(canonicalDomain, suffix) {
+		if mDNS.IsSubDomain(suffix, domain) {
 			return true
 		}
 	}
 	return false
-}
-
-func matchDomainSuffix(domain string, suffix string) bool {
-	if suffix == "." || suffix == "" {
-		return true
-	}
-	if !strings.HasSuffix(domain, suffix) {
-		return false
-	}
-	return len(domain) == len(suffix) || domain[len(domain)-len(suffix)-1] == '.'
 }
 
 func (t *DNSTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, error) {
@@ -386,9 +375,8 @@ func (t *DNSTransport) exchangeOnce(ctx context.Context, message *mDNS.Msg, allo
 		}
 		return
 	}
-	canonicalName := mDNS.CanonicalName(question.Name)
 	for domainSuffix, transports := range routes {
-		if matchDomainSuffix(canonicalName, domainSuffix) {
+		if mDNS.IsSubDomain(domainSuffix, question.Name) {
 			if len(transports) == 0 {
 				callback(&mDNS.Msg{
 					MsgHdr: mDNS.MsgHdr{

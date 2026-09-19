@@ -52,10 +52,9 @@ class HookPackageManagerGetInstalledPackages(private val classLoader: ClassLoade
     }
 
     private fun hookAppsFilter33Plus(hooked: MutableList<String>) {
-        val cls = XposedHelpers.findClassIfExists("com.android.server.pm.AppsFilterBase", classLoader)
-            ?: XposedHelpers.findClassIfExists("com.android.server.pm.AppsFilterImpl", classLoader)
+        val cls = XposedHelpers.findClassIfExists("com.android.server.pm.AppsFilterImpl", classLoader)
         if (cls == null) {
-            HookErrorStore.e(SOURCE, "Class com.android.server.pm.AppsFilterBase not found")
+            HookErrorStore.e(SOURCE, "Class com.android.server.pm.AppsFilterImpl not found")
             return
         }
         val unhooks = try {
@@ -75,11 +74,11 @@ class HookPackageManagerGetInstalledPackages(private val classLoader: ClassLoade
                 },
             )
         } catch (e: Throwable) {
-            HookErrorStore.w(SOURCE, "Skip ${cls.simpleName}.shouldFilterApplication: ${e.message}", e)
+            HookErrorStore.w(SOURCE, "Skip AppsFilterImpl.shouldFilterApplication: ${e.message}", e)
             emptySet<XC_MethodHook.Unhook>()
         }
         if (unhooks.isNotEmpty()) {
-            hooked.add("${cls.simpleName}.shouldFilterApplication")
+            hooked.add("AppsFilterImpl.shouldFilterApplication")
         }
     }
 

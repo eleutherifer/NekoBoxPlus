@@ -6,20 +6,22 @@ import org.junit.Test
 
 class MainShellStateTest {
     @Test
-    fun `opening requests the drawer`() {
+    fun `opening mounts the Compose overlay before requesting the drawer`() {
         val state = MainShellState()
 
         state.openDrawer()
 
+        assertTrue(state.overlayMounted)
         assertTrue(state.drawerRequestedOpen)
     }
 
     @Test
-    fun `closing requests the drawer animation`() {
+    fun `closing requests animation without prematurely unmounting the overlay`() {
         val state = MainShellState().apply { openDrawer() }
 
         state.closeDrawer()
 
         assertFalse(state.drawerRequestedOpen)
+        assertTrue(state.overlayMounted)
     }
 }

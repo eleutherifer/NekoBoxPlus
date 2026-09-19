@@ -1,5 +1,4 @@
 import Libbox
-import Library
 import SwiftUI
 
 @MainActor
@@ -33,7 +32,7 @@ public struct ConnectionView: View {
             HStack {
                 VStack(alignment: .leading) {
                     HStack(alignment: .center) {
-                        Text(verbatim: "\(connection.network.uppercased()) \(connection.displayDestination)")
+                        Text("\(connection.network.uppercased()) \(connection.displayDestination)")
                         Spacer()
                         if connection.closedAt == nil {
                             Text("Active").foregroundStyle(.green)
@@ -46,8 +45,8 @@ public struct ConnectionView: View {
                     HStack {
                         if let closedAt = connection.closedAt {
                             VStack(alignment: .leading) {
-                                Text(verbatim: "↑ \(LibboxFormatBytes(connection.uploadTotal))")
-                                Text(verbatim: "↓ \(LibboxFormatBytes(connection.downloadTotal))")
+                                Text("↑ \(LibboxFormatBytes(connection.uploadTotal))")
+                                Text("↓ \(LibboxFormatBytes(connection.downloadTotal))")
                             }
                             .font(.caption2)
                             VStack(alignment: .leading) {
@@ -61,8 +60,8 @@ public struct ConnectionView: View {
                             }
                         } else {
                             VStack(alignment: .leading) {
-                                Text(verbatim: "↑ \(LibboxFormatBytes(connection.upload))/s")
-                                Text(verbatim: "↓ \(LibboxFormatBytes(connection.download))/s")
+                                Text("↑ \(LibboxFormatBytes(connection.upload))/s")
+                                Text("↓ \(LibboxFormatBytes(connection.download))/s")
                             }
                             .font(.caption2)
                             VStack(alignment: .leading) {
@@ -120,7 +119,7 @@ public struct ConnectionView: View {
 
     private nonisolated func closeConnection() async {
         do {
-            try await CommandTarget.standaloneClient().closeConnection(connection.id)
+            try await LibboxNewStandaloneCommandClient()!.closeConnection(connection.id)
         } catch {
             await MainActor.run {
                 alert = AlertState(action: "close connection", error: error)

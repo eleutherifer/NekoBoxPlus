@@ -17,44 +17,41 @@ public extension View {
     func platformSheet(
         isPresented: Binding<Bool>,
         size: PlatformSheetSize = .default,
-        onDismiss: (() -> Void)? = nil,
         @ViewBuilder content: @escaping () -> some View
     ) -> some View {
-        modifier(PlatformSheetModifier(isPresented: isPresented, size: size, onDismiss: onDismiss, content: content))
+        modifier(PlatformSheetModifier(isPresented: isPresented, size: size, content: content))
     }
 
     func platformSheet<Item: Identifiable>(
         item: Binding<Item?>,
         size: PlatformSheetSize = .default,
-        onDismiss: (() -> Void)? = nil,
         @ViewBuilder content: @escaping (Item) -> some View
     ) -> some View {
-        modifier(PlatformSheetItemModifier(item: item, size: size, onDismiss: onDismiss, content: content))
+        modifier(PlatformSheetItemModifier(item: item, size: size, content: content))
     }
 }
 
 private struct PlatformSheetModifier<SheetContent: View>: ViewModifier {
     @Binding var isPresented: Bool
     let size: PlatformSheetSize
-    let onDismiss: (() -> Void)?
     @ViewBuilder let content: () -> SheetContent
 
     func body(content: Content) -> some View {
         #if os(iOS)
-            content.sheet(isPresented: $isPresented, onDismiss: onDismiss) {
+            content.sheet(isPresented: $isPresented) {
                 NavigationStackCompat {
                     self.content()
                 }
             }
         #elseif os(macOS)
-            content.sheet(isPresented: $isPresented, onDismiss: onDismiss) {
+            content.sheet(isPresented: $isPresented) {
                 NavigationStackCompat {
                     self.content()
                 }
                 .frame(minWidth: size.minWidth, minHeight: size.minHeight)
             }
         #elseif os(tvOS)
-            content.fullScreenCover(isPresented: $isPresented, onDismiss: onDismiss) {
+            content.fullScreenCover(isPresented: $isPresented) {
                 NavigationStackCompat {
                     self.content()
                 }
@@ -66,25 +63,24 @@ private struct PlatformSheetModifier<SheetContent: View>: ViewModifier {
 private struct PlatformSheetItemModifier<Item: Identifiable, SheetContent: View>: ViewModifier {
     @Binding var item: Item?
     let size: PlatformSheetSize
-    let onDismiss: (() -> Void)?
     @ViewBuilder let content: (Item) -> SheetContent
 
     func body(content: Content) -> some View {
         #if os(iOS)
-            content.sheet(item: $item, onDismiss: onDismiss) { item in
+            content.sheet(item: $item) { item in
                 NavigationStackCompat {
                     self.content(item)
                 }
             }
         #elseif os(macOS)
-            content.sheet(item: $item, onDismiss: onDismiss) { item in
+            content.sheet(item: $item) { item in
                 NavigationStackCompat {
                     self.content(item)
                 }
                 .frame(minWidth: size.minWidth, minHeight: size.minHeight)
             }
         #elseif os(tvOS)
-            content.fullScreenCover(item: $item, onDismiss: onDismiss) { item in
+            content.fullScreenCover(item: $item) { item in
                 NavigationStackCompat {
                     self.content(item)
                 }
@@ -121,7 +117,7 @@ public extension View {
     @ViewBuilder
     func actionButtonStyle() -> some View {
         #if os(tvOS)
-            buttonStyle(ActionButtonStyle())
+            ActionButtonWrapper { self }
         #else
             if #available(iOS 26.0, macOS 26.0, *) {
                 frame(width: 44, height: 32)
@@ -136,51 +132,19 @@ public extension View {
 }
 
 #if os(tvOS)
-    /// The frame has to be applied to the label rather than to the button: the focus engine
-    /// takes each button's focus region from the button's own layout frame, so sizing from the
-    /// outside leaves the region at the glyph's size while the pill drawn around it is 70x48.
-    private struct ActionButtonStyle: ButtonStyle {
+    private struct ActionButtonWrapper<Content: View>: View {
         @Environment(\.isFocused) private var isFocused
+        let content: () -> Content
 
-        func makeBody(configuration: Configuration) -> some View {
-            configuration.label
+        var body: some View {
+            content()
                 .frame(width: 70, height: 48)
-                .contentShape(Rectangle())
-                .foregroundStyle(isFocused ? AnyShapeStyle(.black) : AnyShapeStyle(.primary))
-                .background(isFocused ? Color.white : Color.secondary.opacity(0.1))
+                .background(isFocused ? Color.secondary.opacity(0.3) : Color.secondary.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
-                .scaleEffect(configuration.isPressed ? 0.94 : 1)
+                .focusEffectDisabled()
         }
     }
 #endif
-
-public struct ActionIconButton: View {
-    let systemImage: String
-    let action: () -> Void
-
-    public init(_ systemImage: String, action: @escaping () -> Void) {
-        self.systemImage = systemImage
-        self.action = action
-    }
-
-    public var body: some View {
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.system(size: 12))
-            #if !os(tvOS)
-                .frame(width: 44, height: 32)
-                .background(Color.secondary.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-            #endif
-                .contentShape(Rectangle())
-        }
-        #if os(tvOS)
-        .actionButtonStyle()
-        #else
-        .buttonStyle(.plain)
-        #endif
-    }
-}
 
 public extension View {
     func cardStyle() -> some View {

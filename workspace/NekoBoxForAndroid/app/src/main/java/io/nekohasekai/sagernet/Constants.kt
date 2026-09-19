@@ -110,7 +110,6 @@ object Key {
     const val ALLOW_ACCESS = "allowAccess"
     const val SPEED_INTERVAL = "speedInterval"
     const val PROFILE_TRAFFIC_UPDATE_INTERVAL = "profileTrafficUpdateInterval"
-    const val SUBSCRIPTION_XRAY_BALANCERS = "subscriptionXrayBalancers"
     const val SUBSCRIPTION_TRAFFIC_UNIT = "subscriptionTrafficUnit"
     const val SHOW_DIRECT_SPEED = "showDirectSpeed"
     const val PERSISTENT_STATUS_NOTIFICATION = "persistentStatusNotification"

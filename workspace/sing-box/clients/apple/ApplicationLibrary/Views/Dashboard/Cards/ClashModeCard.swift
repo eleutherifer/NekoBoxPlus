@@ -142,9 +142,15 @@ public struct ClashModeCard: View {
             }
         }
 
+        @ViewBuilder
         private var selectorCapsule: some View {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.primary.opacity(0.1))
+            if #available(iOS 26.0, macOS 26.0, *) {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(.ultraThinMaterial)
+            } else {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.primary.opacity(0.1))
+            }
         }
     #endif
 
@@ -186,7 +192,7 @@ public struct ClashModeCard: View {
 
     private nonisolated func setClashMode(_ newMode: String) async {
         do {
-            try CommandTarget.standaloneClient().setClashMode(newMode)
+            try LibboxNewStandaloneCommandClient()!.setClashMode(newMode)
         } catch {
             await MainActor.run {
                 alert = AlertState(action: "set clash mode", error: error)

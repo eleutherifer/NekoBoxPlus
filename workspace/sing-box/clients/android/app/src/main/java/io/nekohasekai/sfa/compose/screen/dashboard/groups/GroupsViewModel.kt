@@ -1,6 +1,7 @@
 package io.nekohasekai.sfa.compose.screen.dashboard.groups
 
 import androidx.lifecycle.viewModelScope
+import io.nekohasekai.libbox.Libbox
 import io.nekohasekai.libbox.OutboundGroup
 import io.nekohasekai.sfa.compose.base.BaseViewModel
 import io.nekohasekai.sfa.compose.base.ScreenEvent
@@ -10,13 +11,9 @@ import io.nekohasekai.sfa.compose.model.toList
 import io.nekohasekai.sfa.constant.Status
 import io.nekohasekai.sfa.utils.AppLifecycleObserver
 import io.nekohasekai.sfa.utils.CommandClient
-import io.nekohasekai.sfa.utils.CommandTarget
-import io.nekohasekai.sfa.utils.RemoteControlManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -24,7 +21,6 @@ data class GroupsUiState(
     val groups: List<Group> = emptyList(),
     val isLoading: Boolean = false,
     val expandedGroups: Set<String> = emptySet(),
-    val testingGroups: Set<String> = emptySet(),
     val showCloseConnectionsSnackbar: Boolean = false,
 )
 
@@ -58,19 +54,9 @@ class GroupsViewModel(private val sharedCommandClient: CommandClient? = null) :
         }
 
         viewModelScope.launch {
-            combine(
-                AppLifecycleObserver.isForeground,
-                RemoteControlManager.remoteServer,
-                RemoteControlManager.isConnected,
-                _serviceStatus,
-            ) { foreground, remoteServer, remoteConnected, status ->
-                SessionTarget(
-                    connect = foreground &&
-                        if (remoteServer != null) remoteConnected else status == Status.Started,
-                    remoteServerId = remoteServer?.id,
-                )
-            }.distinctUntilChanged().collect { target ->
-                if (target.connect) {
+            AppLifecycleObserver.isForeground.collect { foreground ->
+                if (lastServiceStatus != Status.Started) return@collect
+                if (foreground) {
                     if (isUsingSharedClient) {
                         commandClient.addHandler(this@GroupsViewModel)
                     } else {
@@ -88,8 +74,6 @@ class GroupsViewModel(private val sharedCommandClient: CommandClient? = null) :
         }
     }
 
-    private data class SessionTarget(val connect: Boolean, val remoteServerId: Long?)
-
     override fun createInitialState() = GroupsUiState()
 
     override fun onCleared() {
@@ -102,10 +86,15 @@ class GroupsViewModel(private val sharedCommandClient: CommandClient? = null) :
     }
 
     private fun handleServiceStatusChange(status: Status) {
-        if (RemoteControlManager.remoteServer.value != null) {
-            return
-        }
-        if (status != Status.Started) {
+        if (status == Status.Started) {
+            if (!isUsingSharedClient && AppLifecycleObserver.isForeground.value) {
+                updateState { copy(isLoading = true) }
+                commandClient.connect()
+            }
+        } else {
+            if (!isUsingSharedClient) {
+                commandClient.disconnect()
+            }
             updateState {
                 copy(
                     groups = emptyList(),
@@ -138,7 +127,7 @@ class GroupsViewModel(private val sharedCommandClient: CommandClient? = null) :
         }
         viewModelScope.launch(Dispatchers.IO) {
             runCatching {
-                CommandTarget.standaloneClient().setGroupExpand(groupTag, newExpanded)
+                Libbox.newStandaloneCommandClient().setGroupExpand(groupTag, newExpanded)
             }
         }
     }
@@ -159,7 +148,7 @@ class GroupsViewModel(private val sharedCommandClient: CommandClient? = null) :
         viewModelScope.launch(Dispatchers.IO) {
             groups.forEach { group ->
                 runCatching {
-                    CommandTarget.standaloneClient().setGroupExpand(group.tag, newExpanded)
+                    Libbox.newStandaloneCommandClient().setGroupExpand(group.tag, newExpanded)
                 }
             }
         }
@@ -176,7 +165,7 @@ class GroupsViewModel(private val sharedCommandClient: CommandClient? = null) :
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 // Select the new outbound immediately
-                CommandTarget.standaloneClient().selectOutbound(groupTag, itemTag)
+                Libbox.newStandaloneCommandClient().selectOutbound(groupTag, itemTag)
 
                 // Update local state and show snackbar
                 withContext(Dispatchers.Main) {
@@ -204,7 +193,7 @@ class GroupsViewModel(private val sharedCommandClient: CommandClient? = null) :
     fun closeConnections() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                CommandTarget.standaloneClient().closeConnections()
+                Libbox.newStandaloneCommandClient().closeConnections()
                 withContext(Dispatchers.Main) {
                     dismissCloseConnectionsSnackbar()
                 }
@@ -223,27 +212,12 @@ class GroupsViewModel(private val sharedCommandClient: CommandClient? = null) :
         }
     }
 
-    fun urlTest(outboundTag: String) {
+    fun urlTest(groupTag: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                CommandTarget.standaloneClient().urlTest(outboundTag)
+                Libbox.newStandaloneCommandClient().urlTest(groupTag)
             } catch (e: Exception) {
                 sendError(e)
-            }
-        }
-    }
-
-    fun urlTestGroup(groupTag: String) {
-        updateState { copy(testingGroups = testingGroups + groupTag) }
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                CommandTarget.standaloneClient().urlTest(groupTag)
-            } catch (e: Exception) {
-                sendError(e)
-            } finally {
-                withContext(Dispatchers.Main) {
-                    updateState { copy(testingGroups = testingGroups - groupTag) }
-                }
             }
         }
     }
@@ -269,12 +243,63 @@ class GroupsViewModel(private val sharedCommandClient: CommandClient? = null) :
     override fun updateGroups(newGroups: MutableList<OutboundGroup>) {
         viewModelScope.launch(Dispatchers.Default) {
             val currentGroups = uiState.value.groups
-            val currentByTag = currentGroups.associateBy { it.tag }
-            val mergedGroups = newGroups.map { goGroup ->
-                val converted = Group(goGroup)
-                val existing = currentByTag[converted.tag]
-                if (existing == converted) existing else converted
-            }
+            val newGroupsMap = newGroups.associateBy { it.tag }
+
+            // Smart merge: preserve existing Group objects when only delays change
+            val mergedGroups =
+                if (currentGroups.isEmpty()) {
+                    // Initial load
+                    newGroups.map(::Group)
+                } else {
+                    currentGroups.map { existingGroup ->
+                        val newGroupData = newGroupsMap[existingGroup.tag]
+                        if (newGroupData != null) {
+                            // Check if only delays have changed
+                            val newItems = newGroupData.items.toList()
+                            val hasStructuralChange =
+                                existingGroup.items.size != newItems.size ||
+                                    existingGroup.selected != newGroupData.selected ||
+                                    existingGroup.type != newGroupData.type ||
+                                    existingGroup.selectable != newGroupData.selectable
+
+                            if (hasStructuralChange) {
+                                // Structural change, create new Group
+                                Group(newGroupData)
+                            } else {
+                                // Only delays might have changed, update items efficiently
+                                val updatedItems =
+                                    existingGroup.items.mapIndexed { index, item ->
+                                        val newItemData = newItems.getOrNull(index)
+                                        if (newItemData != null &&
+                                            item.tag == newItemData.tag &&
+                                            item.type == newItemData.type
+                                        ) {
+                                            // Only update if delay actually changed
+                                            if (item.urlTestDelay != newItemData.urlTestDelay ||
+                                                item.urlTestTime != newItemData.urlTestTime
+                                            ) {
+                                                GroupItem(newItemData)
+                                            } else {
+                                                item // Keep existing object
+                                            }
+                                        } else {
+                                            if (newItemData != null) {
+                                                GroupItem(newItemData)
+                                            } else {
+                                                item // Keep existing if index out of bounds
+                                            }
+                                        }
+                                    }
+                                existingGroup.copy(items = updatedItems)
+                            }
+                        } else {
+                            existingGroup
+                        }
+                    } +
+                        newGroups.filter { newGroup ->
+                            currentGroups.none { it.tag == newGroup.tag }
+                        }.map(::Group)
+                }
 
             withContext(Dispatchers.Main) {
                 updateState {
@@ -284,7 +309,7 @@ class GroupsViewModel(private val sharedCommandClient: CommandClient? = null) :
                         expandedGroups
                     }
                     copy(
-                        groups = if (mergedGroups == groups) groups else mergedGroups,
+                        groups = mergedGroups,
                         expandedGroups = initialExpandedGroups,
                         isLoading = false,
                     )

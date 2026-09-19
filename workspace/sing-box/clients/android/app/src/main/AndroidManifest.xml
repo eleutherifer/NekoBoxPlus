@@ -7,10 +7,6 @@
         android:name="android.hardware.camera"
         android:required="false" />
 
-    <uses-feature
-        android:name="android.hardware.usb.host"
-        android:required="false" />
-
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED" />
@@ -20,7 +16,6 @@
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
@@ -51,7 +46,6 @@
             android:exported="true"
             android:icon="@mipmap/ic_launcher"
             android:launchMode="singleTask"
-            android:windowSoftInputMode="adjustResize"
             android:theme="@style/AppTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -115,23 +109,6 @@
             </intent-filter>
 
         </activity>
-        <activity
-            android:name=".compose.ShareActivity"
-            android:excludeFromRecents="true"
-            android:exported="true"
-            android:label="@string/taildrop"
-            android:taskAffinity=""
-            android:theme="@style/AppTheme.Share">
-            <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <action android:name="android.intent.action.SEND_MULTIPLE" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-
-                <data android:mimeType="*/*" />
-            </intent-filter>
-        </activity>
-
         <service
             android:name=".bg.TileService"
             android:directBootAware="true"
@@ -164,22 +141,6 @@
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="proxy" />
-        </service>
-        <service
-            android:name=".bg.USBIPService"
-            android:exported="false"
-            android:foregroundServiceType="specialUse">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="usbip" />
-        </service>
-        <service
-            android:name=".bg.TaildropSendService"
-            android:exported="false"
-            android:foregroundServiceType="specialUse">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="taildrop" />
         </service>
 
         <receiver

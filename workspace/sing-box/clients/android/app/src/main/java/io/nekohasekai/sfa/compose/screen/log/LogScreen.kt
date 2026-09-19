@@ -94,12 +94,8 @@ import io.nekohasekai.sfa.Application
 import io.nekohasekai.sfa.R
 import io.nekohasekai.sfa.compat.WindowSizeClassCompat
 import io.nekohasekai.sfa.compat.isWidthAtLeastBreakpointCompat
-import io.nekohasekai.sfa.compose.component.RemoteControlMenuItems
-import io.nekohasekai.sfa.compose.component.rememberRemoteServers
-import io.nekohasekai.sfa.compose.topbar.LocalScaffoldPadding
 import io.nekohasekai.sfa.compose.topbar.OverrideTopBar
 import io.nekohasekai.sfa.constant.Status
-import io.nekohasekai.sfa.utils.RemoteControlManager
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -128,8 +124,6 @@ fun LogScreen(
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val resolvedTitle = title ?: stringResource(R.string.title_log)
-    val remoteServer by RemoteControlManager.remoteServer.collectAsState()
-    val remoteServers by rememberRemoteServers()
     val emptyStateMessage = emptyMessage ?: stringResource(R.string.privilege_settings_hook_logs_empty)
 
     OverrideTopBar {
@@ -272,15 +266,11 @@ fun LogScreen(
         }
     }
 
-    val scaffoldPadding = LocalScaffoldPadding.current
-
     Box(
         modifier = Modifier.fillMaxSize(),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(scaffoldPadding),
+            modifier = Modifier.fillMaxSize(),
         ) {
             // Show selection mode bar
             if (uiState.isSelectionMode) {
@@ -481,14 +471,10 @@ fun LogScreen(
                     ) {
                         Text(
                             text = if (showStatusInfo) {
-                                when {
-                                    remoteServer != null && !uiState.isConnected ->
-                                        stringResource(R.string.remote_connecting)
-
-                                    remoteServer != null -> stringResource(R.string.status_started)
-                                    serviceStatus == Status.Started -> stringResource(R.string.status_started)
-                                    serviceStatus == Status.Starting -> stringResource(R.string.status_starting)
-                                    serviceStatus == Status.Stopping -> stringResource(R.string.status_stopping)
+                                when (serviceStatus) {
+                                    Status.Started -> stringResource(R.string.status_started)
+                                    Status.Starting -> stringResource(R.string.status_starting)
+                                    Status.Stopping -> stringResource(R.string.status_stopping)
                                     else -> stringResource(R.string.status_default)
                                 }
                             } else {
@@ -514,7 +500,7 @@ fun LogScreen(
                         start = 8.dp,
                         end = 8.dp,
                         top = 8.dp,
-                        bottom = scaffoldPadding.calculateBottomPadding() + bottomPadding + 8.dp,
+                        bottom = bottomPadding,
                     ),
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
@@ -842,13 +828,6 @@ fun LogScreen(
                         },
                     )
                 }
-
-                if (showStatusInfo) {
-                    RemoteControlMenuItems(
-                        servers = remoteServers,
-                        onAction = { resolvedViewModel.toggleOptionsMenu() },
-                    )
-                }
             }
         }
 
@@ -865,7 +844,7 @@ fun LogScreen(
             modifier =
             Modifier
                 .align(Alignment.BottomEnd)
-                .padding(bottom = scaffoldPadding.calculateBottomPadding() + fabBottomPadding, end = fabEndPadding, top = 16.dp),
+                .padding(bottom = fabBottomPadding, end = fabEndPadding, top = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             // Scroll to bottom FAB

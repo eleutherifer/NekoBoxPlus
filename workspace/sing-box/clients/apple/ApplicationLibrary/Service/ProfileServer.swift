@@ -90,7 +90,7 @@ public class ProfileServer {
         #endif
 
         private func processMessage(_ data: Data) async throws {
-            if data.isEmpty {
+            if data.count == 0 {
                 return
             }
             let messageType = Int64(data[0])

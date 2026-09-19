@@ -9,11 +9,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import io.nekohasekai.sagernet.R
-import io.nekohasekai.sagernet.database.AppData
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.ProfileManager
 import io.nekohasekai.sagernet.database.ProxyEntity
-import io.nekohasekai.sagernet.fmt.ProfileChainResolver
 import io.nekohasekai.sagernet.fmt.internal.ChainBean
 import io.nekohasekai.sagernet.ktx.onMainDispatcher
 import io.nekohasekai.sagernet.ktx.runOnDefaultDispatcher
@@ -113,9 +111,18 @@ class ChainSettingsActivity : ProfileSettingsActivity<ChainBean>() {
     }
 
     private fun testProfileAllowed(profile: ProxyEntity): Boolean {
-        val resolver = ProfileChainResolver(AppData.profiles, DataStore.globalAllowInsecure, null, null)
-        return !resolver.referencesProfile(profile, DataStore.editingId) &&
-            !resolver.containsMasterDnsVPN(profile)
+        if (profile.id == DataStore.editingId || profile.containsMasterDnsVPN()) return false
+        return proxyList.none { testProfileContains(it, profile) }
+    }
+
+    private fun testProfileContains(profile: ProxyEntity, another: ProxyEntity): Boolean {
+        if (profile.type != 8 || another.type != 8) return false
+        if (profile.id == another.id) return true
+        val ids = profile.chainBean!!.proxies
+        if (another.id in ids) return true
+        return ids.isNotEmpty() && ProfileManager.getProfiles(ids).any {
+            testProfileContains(it, another)
+        }
     }
 
     private val selectProfileForAdd =

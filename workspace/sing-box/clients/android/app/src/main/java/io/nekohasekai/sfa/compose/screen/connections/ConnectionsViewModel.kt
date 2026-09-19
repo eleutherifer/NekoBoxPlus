@@ -3,6 +3,7 @@ package io.nekohasekai.sfa.compose.screen.connections
 import androidx.lifecycle.viewModelScope
 import io.nekohasekai.libbox.ConnectionEvents
 import io.nekohasekai.libbox.Connections
+import io.nekohasekai.libbox.Libbox
 import io.nekohasekai.sfa.compose.base.BaseViewModel
 import io.nekohasekai.sfa.compose.base.ScreenEvent
 import io.nekohasekai.sfa.compose.model.Connection
@@ -12,8 +13,6 @@ import io.nekohasekai.sfa.constant.Status
 import io.nekohasekai.sfa.ktx.toList
 import io.nekohasekai.sfa.utils.AppLifecycleObserver
 import io.nekohasekai.sfa.utils.CommandClient
-import io.nekohasekai.sfa.utils.CommandTarget
-import io.nekohasekai.sfa.utils.RemoteControlManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -65,8 +64,6 @@ class ConnectionsViewModel :
         val screenOn: Boolean,
         val visibleCount: Int,
         val status: Status,
-        val remoteServerId: Long?,
-        val remoteConnected: Boolean,
     )
 
     init {
@@ -76,17 +73,11 @@ class ConnectionsViewModel :
                 AppLifecycleObserver.isScreenOn,
                 _visibleCount,
                 _serviceStatus,
-                combine(
-                    RemoteControlManager.remoteServer,
-                    RemoteControlManager.isConnected,
-                ) { remoteServer, remoteConnected -> remoteServer?.id to remoteConnected },
-            ) { foreground, screenOn, visibleCount, status, (remoteServerId, remoteConnected) ->
-                ConnectionState(foreground, screenOn, visibleCount, status, remoteServerId, remoteConnected)
+            ) { foreground, screenOn, visibleCount, status ->
+                ConnectionState(foreground, screenOn, visibleCount, status)
             }.collect { state ->
-                val serviceReady =
-                    if (state.remoteServerId != null) state.remoteConnected else state.status == Status.Started
                 val shouldConnect = state.foreground && state.screenOn &&
-                    state.visibleCount > 0 && serviceReady
+                    state.visibleCount > 0 && state.status == Status.Started
                 if (shouldConnect) {
                     updateState { copy(isLoading = true) }
                     commandClient.connect()
@@ -107,9 +98,6 @@ class ConnectionsViewModel :
     }
 
     private suspend fun handleServiceStatusChange(status: Status) {
-        if (RemoteControlManager.remoteServer.value != null) {
-            return
-        }
         if (status != Status.Started) {
             withContext(Dispatchers.Default) {
                 connectionsMutex.withLock {
@@ -163,7 +151,7 @@ class ConnectionsViewModel :
     fun closeConnection(connectionId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                CommandTarget.standaloneClient().closeConnection(connectionId)
+                Libbox.newStandaloneCommandClient().closeConnection(connectionId)
                 withContext(Dispatchers.Main) {
                     sendEvent(ConnectionsEvent.ConnectionClosed(connectionId))
                 }
@@ -176,7 +164,7 @@ class ConnectionsViewModel :
     fun closeAllConnections() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                CommandTarget.standaloneClient().closeConnections()
+                Libbox.newStandaloneCommandClient().closeConnections()
                 withContext(Dispatchers.Main) {
                     sendEvent(ConnectionsEvent.AllConnectionsClosed)
                 }

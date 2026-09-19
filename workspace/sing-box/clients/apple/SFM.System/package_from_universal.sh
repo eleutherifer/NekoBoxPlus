@@ -4,17 +4,15 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-APPLICATION_SIGN_IDENTITY="${APPLICATION_SIGN_IDENTITY:-34EED4C8F8E609CD5D253D88202A071521D1BE74}"
-INSTALLER_SIGN_IDENTITY="${INSTALLER_SIGN_IDENTITY:-21E03A44ACC2B48753BABB3DAE9B5F9A9CFF0480}"
+APPLICATION_SIGN_IDENTITY="${APPLICATION_SIGN_IDENTITY:-Developer ID Application}"
+INSTALLER_SIGN_IDENTITY="${INSTALLER_SIGN_IDENTITY:-16480CA444F481F8DEAF9421FAD2CCE590FC54E4}"
 UNIVERSAL_APP="build/SFM.System-universal/SFM.app"
-PKG_IDENTIFIER="$(sed -n 's/.*<pkg-ref id="\([^"]*\)".*/\1/p' SFM.System/distribution-universal.xml | head -1)"
 
 [[ -d "$UNIVERSAL_APP" ]] || { echo "error: $UNIVERSAL_APP not found" >&2; exit 1; }
 
 resign() {
 	local app="$1"
-	local sysext
-	sysext="$(echo "$app"/Contents/Library/SystemExtensions/*.systemextension)"
+	local sysext="$app/Contents/Library/SystemExtensions/io.nekohasekai.sfavt.system.systemextension"
 	local target
 	for target in \
 		"$sysext/Contents/Frameworks/Library.framework" \
@@ -36,7 +34,7 @@ build_pkg() {
 	ditto "$app_dir" "$pkgroot/SFM.app"
 	pkgbuild --root "$pkgroot" \
 		--component-plist SFM.System/component.plist \
-		--identifier "$PKG_IDENTIFIER" \
+		--identifier io.nekohasekai.sfavt.standalone \
 		--install-location /Applications \
 		--min-os-version 13.0 \
 		--compression latest \

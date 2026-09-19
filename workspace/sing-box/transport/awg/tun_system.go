@@ -86,7 +86,7 @@ func (t *systemTun) Start() error {
 		return exceptions.Cause(err, "start tunnel")
 	}
 
-	// The endpoint lifecycle controller owns Up/Down, including initial startup.
+	t.events <- awgTun.EventUp
 	return nil
 }
 

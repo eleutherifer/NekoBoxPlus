@@ -16,12 +16,10 @@ import io.nekohasekai.sagernet.CONNECTION_TEST_URL
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.SagerNet
 import io.nekohasekai.sagernet.bg.proto.UrlTest
-import io.nekohasekai.sagernet.database.AppData
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.ProfileManager
 import io.nekohasekai.sagernet.database.ProxyEntity
 import io.nekohasekai.sagernet.database.SagerDatabase
-import io.nekohasekai.sagernet.fmt.ProfileChainResolver
 import io.nekohasekai.sagernet.fmt.internal.ProxySetBean
 import io.nekohasekai.sagernet.fmt.internal.decodeEmbeddedProfiles
 import io.nekohasekai.sagernet.fmt.internal.filterInsecureProfiles
@@ -178,18 +176,21 @@ class ProxySetSettingsActivity : ProfileSettingsActivity<ProxySetBean>() {
         val filterBean = ProxySetBean().apply {
             skipInsecureProfiles = DataStore.profileCacheStore.getBoolean(KEY_SKIP_INSECURE) ?: false
         }
-        if (hasEmbeddedMembers) {
+        if (currentCollectType() != ProxySetBean.TYPE_GROUP) {
             return filterBean.filterInsecureProfiles(proxyList, DataStore.globalAllowInsecure)
         }
-        filterBean.type = currentCollectType()
-        filterBean.proxies = proxyList.map { it.id }
-        filterBean.groupId = DataStore.profileCacheStore.getString(KEY_GROUP)?.toLongOrNull() ?: 0L
-        filterBean.groupFilterNotRegex = DataStore.profileCacheStore.getString(KEY_GROUP_FILTER).orEmpty()
-        val owner = ProxyEntity(id = DataStore.editingId).putBean(filterBean)
-        return runCatching {
-            profileResolver().eligibleProxySetCandidates(owner, filterBean)
-                .filter { filterBean.type != ProxySetBean.TYPE_GROUP || it.type != ProxyEntity.TYPE_CHAIN }
-        }.getOrDefault(emptyList())
+        val groupId = DataStore.profileCacheStore.getString(KEY_GROUP)?.toLongOrNull() ?: 0L
+        val regex = DataStore.profileCacheStore.getString(KEY_GROUP_FILTER)
+            ?.takeIf(String::isNotBlank)?.let { runCatching { it.toRegex() }.getOrNull() }
+        val profiles = SagerDatabase.proxyDao.getByGroup(groupId).filter { profile ->
+            profile.id != DataStore.editingId &&
+                profile.type != ProxyEntity.TYPE_PROXY_SET &&
+                profile.type != ProxyEntity.TYPE_CHAIN &&
+                !profile.containsMasterDnsVPN() &&
+                !profile.containsByeDPI() &&
+                (regex == null || regex.containsMatchIn(profile.displayName()))
+        }
+        return filterBean.filterInsecureProfiles(profiles, DataStore.globalAllowInsecure)
     }
 
     private fun currentDefaultOutboundName() = selectableDefaultOutbounds()
@@ -257,15 +258,19 @@ class ProxySetSettingsActivity : ProfileSettingsActivity<ProxySetBean>() {
         })
     }
 
-    private fun profileResolver() =
-        ProfileChainResolver(AppData.profiles, DataStore.globalAllowInsecure, null, null)
-
     private fun testProfileAllowed(profile: ProxyEntity): Boolean {
-        val resolver = profileResolver()
-        if (resolver.referencesProfile(profile, DataStore.editingId) ||
-            resolver.containsMasterDnsVPN(profile) || resolver.containsByeDpi(profile)) return false
-        return proxyList.withIndex().none { (index, existing) ->
-            index != replacing && existing.id == profile.id
+        if (profile.id == DataStore.editingId || profile.type == ProxyEntity.TYPE_PROXY_SET ||
+            profile.containsMasterDnsVPN() || profile.containsByeDPI() ||
+            proxyList.any { it.id == profile.id }) return false
+        return proxyList.none { testProfileContains(it, profile) }
+    }
+
+    private fun testProfileContains(profile: ProxyEntity, another: ProxyEntity): Boolean {
+        if (profile.type != ProxyEntity.TYPE_CHAIN || another.type != ProxyEntity.TYPE_CHAIN) return false
+        if (profile.id == another.id) return true
+        val ids = profile.chainBean!!.proxies
+        return another.id in ids || ids.isNotEmpty() && ProfileManager.getProfiles(ids).any {
+            testProfileContains(it, another)
         }
     }
 

@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import io.nekohasekai.sagernet.R
 
 internal class MainShellState {
+    var overlayMounted by mutableStateOf(false)
     var drawerRequestedOpen by mutableStateOf(false)
     var drawerIsOpen by mutableStateOf(false)
     var selectedItemId by mutableIntStateOf(R.id.nav_configuration)
@@ -47,6 +48,7 @@ internal class MainShellState {
     var proxyAppsEnabled by mutableStateOf(false)
 
     fun openDrawer() {
+        overlayMounted = true
         drawerRequestedOpen = true
     }
 
@@ -80,8 +82,8 @@ internal fun MainComposeDrawer(
     onNavigate: (Int) -> Unit,
     onOpenApps: () -> Unit,
     onToggleProxyApps: (Boolean) -> Unit,
-    onDrawerActiveChanged: (Boolean) -> Unit = {},
 ) {
+    if (!state.overlayMounted) return
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val drawerFocusRequester = remember { FocusRequester() }
     LaunchedEffect(state.drawerRequestedOpen) {
@@ -90,23 +92,17 @@ internal fun MainComposeDrawer(
             drawerFocusRequester.requestFocus()
         } else {
             drawerState.close()
+            state.drawerIsOpen = false
+            state.overlayMounted = false
         }
     }
     LaunchedEffect(drawerState.currentValue, drawerState.targetValue) {
         state.drawerIsOpen = drawerState.currentValue == DrawerValue.Open ||
             drawerState.targetValue == DrawerValue.Open
-        if (drawerState.currentValue == DrawerValue.Open &&
-            drawerState.targetValue == DrawerValue.Open
-        ) {
-            state.drawerRequestedOpen = true
-        } else if (drawerState.currentValue == DrawerValue.Closed &&
-            drawerState.targetValue == DrawerValue.Closed
-        ) {
+        if (!state.drawerIsOpen && drawerState.currentValue == DrawerValue.Closed) {
             state.drawerRequestedOpen = false
+            state.overlayMounted = false
         }
-    }
-    LaunchedEffect(state.drawerRequestedOpen, state.drawerIsOpen) {
-        onDrawerActiveChanged(state.drawerRequestedOpen || state.drawerIsOpen)
     }
 
     ModalNavigationDrawer(

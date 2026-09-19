@@ -46,9 +46,7 @@ struct ProfileEditorWrapperView: View {
 
     private func checkConfiguration() async {
         let content = text
-        if content.isEmpty {
-            return
-        }
+        if content.isEmpty { return }
         var error: NSError?
         LibboxCheckConfig(content, &error)
         if let error {
@@ -60,9 +58,7 @@ struct ProfileEditorWrapperView: View {
 
     private func formatConfiguration() {
         let content = text
-        if content.isEmpty {
-            return
-        }
+        if content.isEmpty { return }
         var error: NSError?
         let result = LibboxFormatConfig(content, &error)
         if let error {
