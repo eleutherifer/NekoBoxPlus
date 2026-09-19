@@ -117,6 +117,7 @@ func TestV2RayXHTTPOptionsRejectsInvalidCombinations(t *testing.T) {
 		`{"mode":"packet-up","headers":{"Host":"example.com"}}`,
 		`{"mode":"stream-up","uplink_data_placement":"header"}`,
 		`{"mode":"stream-one","uplink_http_method":"GET"}`,
+		`{"mode":"packet-up","session_id_placement":"path","seq_placement":"header"}`,
 		`{"mode":"packet-up","xmux":{"max_connections":1,"max_concurrency":1}}`,
 	}
 	for _, content := range tests {
@@ -126,22 +127,6 @@ func TestV2RayXHTTPOptionsRejectsInvalidCombinations(t *testing.T) {
 				t.Fatal("expected error")
 			}
 		})
-	}
-}
-
-func TestV2RayXHTTPOptionsAllowsIndependentSessionAndSequencePlacements(t *testing.T) {
-	var options V2RayXHTTPOptions
-	if err := json.Unmarshal([]byte(`{"mode":"packet-up","session_id_placement":"path","seq_placement":"cookie"}`), &options); err != nil {
-		t.Fatal(err)
-	}
-	if options.SessionIDPlacement != PlacementPath {
-		t.Fatalf("session_id_placement = %q", options.SessionIDPlacement)
-	}
-	if options.SeqPlacement != PlacementCookie {
-		t.Fatalf("seq_placement = %q", options.SeqPlacement)
-	}
-	if options.SeqKey != "x_seq" {
-		t.Fatalf("seq_key = %q", options.SeqKey)
 	}
 }
 

@@ -290,6 +290,7 @@ func checkV2RayXHTTPBaseOptions(mode string, options *V2RayXHTTPBaseOptions) err
 		return E.New("uplink_http_method can be GET only in packet-up mode")
 	}
 
+	sessionIDPlacementConfigured := options.SessionIDPlacement != ""
 	switch options.SessionIDPlacement {
 	case "":
 		if options.SessionPlacement == "" {
@@ -304,11 +305,18 @@ func checkV2RayXHTTPBaseOptions(mode string, options *V2RayXHTTPBaseOptions) err
 	default:
 		return E.New("unsupported session placement: " + options.SessionPlacement)
 	}
+	sessionPlacementForSeq := options.SessionIDPlacement
+	if !sessionIDPlacementConfigured && options.SessionPlacement != "" {
+		sessionPlacementForSeq = options.SessionPlacement
+	}
 	switch options.SeqPlacement {
 	case "":
 		options.SeqPlacement = PlacementPath
 	case PlacementPath:
 	case PlacementCookie, PlacementHeader, PlacementQuery:
+		if sessionPlacementForSeq == PlacementPath {
+			return E.New("seq_placement must be path when session_id_placement is path")
+		}
 	default:
 		return E.New("unsupported seq placement: " + options.SeqPlacement)
 	}
