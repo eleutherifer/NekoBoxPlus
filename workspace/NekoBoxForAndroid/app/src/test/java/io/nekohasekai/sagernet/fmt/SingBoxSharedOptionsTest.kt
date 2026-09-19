@@ -2,14 +2,8 @@ package io.nekohasekai.sagernet.fmt
 
 import io.nekohasekai.sagernet.fmt.masque.MasqueBean
 import io.nekohasekai.sagernet.fmt.masterdns.MasterDnsVPNBean
-import io.nekohasekai.sagernet.fmt.mieru.MieruBean
 import io.nekohasekai.sagernet.fmt.naive.NaiveBean
 import io.nekohasekai.sagernet.fmt.trusttunnel.TrustTunnelBean
-import io.nekohasekai.sagernet.fmt.wireguard.AmneziaWGBean
-import io.nekohasekai.sagernet.fmt.wireguard.WireGuardBean
-import io.nekohasekai.sagernet.fmt.wireguard.buildSingBoxEndpointAwgBean
-import io.nekohasekai.sagernet.fmt.wireguard.buildSingBoxEndpointWireguardBean
-import moe.matsuri.nb4a.SingBoxOptions.CustomSingBoxOption
 import moe.matsuri.nb4a.SingBoxOptions.Outbound
 import moe.matsuri.nb4a.SingBoxOptions.Outbound_MasterDnsVPNOptions
 import moe.matsuri.nb4a.SingBoxOptions.OutboundTLSOptions
@@ -20,34 +14,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SingBoxSharedOptionsTest {
-
-    private val dialOptionNames = setOf(
-        "tcp_fast_open",
-        "tcp_multi_path",
-        "udp_fragment",
-        "disable_tcp_keep_alive",
-        "tcp_keep_alive",
-        "tcp_keep_alive_interval",
-    )
-
-    private fun <T : AbstractBean> T.enableAllDialOptions(): T = apply {
-        initializeDefaultValues()
-        tcpFastOpen = true
-        tcpMultiPath = true
-        udpFragment = true
-        disableTcpKeepAlive = true
-        tcpKeepAlive = "45s"
-        tcpKeepAliveInterval = "15s"
-    }
-
-    private fun Outbound.applyAllConfiguredDialOptions(bean: AbstractBean) {
-        applyConfiguredDialOptions(
-            bean,
-            tcpFastOpen = true,
-            tcpMultiPath = true,
-            udpFragment = "false",
-        )
-    }
 
     @Test
     fun sharedDialOptionsMapConnectionAndKeepAliveFields() {
@@ -60,9 +26,7 @@ class SingBoxSharedOptionsTest {
             tcpKeepAlive = "45s"
             tcpKeepAliveInterval = "15s"
         }
-        val outbound = Outbound().apply {
-            applySharedDialOptions(bean, DialOptionCapabilities.TCP_AND_UDP)
-        }
+        val outbound = Outbound().apply { applySharedDialOptions(bean) }
 
         assertEquals(true, outbound._hack_config_map["tcp_fast_open"])
         assertEquals(true, outbound._hack_config_map["tcp_multi_path"])
@@ -75,18 +39,14 @@ class SingBoxSharedOptionsTest {
     @Test
     fun sharedDialOptionsOmitDefaultsAndCanEnableUdpFragmentation() {
         val defaults = NaiveBean().apply { initializeDefaultValues() }
-        val defaultOutbound = Outbound().apply {
-            applySharedDialOptions(defaults, DialOptionCapabilities.TCP_AND_UDP)
-        }
+        val defaultOutbound = Outbound().apply { applySharedDialOptions(defaults) }
 
         assertFalse(defaultOutbound._hack_config_map.containsKey("tcp_fast_open"))
         assertFalse(defaultOutbound._hack_config_map.containsKey("tcp_multi_path"))
         assertFalse(defaultOutbound._hack_config_map.containsKey("udp_fragment"))
 
         defaults.udpFragment = true
-        val enabledOutbound = Outbound().apply {
-            applySharedDialOptions(defaults, DialOptionCapabilities.TCP_AND_UDP)
-        }
+        val enabledOutbound = Outbound().apply { applySharedDialOptions(defaults) }
         assertEquals(true, enabledOutbound._hack_config_map["udp_fragment"])
     }
 
@@ -97,7 +57,6 @@ class SingBoxSharedOptionsTest {
                 tcpFastOpen = false,
                 tcpMultiPath = false,
                 udpFragment = "",
-                capabilities = DialOptionCapabilities.TCP_AND_UDP,
             )
         }
         assertFalse(defaults._hack_config_map.containsKey("tcp_fast_open"))
@@ -112,7 +71,6 @@ class SingBoxSharedOptionsTest {
                 tcpFastOpen = false,
                 tcpMultiPath = false,
                 udpFragment = "",
-                capabilities = DialOptionCapabilities.TCP_AND_UDP,
             )
         }
 
@@ -131,7 +89,6 @@ class SingBoxSharedOptionsTest {
                 tcpFastOpen = true,
                 tcpMultiPath = true,
                 udpFragment = "true",
-                capabilities = DialOptionCapabilities.TCP_AND_UDP,
             )
         }
 
@@ -143,7 +100,6 @@ class SingBoxSharedOptionsTest {
             tcpFastOpen = false,
             tcpMultiPath = false,
             udpFragment = "false",
-            capabilities = DialOptionCapabilities.TCP_AND_UDP,
         )
         assertEquals(false, enabledUdp._hack_config_map["udp_fragment"])
     }
@@ -190,99 +146,6 @@ class SingBoxSharedOptionsTest {
         assertFalse(customOutbound._hack_config_map.containsKey("tcp_fast_open"))
         assertFalse(customOutbound._hack_config_map.containsKey("tcp_multi_path"))
         assertFalse(customOutbound._hack_config_map.containsKey("udp_fragment"))
-    }
-
-    @Test
-    fun endpointDialOptionsRespectTransportCapabilities() {
-        val wireGuardBean = WireGuardBean().enableAllDialOptions()
-        val wireGuard = buildSingBoxEndpointWireguardBean(wireGuardBean).apply {
-            type = "wireguard"
-            applyConfiguredDialOptions(wireGuardBean, true, true, "false")
-        }
-        assertEquals(setOf("udp_fragment"), wireGuard._hack_config_map.keys.intersect(dialOptionNames))
-        assertEquals(false, wireGuard._hack_config_map["udp_fragment"])
-
-        val amneziaBean = AmneziaWGBean().enableAllDialOptions()
-        val amnezia = buildSingBoxEndpointAwgBean(amneziaBean).apply {
-            applyConfiguredDialOptions(amneziaBean, true, true, "false")
-        }
-        assertTrue(amnezia._hack_config_map.keys.intersect(dialOptionNames).isEmpty())
-
-        val tailscale = Outbound().apply {
-            type = "tailscale"
-            applyAllConfiguredDialOptions(NaiveBean().enableAllDialOptions())
-        }
-        assertEquals(dialOptionNames, tailscale._hack_config_map.keys.intersect(dialOptionNames))
-    }
-
-    @Test
-    fun configuredDialOptionsFollowDynamicTransportModes() {
-        val tcpMieru = MieruBean().enableAllDialOptions().apply { protocol = MieruBean.PROTOCOL_TCP }
-        val udpMieru = MieruBean().enableAllDialOptions().apply { protocol = MieruBean.PROTOCOL_UDP }
-        assertEquals(DialOptionCapabilities.TCP, Outbound().apply { type = "mieru" }.resolveDialOptionCapabilities(tcpMieru))
-        assertEquals(DialOptionCapabilities.UDP, Outbound().apply { type = "mieru" }.resolveDialOptionCapabilities(udpMieru))
-
-        val naiveQuic = NaiveBean().enableAllDialOptions().apply { proto = "quic" }
-        assertEquals(DialOptionCapabilities.UDP, Outbound().apply { type = "naive" }.resolveDialOptionCapabilities(naiveQuic))
-
-        val trustTunnelFallback = TrustTunnelBean().enableAllDialOptions().apply {
-            quic = true
-            forceQuic = false
-        }
-        val trustTunnelQuic = TrustTunnelBean().enableAllDialOptions().apply {
-            quic = true
-            forceQuic = true
-        }
-        assertEquals(
-            DialOptionCapabilities.TCP_AND_UDP,
-            Outbound().apply { type = "trusttunnel" }.resolveDialOptionCapabilities(trustTunnelFallback),
-        )
-        assertEquals(
-            DialOptionCapabilities.UDP,
-            Outbound().apply { type = "trusttunnel" }.resolveDialOptionCapabilities(trustTunnelQuic),
-        )
-
-        val masqueHttp2 = MasqueBean().enableAllDialOptions().apply { useHTTP2 = true }
-        val masqueHttp3 = MasqueBean().enableAllDialOptions().apply { useHTTP2 = false }
-        assertEquals(DialOptionCapabilities.TCP, Outbound().apply { type = "masque" }.resolveDialOptionCapabilities(masqueHttp2))
-        assertEquals(DialOptionCapabilities.UDP, Outbound().apply { type = "masque" }.resolveDialOptionCapabilities(masqueHttp3))
-    }
-
-    @Test
-    fun customOutboundsOnlyReceiveOptionsForKnownTypes() {
-        val bean = NaiveBean().enableAllDialOptions()
-        val known = CustomSingBoxOption("""{"type":"wireguard"}""").apply {
-            applyConfiguredDialOptions(bean, true, true, "true")
-        }
-        assertEquals(setOf("udp_fragment"), known._hack_config_map.keys.intersect(dialOptionNames))
-
-        val unknown = CustomSingBoxOption("""{"type":"third-party"}""").apply {
-            applyConfiguredDialOptions(bean, true, true, "true")
-        }
-        assertTrue(unknown._hack_config_map.keys.intersect(dialOptionNames).isEmpty())
-    }
-
-    @Test
-    fun anyTlsDoesNotReceiveTcpFastOpen() {
-        val outbound = Outbound().apply {
-            type = "anytls"
-            applyAllConfiguredDialOptions(NaiveBean().enableAllDialOptions())
-        }
-
-        assertFalse(outbound._hack_config_map.containsKey("tcp_fast_open"))
-        assertEquals(true, outbound._hack_config_map["tcp_multi_path"])
-        assertEquals(true, outbound._hack_config_map["disable_tcp_keep_alive"])
-    }
-
-    @Test
-    fun selectorAndUrlTestDoNotReceiveDialOptions() {
-        for (type in listOf("selector", "urltest")) {
-            val outbound = Outbound().apply {
-                this.type = type
-                applyAllConfiguredDialOptions(NaiveBean().enableAllDialOptions())
-            }
-            assertTrue(outbound._hack_config_map.keys.intersect(dialOptionNames).isEmpty())
-        }
     }
 
     @Test

@@ -257,7 +257,7 @@ object DataStore : OnPreferenceDataStoreChangeListener {
 
     var remoteDns by configurationStore.string(Key.REMOTE_DNS) { "https://1.1.1.1/dns-query" }
     var remoteDnsDeadline by configurationStore.string(Key.REMOTE_DNS_DEADLINE) { "5000ms" }
-    var directDns by configurationStore.string(Key.DIRECT_DNS) { "local" }
+    var directDns by configurationStore.string(Key.DIRECT_DNS) { "https://77.88.8.8/dns-query" }
     var directDnsDeadline by configurationStore.string(Key.DIRECT_DNS_DEADLINE) { "5000ms" }
     var enableDnsRouting by configurationStore.boolean(Key.ENABLE_DNS_ROUTING) { true }
     var enableFakeDns by configurationStore.boolean(Key.ENABLE_FAKEDNS) { true }
