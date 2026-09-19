@@ -37,7 +37,6 @@
         <item quantity="other">%d profiles moved.</item>
     </plurals>
     <string name="no_profiles_support_export">None of the selected profiles support this export format.</string>
-    <string name="amneziawg_json" translatable="false">AmneziaWG JSON</string>
     <string name="qr_code_data_too_large">The selected profile data is too large for a QR code.</string>
     <plurals name="profiles_skipped">
         <item quantity="one">Skipped %d profile.</item>
@@ -326,18 +325,11 @@
     <string name="mux_brutal_down_mbps">Download (Mbps)</string>
     <string name="tcp_keep_alive_interval">TCP keep active packet delivery interval</string>
     <string name="sing_box_dial_options">sing-box connection options</string>
-    <string name="tcp_fast_open">TCP Fast Open</string>
-    <string name="multipath_tcp">Multipath TCP</string>
-    <string name="udp_fragmentation">UDP Fragmentation</string>
-    <string name="connection_option_default">Default</string>
-    <string name="connection_option_enabled">Enabled</string>
-    <string name="connection_option_disabled">Disabled</string>
     <string name="disable_tcp_keep_alive">Disable TCP keep-alive</string>
     <string name="tcp_keep_alive">TCP keep-alive initial period</string>
     <string name="sing_box_tls_13_options">sing-box TLS 1.13 options</string>
     <string name="tls_curve_preferences">TLS curve preferences</string>
     <string name="tls_certificate_public_key_sha256">Server public-key SHA-256 pins</string>
-    <string name="tls_xray_certificate_sha256">Xray server-certificate SHA-256 pins</string>
     <string name="tls_client_certificate">Client certificate (PEM)</string>
     <string name="tls_client_key">Client private key (PEM)</string>
     <string name="proxied_apps">Apps VPN mode</string>
@@ -381,10 +373,6 @@
     <string name="background_process_not_running">Background process is not running</string>
     <string name="show_profile_count_on_tabs">Show profile count on tabs</string>
     <string name="show_profile_count_on_tabs_summary">Shows a pill with profile count on each group tab</string>
-    <string name="profile_country_indicator">Profile country indicator</string>
-    <string name="profile_country_indicator_summary">Show country flag icons and remove matching country emoji from profile names.</string>
-    <string name="notification_country_indicator">Notification country indicator</string>
-    <string name="notification_country_indicator_summary">Show the active profile country flag in the connection notification.</string>
     <string name="short_profile_protocol_info">Short profile protocol info</string>
     <string name="short_profile_protocol_info_summary">Show only a shortened protocol type on profile cards.</string>
     <string name="tab_double_tap_to_navigate">Tab double tap to navigate</string>
@@ -430,7 +418,6 @@
     <string name="settings">Settings</string>
     <string name="edit">Edit</string>
     <string name="share">Share</string>
-    <string name="share_server">Share server</string>
     <string name="add_profile">Add Profile</string>
     <string name="select_profile">Select Profile</string>
     <string name="action_socks" translatable="false">SOCKS</string>
@@ -447,7 +434,6 @@
     <string name="mieru_traffic_pattern">Traffic pattern</string>
     <string name="action_naive" translatable="false">Naïve</string>
     <string name="action_anytls" translatable="false">AnyTLS</string>
-    <string name="anytls_client_metadata">Client metadata</string>
     <string name="action_masque" translatable="false">MASQUE</string>
     <string name="action_tailscale" translatable="false">Tailscale</string>
     <string name="action_hysteria" translatable="false">Hysteria</string>
@@ -644,7 +630,6 @@
     <string name="subscription_banner_announcement_urls">Announcement URLs</string>
     <string name="subscription_banner_traffic_text">Traffic counter text</string>
     <string name="subscription_banner_traffic_bar">Traffic counter bar</string>
-    <string name="subscription_banner_expiration_time">Expiration time</string>
     <string name="subscription_banner_clickable">Clickable</string>
     <string name="subscription_provider_announcement">Provider announcement</string>
     <string name="subscription_open_link_prompt">What link do you want to open?</string>
@@ -653,20 +638,6 @@
     <string name="subscription_link_email_support">E-Mail Support</string>
     <string name="subscription_link_page">Subscription Page</string>
     <string name="subscription_traffic_total">%1$s / %2$s</string>
-    <plurals name="subscription_expiration_days_left">
-        <item quantity="one">%d day left</item>
-        <item quantity="other">%d days left</item>
-    </plurals>
-    <plurals name="subscription_expiration_hours_left">
-        <item quantity="one">%d hour left</item>
-        <item quantity="other">%d hours left</item>
-    </plurals>
-    <plurals name="subscription_expiration_minutes_left">
-        <item quantity="one">%d minute left</item>
-        <item quantity="other">%d minutes left</item>
-    </plurals>
-    <string name="subscription_expiration_less_than_minute">&lt; 1 minute</string>
-    <string name="subscription_expiration_expired">Expired</string>
     <string name="group_type">Group Type</string>
     <string name="subscription_type">Subscription Type</string>
     <string name="delete_group_prompt">Are you sure you want to remove this group?</string>
@@ -843,7 +814,6 @@
     <string name="copy_all_logs">Copy all debug information</string>
     <string name="logs_copied">Debug information copied</string>
     <string name="scroll_to_bottom">Scroll to bottom</string>
-    <string name="log_line_position">Line %1$d of %2$d</string>
     <string name="log_level_panic">Panic</string>
     <string name="log_level_fatal">Fatal</string>
     <string name="log_level_error">Error</string>
@@ -1056,7 +1026,6 @@
     <string name="domain_strategy_for_server">Domain strategy for Server address</string>
     <string name="show_bottom_bar">Show bottom bar like SagerNet</string>
     <string name="utls_fingerprint">uTLS fingerprint</string>
-    <string name="app_utls_fingerprint">uTLS for subscriptions</string>
     <string name="custom_outbound_json">Custom outbound JSON</string>
     <string name="custom_config_json">Custom config JSON</string>
     <string name="is_outbound_only">The JSON set is outbound</string>
@@ -1068,8 +1037,6 @@
     <string name="no_active_connections">No active connections</string>
     <string name="enable_clash_api">Enable Clash API</string>
     <string name="log_level">Log Level</string>
-    <string name="logcat_retention_size">Logcat retention size</string>
-    <string name="logcat_retention_size_summary">Maximum log data retained in the backing file. Use kb or mb (10kb–1024mb).</string>
     <string name="enable_clash_api_summary">Provide Clash API and metacubexd dashboard</string>
     <string name="reset_clash_api_secret">Reset Clash API secret</string>
     <string name="reset_clash_api_secret_summary">Resets the secret used to access the Clash API; use this if the old secret was compromised</string>
@@ -1218,7 +1185,6 @@
     <string name="wake_reconnect">Reconnect when device wake from sleep</string>
     <string name="wake_reset_connections">Reset outbound connections when device wake from sleep</string>
     <string name="backup_in_progress">Backup is already in progress</string>
-    <string name="backup_creating">Creating backup…</string>
     <string name="restore_in_progress">Restore is already in progress</string>
     <string name="restore_cancelled">Restore operation cancelled</string>
     <string name="ruleset_update_interval">RuleSet Update Interval</string>
@@ -1794,5 +1760,4 @@
     <string name="subscription_routing_not_provided">This subscription doesn\'t provide routing data. Your current routing rules will apply.</string>
     <string name="toolbar_restore_default">Restore default</string>
     <string name="toolbar_restore_default_confirmation">Restore the default toolbar layout?</string>
-    <string name="profile_country">Profile country: %1$s</string>
 </resources>

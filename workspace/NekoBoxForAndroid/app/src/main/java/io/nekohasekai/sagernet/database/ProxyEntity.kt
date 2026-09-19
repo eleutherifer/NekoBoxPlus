@@ -44,8 +44,6 @@ import io.nekohasekai.sagernet.fmt.juicity.toUri
 import io.nekohasekai.sagernet.fmt.v2ray.*
 import io.nekohasekai.sagernet.fmt.wireguard.AmneziaWGBean
 import io.nekohasekai.sagernet.fmt.wireguard.WireGuardBean
-import io.nekohasekai.sagernet.fmt.wireguard.toAmneziaWGUri
-import io.nekohasekai.sagernet.fmt.wireguard.toWireGuardUri
 import io.nekohasekai.sagernet.fmt.wireguard.buildAmneziaWGConfig
 import io.nekohasekai.sagernet.fmt.wireguard.buildWireGuardConfig
 import io.nekohasekai.sagernet.ktx.app
@@ -78,8 +76,6 @@ data class ProxyEntity(
     var ping: Int = 0,
     var uuid: String = "",
     var error: String? = null,
-    var countryCode: String = "",
-    var countrySource: Int = 0,
     var socksBean: SOCKSBean? = null,
     var httpBean: HttpBean? = null,
     var ssBean: ShadowsocksBean? = null,
@@ -167,7 +163,7 @@ data class ProxyEntity(
     }
 
     override fun serializeToBuffer(output: ByteBufferOutput) {
-        output.writeInt(1)
+        output.writeInt(0)
 
         output.writeLong(id)
         output.writeLong(groupId)
@@ -185,8 +181,6 @@ data class ProxyEntity(
         output.writeBytes(data)
 
         output.writeBoolean(dirty)
-        output.writeString(countryCode)
-        output.writeInt(countrySource)
     }
 
     override fun deserializeFromBuffer(input: ByteBufferInput) {
@@ -205,10 +199,6 @@ data class ProxyEntity(
         putByteArray(input.readBytes(input.readVarInt(true)))
 
         dirty = input.readBoolean()
-        if (version >= 1) {
-            countryCode = input.readString()
-            countrySource = input.readInt()
-        }
     }
 
 
@@ -328,6 +318,8 @@ data class ProxyEntity(
 
     fun haveStandardLink(): Boolean {
         return when (requireBean()) {
+            is WireGuardBean -> false
+            is AmneziaWGBean -> false
             is ShadowTLSBean -> false
             is NekoBean -> false
             is ConfigBean -> false
@@ -361,8 +353,6 @@ data class ProxyEntity(
             is ByeDPIBean -> ""
             is AnyTLSBean -> toUri()
             is MasqueBean -> toUniversalLink()
-            is WireGuardBean -> toWireGuardUri()
-            is AmneziaWGBean -> toAmneziaWGUri()
             is ProxySetBean -> error("Proxy sets can only be exported as configuration")
             is NekoBean -> ""
             is DirectBean -> ""
@@ -371,7 +361,7 @@ data class ProxyEntity(
     }
 
     fun usesUniversalLinkForGroupExport(): Boolean = when (requireBean()) {
-        is TailscaleBean -> true
+        is WireGuardBean, is AmneziaWGBean, is TailscaleBean -> true
         else -> false
     }
 

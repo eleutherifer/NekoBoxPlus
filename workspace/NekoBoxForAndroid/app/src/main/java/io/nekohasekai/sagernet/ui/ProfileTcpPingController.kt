@@ -12,7 +12,6 @@ import io.nekohasekai.sagernet.ktx.isIpAddress
 import io.nekohasekai.sagernet.ktx.readableMessage
 import io.nekohasekai.sagernet.ktx.runOnDefaultDispatcher
 import io.nekohasekai.sagernet.utils.DefaultNetworkListener
-import io.nekohasekai.sagernet.utils.ProfileCountryResolver
 import kotlinx.coroutines.withTimeoutOrNull
 import libcore.Libcore
 import moe.matsuri.nb4a.net.LocalResolverImpl
@@ -44,7 +43,7 @@ object ProfileTcpPingController {
                 }
                 val bean = profile.requireBean()
                 if (DataStore.connectionTestHardened) {
-                    val ping = Libcore.tcpPingWithAddress(
+                    val ping = Libcore.tcpPing(
                         bean.serverAddress,
                         bean.serverPort.toString(),
                         3000,
@@ -54,13 +53,8 @@ object ProfileTcpPingController {
                     ProfileStatusUpdater.update(
                         profile.id,
                         status = 1,
-                        ping = ping.latency,
+                        ping = ping,
                         reloadDelayOrderedGroup = false,
-                    )
-                    ProfileCountryResolver.updateFromAddress(
-                        profile.id,
-                        ping.address,
-                        ProfileCountryResolver.SOURCE_ENDPOINT,
                     )
                     return@runOnDefaultDispatcher
                 }
@@ -75,7 +69,6 @@ object ProfileTcpPingController {
                 }
                 if (addresses.isEmpty()) error(app.getString(R.string.connection_test_domain_not_found))
                 var ping: Int? = null
-                var successfulAddress: String? = null
                 var lastError: Exception? = null
                 for (address in addresses) {
                     try {
@@ -86,7 +79,6 @@ object ProfileTcpPingController {
                             false,
                             LocalResolverImpl,
                         )
-                        successfulAddress = address
                         break
                     } catch (e: Exception) {
                         lastError = e
@@ -99,13 +91,6 @@ object ProfileTcpPingController {
                     ping = ping ?: throw lastError ?: error("TCP ping failed"),
                     reloadDelayOrderedGroup = false,
                 )
-                successfulAddress?.let {
-                    ProfileCountryResolver.updateFromAddress(
-                        profile.id,
-                        it,
-                        ProfileCountryResolver.SOURCE_ENDPOINT,
-                    )
-                }
             } catch (e: Exception) {
                 Logs.w(e)
                 val message = e.readableMessage

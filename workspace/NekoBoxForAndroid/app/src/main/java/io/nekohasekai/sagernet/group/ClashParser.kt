@@ -599,8 +599,8 @@ internal object ClashParser {
 
     private fun applyCommonOptions(bean: AbstractBean, proxy: Map<String, Any?>) {
         val custom = JSONObject()
-        bean.tcpFastOpen = proxy.boolean("tfo")
-        bean.tcpMultiPath = proxy.boolean("mptcp")
+        copy(proxy, custom, "tfo", "tcp_fast_open")
+        copy(proxy, custom, "mptcp", "tcp_multi_path")
         copy(proxy, custom, "interface-name", "bind_interface")
         copy(proxy, custom, "routing-mark", "routing_mark")
         when (proxy.value("ip-version").lowercase(Locale.ROOT)) {

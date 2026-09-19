@@ -513,7 +513,6 @@ class AssetsActivity : ThemedActivity() {
 
         val client =
             Libcore.newHttpClient().apply {
-                withUTLS(DataStore.appUTLSFingerprint)
                 modernTLS()
                 keepAlive()
             }
@@ -596,7 +595,6 @@ class AssetsActivity : ThemedActivity() {
             }
         val client =
             Libcore.newHttpClient().apply {
-                withUTLS(DataStore.appUTLSFingerprint)
                 modernTLS()
                 keepAlive()
                 trySocks5(
@@ -636,7 +634,6 @@ class AssetsActivity : ThemedActivity() {
     ) {
         val client =
             Libcore.newHttpClient().apply {
-                withUTLS(DataStore.appUTLSFingerprint)
                 modernTLS()
                 keepAlive()
             }
@@ -689,7 +686,6 @@ class AssetsActivity : ThemedActivity() {
     ) {
         val client =
             Libcore.newHttpClient().apply {
-                withUTLS(DataStore.appUTLSFingerprint)
                 modernTLS()
                 keepAlive()
             }

@@ -8,7 +8,6 @@ icon: material/new-box
     :material-plus: [kernel_rx](#kernel_rx)  
     :material-plus: [curve_preferences](#curve_preferences)  
     :material-plus: [certificate_public_key_sha256](#certificate_public_key_sha256)  
-    :material-plus: [xray_certificate_sha256](#xray_certificate_sha256) \
     :material-plus: [client_certificate](#client_certificate)  
     :material-plus: [client_certificate_path](#client_certificate_path)  
     :material-plus: [client_key](#client_key)  
@@ -109,7 +108,6 @@ icon: material/new-box
   "certificate": "",
   "certificate_path": "",
   "certificate_public_key_sha256": [],
-  "xray_certificate_sha256": [],
   "client_certificate": [],
   "client_certificate_path": "",
   "client_key": [],
@@ -263,18 +261,6 @@ openssl x509 -in certificate.pem -pubkey -noout | openssl pkey -pubin -outform d
 # 对于远程服务器的证书
 echo | openssl s_client -servername example.com -connect example.com:443 2>/dev/null | openssl x509 -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | openssl enc -base64
 ```
-
-#### xray_certificate_sha256
-
-!!! question "自 sing-box 1.13.0 起"
-
-==仅客户端==
-
-完整 DER 编码服务器证书的 SHA-256 哈希列表，base64 格式。
-
-此选项遵循 Xray `pinnedPeerCertSha256` 的验证语义。匹配的叶证书将被直接接受；匹配的对端证书链 CA 证书将用于验证叶证书和服务器名称。
-
-此选项与 `certificate`、`certificate_path` 和 `certificate_public_key_sha256` 冲突。
 
 #### client_certificate
 

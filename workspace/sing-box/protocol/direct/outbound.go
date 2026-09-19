@@ -174,10 +174,7 @@ func (h *Outbound) fetchMyAddresses() {
 func (h *Outbound) isMyLoopbackAddress(addresses ...netip.Addr) bool {
 	for _, prefix := range h.myAddresses.Load() {
 		for _, address := range addresses {
-			if !C.IsDarwin && prefix.Addr() == address {
-				continue
-			}
-			if prefix.Contains(address) {
+			if prefix.Addr() != address && prefix.Contains(address) {
 				return true
 			}
 		}

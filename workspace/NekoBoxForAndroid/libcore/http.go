@@ -37,7 +37,6 @@ type HTTPClient interface {
 	ModernTLS()
 	PinnedTLS12()
 	PinnedSHA256(sumHex string)
-	WithUTLS(name string)
 	TrySocks5(addr string, port int32, username string, password string)
 	TryH3Direct()
 	KeepAlive()
@@ -76,8 +75,6 @@ type httpClient struct {
 	h1h2Client    http.Client
 	trySocks5     bool
 	tryH3Direct   bool
-	utlsName      string
-	utlsTransport *utlsRoundTripper
 }
 
 func NewHttpClient() HTTPClient {
@@ -117,15 +114,6 @@ func (c *httpClient) PinnedSHA256(sumHex string) {
 		}
 		return errors.New("pinned sha256 sum mismatch")
 	}
-}
-
-func (c *httpClient) WithUTLS(name string) {
-	if name == "" {
-		return
-	}
-	c.utlsName = name
-	c.utlsTransport = newUTLSRoundTripper(c)
-	c.h1h2Client.Transport = c.utlsTransport
 }
 
 func (c *httpClient) TrySocks5(listenerAddr string, port int32, username string, password string) {
@@ -176,9 +164,6 @@ func (c *httpClient) NewRequest() HTTPRequest {
 }
 
 func (c *httpClient) Close() {
-	if c.utlsTransport != nil {
-		c.utlsTransport.Close()
-	}
 	c.h1h2Transport.CloseIdleConnections()
 }
 
@@ -230,13 +215,13 @@ func (r *httpRequest) SetContentString(content string) {
 func (r *httpRequest) Execute() (HTTPResponse, error) {
 	defer device.DeferPanicToError("http execute", func(err error) { log.Println(err) })
 	// full direct
-	if r.tryH3Direct && !r.trySocks5 && r.utlsName == "" {
+	if r.tryH3Direct && !r.trySocks5 {
 		return r.doH3Direct()
 	}
 	response, err := r.h1h2Client.Do(&r.request) //nolint:bodyclose // successful bodies are owned by the returned httpResponse.
 	if err != nil {
 		// trySocks5 && tryH3Direct
-		if r.tryH3Direct && r.utlsName == "" && errors.Is(err, errFailConnectSocks5) {
+		if r.tryH3Direct && errors.Is(err, errFailConnectSocks5) {
 			return r.doH3Direct()
 		}
 		return nil, err

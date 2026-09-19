@@ -21,11 +21,6 @@
             app:icon="@drawable/ic_settings_password"
             app:key="password"
             app:title="@string/password" />
-        <EditTextPreference
-            app:icon="@drawable/ic_baseline_info_24"
-            app:key="clientMetadata"
-            app:title="@string/anytls_client_metadata"
-            app:useSimpleSummaryProvider="true" />
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/security_settings">

@@ -8,7 +8,6 @@ icon: material/new-box
     :material-plus: [kernel_rx](#kernel_rx)  
     :material-plus: [curve_preferences](#curve_preferences)  
     :material-plus: [certificate_public_key_sha256](#certificate_public_key_sha256)  
-    :material-plus: [xray_certificate_sha256](#xray_certificate_sha256) \
     :material-plus: [client_certificate](#client_certificate)  
     :material-plus: [client_certificate_path](#client_certificate_path)  
     :material-plus: [client_key](#client_key)  
@@ -109,7 +108,6 @@ icon: material/new-box
   "certificate": "",
   "certificate_path": "",
   "certificate_public_key_sha256": [],
-  "xray_certificate_sha256": [],
   "client_certificate": [],
   "client_certificate_path": "",
   "client_key": [],
@@ -268,18 +266,6 @@ openssl x509 -in certificate.pem -pubkey -noout | openssl pkey -pubin -outform d
 # For a certificate from a remote server
 echo | openssl s_client -servername example.com -connect example.com:443 2>/dev/null | openssl x509 -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | openssl enc -base64
 ```
-
-#### xray_certificate_sha256
-
-!!! question "Since sing-box 1.13.0"
-
-==Client only==
-
-List of SHA-256 hashes of complete DER-encoded server certificates, in base64 format.
-
-This option follows Xray `pinnedPeerCertSha256` verification semantics. A matching leaf certificate is accepted directly. A matching CA certificate from the peer chain is used to verify the leaf certificate and server name.
-
-This option conflicts with `certificate`, `certificate_path`, and `certificate_public_key_sha256`.
 
 #### client_certificate
 

@@ -1,14 +1,10 @@
 package io.nekohasekai.sagernet.fmt.wireguard
 
 import io.nekohasekai.sagernet.ktx.isIpAddressV6
-import io.nekohasekai.sagernet.ktx.linkBuilder
-import io.nekohasekai.sagernet.ktx.toLink
 import io.nekohasekai.sagernet.ktx.wrapIPV6Host
 import moe.matsuri.nb4a.SingBoxOptions
 import moe.matsuri.nb4a.utils.Util
 import moe.matsuri.nb4a.utils.listByLineOrComma
-import okhttp3.HttpUrl
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 private fun normalizeWireGuardAddress(value: String): String {
     if (value.isEmpty() || value.contains("/")) return value
@@ -50,84 +46,6 @@ fun genReserved(anyStr: String): String {
     } catch (e: Exception) {
         return anyStr
     }
-}
-
-fun parseWireGuardUri(url: String): WireGuardBean {
-    val link = url.replaceBefore("://", "https").toHttpUrlOrNull()
-        ?: error("Invalid WireGuard link")
-    val authority = url.substringAfter("://").substringBefore('/').substringBefore('?').substringBefore('#')
-    val explicitPort = if (authority.startsWith('[')) {
-        authority.substringAfter("]:", "").toIntOrNull()
-    } else {
-        authority.substringAfterLast(':', "").toIntOrNull()
-    } ?: -1
-    require(link.host.isNotBlank() && explicitPort > 0) { "Invalid WireGuard endpoint" }
-
-    return WireGuardBean().apply {
-        initializeDefaultValues()
-        name = link.fragment.orEmpty()
-        serverAddress = link.host
-        serverPort = explicitPort
-        privateKey = url.throneQueryParameter("private_key").orEmpty()
-        localAddress = url.throneQueryParameter("local_address")
-            ?.split('-')
-            ?.joinToString("\n")
-            .orEmpty()
-        mtu = url.throneQueryParameter("mtu")?.toIntOrNull() ?: 1280
-        peerPublicKey = url.throneQueryParameter("peer_public_key")
-            ?: url.throneQueryParameter("public_key")
-            ?: ""
-        peerPreSharedKey = url.throneQueryParameter("pre_shared_key").orEmpty()
-        peerPersistentKeepalive = url.throneQueryParameter("persistent_keepalive_interval")
-            ?.toIntOrNull()
-            ?: 0
-        reserved = url.throneQueryParameter("reserved")
-            ?.split('-')
-            ?.mapNotNull(String::toIntOrNull)
-            ?.takeIf { it.size == 3 }
-            ?.joinToString(",")
-            .orEmpty()
-
-        require(privateKey.isNotBlank()) { "Missing WireGuard private key" }
-        require(peerPublicKey.isNotBlank()) { "Missing WireGuard peer public key" }
-    }
-}
-
-internal fun String.throneQueryParameter(name: String): String? {
-    val encodedValue = substringAfter('?', "")
-        .substringBefore('#')
-        .split('&')
-        .firstOrNull { part -> part.substringBefore('=') == name }
-        ?.substringAfter('=', "")
-        ?: return null
-    return HttpUrl.Builder()
-        .scheme("https")
-        .host("query.invalid")
-        .addEncodedQueryParameter("value", encodedValue.replace("+", "%2B"))
-        .build()
-        .queryParameter("value")
-}
-
-fun WireGuardBean.toWireGuardUri(): String {
-    require(privateKey.isNotBlank()) { "Missing WireGuard private key" }
-    require(peerPublicKey.isNotBlank()) { "Missing WireGuard peer public key" }
-    val builder = linkBuilder().host(serverAddress).port(serverPort)
-        .addQueryParameter("private_key", privateKey)
-        .addQueryParameter("public_key", peerPublicKey)
-    val addresses = normalizeWireGuardAddressList(localAddress)
-    if (addresses.isNotEmpty()) builder.addQueryParameter("local_address", addresses.joinToString("-"))
-    if (mtu > 0 && mtu != 1420) builder.addQueryParameter("mtu", mtu.toString())
-    if (peerPreSharedKey.isNotBlank()) builder.addQueryParameter("pre_shared_key", peerPreSharedKey)
-    if (reserved.isNotBlank()) {
-        parseReservedValues(reserved)?.let {
-            builder.addQueryParameter("reserved", it.joinToString("-"))
-        }
-    }
-    if (peerPersistentKeepalive > 0) {
-        builder.addQueryParameter("persistent_keepalive_interval", peerPersistentKeepalive.toString())
-    }
-    if (name.isNotBlank()) builder.fragment(name)
-    return builder.toLink("wg").replace(":$serverPort/", ":$serverPort")
 }
 
 fun WireGuardBean.buildWireGuardConfig(): String = buildString {

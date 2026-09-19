@@ -5,22 +5,12 @@ import android.app.Service
 import android.content.Intent
 import android.os.PowerManager
 import io.nekohasekai.sagernet.SagerNet
-import io.nekohasekai.sagernet.database.DataStore
-import io.nekohasekai.sagernet.database.ProxyEntity
 
 class ProxyService : Service(), BaseService.Interface {
     override val data = BaseService.Data(this)
     override val tag: String get() = "SagerNetProxyService"
-    override fun createNotification(profile: ProxyEntity?): ServiceNotification =
-        ServiceNotification(
-            this,
-            profile?.let {
-                ServiceNotification.genNotificationTitle(it, DataStore.notificationCountryIndicator)
-            }.orEmpty(),
-            "service-proxy",
-            true,
-            profile,
-        )
+    override fun createNotification(profileName: String): ServiceNotification =
+        ServiceNotification(this, profileName, "service-proxy", true)
 
     override var wakeLock: PowerManager.WakeLock? = null
     override var upstreamInterfaceName: String? = null

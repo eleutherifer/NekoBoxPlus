@@ -1,6 +1,5 @@
 package io.nekohasekai.sagernet.group
 
-import android.annotation.SuppressLint
 import io.nekohasekai.sagernet.fmt.AbstractBean
 import io.nekohasekai.sagernet.fmt.http.HttpBean
 import io.nekohasekai.sagernet.fmt.hysteria.HysteriaBean
@@ -16,7 +15,6 @@ import io.nekohasekai.sagernet.ktx.isIpAddressV6
 import org.json.JSONArray
 import org.json.JSONObject
 import org.json.JSONTokener
-import java.util.Base64
 import java.util.Locale
 
 /**
@@ -28,7 +26,6 @@ import java.util.Locale
 internal object XrayParser {
     private val supportedProtocols =
         setOf("http", "socks", "shadowsocks", "vmess", "vless", "trojan", "hysteria", "wireguard")
-    private const val superscriptDigits = "⁰¹²³⁴⁵⁶⁷⁸⁹"
 
     fun parse(text: String): List<AbstractBean>? {
         val root = runCatching { JSONTokener(text).nextValue() }.getOrNull() ?: return null
@@ -54,22 +51,25 @@ internal object XrayParser {
             for ((config, outbounds) in outboundsByConfig) {
                 val candidates = outbounds.filter { it.optString("protocol").lowercase(Locale.ROOT) in supportedProtocols }
                 val remarks = config.optString("remarks").takeIf(String::isNotBlank)
-                val parsed = mutableListOf<Pair<AbstractBean, String>>()
-                for (outbound in candidates) {
+                for ((index, outbound) in candidates.withIndex()) {
                     val protocol = outbound.optString("protocol").lowercase(Locale.ROOT)
-                    val realName = remarks ?: "Xray ${protocol.replaceFirstChar { it.uppercase() }}"
+                    val baseName = proxyName(outbound, remarks, index, candidates.size, protocol)
                     val beans =
                         runCatching { parseOutbound(outbound, protocol) }
                             .onFailure {
                                 Logs.w("Skipping invalid Xray $protocol outbound ${outbound.optString("tag")}")
                             }.getOrNull()
                             .orEmpty()
-                    beans.forEach { bean -> parsed += bean to realName }
-                }
-                parsed.forEachIndexed { index, (bean, realName) ->
-                    bean.name = if (parsed.size == 1) realName else "${(index + 1).toSuperscript()} $realName"
-                    bean.initializeDefaultValues()
-                    add(bean)
+                    beans.forEachIndexed { beanIndex, bean ->
+                        bean.name =
+                            if (beans.size == 1) {
+                                baseName
+                            } else {
+                                "$baseName #${beanIndex + 1}"
+                            }
+                        bean.initializeDefaultValues()
+                        add(bean)
+                    }
                 }
             }
         }
@@ -181,7 +181,6 @@ internal object XrayParser {
         val settings = outbound.requiredObject("settings")
         val stream = outbound.optJSONObject("streamSettings")
         val hysteria = stream?.optJSONObject("hysteriaSettings")
-        val tls = stream?.optJSONObject("tlsSettings")
         val port = settings.requiredPort()
         return HysteriaBean().apply {
             protocolVersion = 2
@@ -190,9 +189,7 @@ internal object XrayParser {
             serverPorts = port.toString()
             authPayload = hysteria?.optString("auth").orEmpty()
             sni = stream?.serverName().orEmpty()
-            allowInsecure = tls?.optBoolean("allowInsecure") == true
-            tlsCurvePreferences = normalizeCurvePreferences(tls).joinToString("\n")
-            tlsXrayCertificateSha256 = parseXrayCertificatePins(tls).joinToString("\n")
+            allowInsecure = stream?.optJSONObject("tlsSettings")?.optBoolean("allowInsecure") == true
             applyCommonOptions(this, outbound)
         }
     }
@@ -263,24 +260,15 @@ internal object XrayParser {
                 bean.kcpTti = it.optInt("tti")
                 bean.headerType = it.optJSONObject("header")?.optString("type").orEmpty().ifBlank { "none" }
             }
-            "http" -> {
-                val http = stream?.optJSONObject("httpSettings")
-                if (http != null) {
-                    bean.path = http.optString("path")
-                    bean.host = http.optJSONArray("host")?.strings()?.joinToString(",").orEmpty()
-                } else {
-                    stream
-                        ?.optJSONObject("tcpSettings")
-                        ?.optJSONObject("header")
-                        ?.optJSONObject("request")
-                        ?.let { request ->
-                            bean.path = request.optJSONArray("path")?.optString(0).orEmpty()
-                            bean.host =
-                                request.optJSONObject("headers")?.optJSONArray("Host")?.optString(0).orEmpty()
-                            bean.headerType = "http"
-                        }
+            "http" -> stream
+                ?.optJSONObject("tcpSettings")
+                ?.optJSONObject("header")
+                ?.optJSONObject("request")
+                ?.let { request ->
+                    bean.path = request.optJSONArray("path")?.optString(0).orEmpty()
+                    bean.host = request.optJSONObject("headers")?.optJSONArray("Host")?.optString(0).orEmpty()
+                    bean.headerType = "http"
                 }
-            }
         }
         applySecurity(bean, stream)
         applyMux(bean, outbound.optJSONObject("mux"))
@@ -295,11 +283,11 @@ internal object XrayParser {
                 bean.sni = tls?.optString("serverName").orEmpty()
                 bean.alpn = tls?.optJSONArray("alpn")?.strings()?.joinToString("\n").orEmpty()
                 bean.allowInsecure = tls?.optBoolean("allowInsecure") == true
-                bean.utlsFingerprint =
-                    tls?.optString("fingerprint").orEmpty().takeUnless { it.equals("unsafe", ignoreCase = true) }.orEmpty()
-                bean.tlsCurvePreferences = normalizeCurvePreferences(tls).joinToString("\n")
-                bean.tlsXrayCertificateSha256 = parseXrayCertificatePins(tls).joinToString("\n")
-                applyECH(bean, tls?.optString("echConfigList").orEmpty())
+                bean.utlsFingerprint = tls?.optString("fingerprint").orEmpty()
+                bean.tlsCurvePreferences = tls?.optJSONArray("curvePreferences")?.strings()?.joinToString("\n").orEmpty()
+                bean.tlsCertificatePublicKeySha256 = tls?.optString("pinnedPeerCertSha256").orEmpty()
+                bean.enableECH = !tls?.optString("echConfigList").isNullOrBlank()
+                bean.echConfig = tls?.optString("echConfigList").orEmpty()
             }
             "reality" -> {
                 val reality = stream.optJSONObject("realitySettings")
@@ -332,20 +320,8 @@ internal object XrayParser {
             custom.put(if (it.isIpAddressV6()) "inet6_bind_address" else "inet4_bind_address", it)
         }
         outbound.optJSONObject("streamSettings")?.optJSONObject("sockopt")?.let { socket ->
-            socket.opt("tcpFastOpen").takeUnless { it == null || it == JSONObject.NULL }?.let {
-                bean.tcpFastOpen = when (it) {
-                    is Boolean -> it
-                    is Number -> it.toInt() > 0
-                    else -> it.toString().toBooleanStrictOrNull() ?: false
-                }
-            }
-            socket.opt("tcpMptcp").takeUnless { it == null || it == JSONObject.NULL }?.let {
-                bean.tcpMultiPath = when (it) {
-                    is Boolean -> it
-                    is Number -> it.toInt() > 0
-                    else -> it.toString().toBooleanStrictOrNull() ?: false
-                }
-            }
+            copy(socket, custom, "tcpFastOpen", "tcp_fast_open")
+            copy(socket, custom, "tcpMptcp", "tcp_multi_path")
             copy(socket, custom, "mark", "routing_mark")
             copy(socket, custom, "interface", "bind_interface")
             socket.optInt("tcpKeepAliveIdle").takeIf { it > 0 }?.let {
@@ -378,62 +354,22 @@ internal object XrayParser {
         if (source.has(sourceKey) && !source.isNull(sourceKey)) target.put(targetKey, source.get(sourceKey))
     }
 
-    private fun Int.toSuperscript(): String = toString().map { superscriptDigits[it.digitToInt()] }.joinToString("")
-
-    private fun normalizeCurvePreferences(tls: JSONObject?): List<String> =
-        tls
-            ?.optJSONArray("curvePreferences")
-            ?.strings()
-            .orEmpty()
-            .mapNotNull {
-                when (it.lowercase(Locale.ROOT)) {
-                    "curvep256", "p256" -> "P256"
-                    "curvep384", "p384" -> "P384"
-                    "curvep521", "p521" -> "P521"
-                    "x25519" -> "X25519"
-                    "x25519mlkem768" -> "X25519MLKEM768"
-                    else -> null
-                }
-            }
-
-    @SuppressLint("NewApi") // java.util.Base64 is provided below API 26 by core library desugaring.
-    private fun parseXrayCertificatePins(tls: JSONObject?): List<String> {
-        val value = tls?.optString("pinnedPeerCertSha256").orEmpty()
-        if (value.isBlank()) return emptyList()
-        return value.split(',').mapNotNull { it.trim().takeIf(String::isNotEmpty) }.map { pin ->
-            val hex = pin.replace(":", "")
-            require(hex.length == 64 && hex.all(::isHexDigit)) { "invalid pinnedPeerCertSha256" }
-            val bytes = ByteArray(32) { index ->
-                hex.substring(index * 2, index * 2 + 2).toInt(16).toByte()
-            }
-            Base64.getEncoder().encodeToString(bytes)
+    private fun proxyName(
+        outbound: JSONObject,
+        remarks: String?,
+        index: Int,
+        total: Int,
+        protocol: String,
+    ): String {
+        val tag = outbound.optString("tag").takeIf(String::isNotBlank)
+        return when {
+            !remarks.isNullOrBlank() && total == 1 -> remarks
+            !remarks.isNullOrBlank() && tag != null -> "$remarks [$tag]"
+            !remarks.isNullOrBlank() -> "$remarks #${index + 1}"
+            tag != null -> tag
+            else -> "Xray ${protocol.replaceFirstChar { it.uppercase() }}"
         }
     }
-
-    @SuppressLint("NewApi") // java.util.Base64 is provided below API 26 by core library desugaring.
-    private fun applyECH(bean: StandardV2RayBean, value: String) {
-        if (value.isBlank()) return
-        bean.enableECH = true
-        if (value.contains("://")) {
-            val separator = value.indexOf('+')
-            if (separator > 0 && value.substring(separator + 1).contains("://")) {
-                bean.echQueryServerName = value.substring(0, separator).trim()
-            }
-            bean.echConfig = ""
-            return
-        }
-        val decoded = Base64.getDecoder().decode(value.filterNot(Char::isWhitespace))
-        require(decoded.isNotEmpty()) { "empty echConfigList" }
-        val encoded = Base64.getEncoder().encodeToString(decoded)
-        bean.echConfig = encoded.chunked(64).joinToString(
-            separator = "\n",
-            prefix = "-----BEGIN ECH CONFIGS-----\n",
-            postfix = "\n-----END ECH CONFIGS-----",
-        )
-    }
-
-    private fun isHexDigit(value: Char): Boolean =
-        value in '0'..'9' || value in 'a'..'f' || value in 'A'..'F'
 
     private fun JSONObject.endpoint(arrayKey: String): JSONObject =
         optJSONArray(arrayKey)?.requiredObject(0) ?: this

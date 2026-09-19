@@ -100,7 +100,6 @@ dependencies {
 
     implementation("com.google.android.material:material:1.13.0")
     implementation("com.google.code.gson:gson:2.9.0")
-    implementation("com.caverock:androidsvg-aar:1.4")
     implementation("org.eclipse.jgit:org.eclipse.jgit:5.13.3.202401111512-r")
     implementation("org.slf4j:slf4j-nop:2.0.18")
 

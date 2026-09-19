@@ -20,36 +20,19 @@ import (
 
 const icmpPingPayloadSize = 40
 
-type PingResult struct {
-	latency int32
-	address string
-}
-
-func (r *PingResult) GetLatency() int32 { return r.latency }
-
-func (r *PingResult) GetAddress() string { return r.address }
-
 type icmpPingDNSExchange func(context.Context, *dns.Msg) (*dns.Msg, error)
 
 // IcmpPing sends an ICMP echo request directly to a proxy server.
 // The timeout is expressed in milliseconds.
 func IcmpPing(host string, timeout int32) (latency int32, err error) {
-	result, err := IcmpPingWithAddress(host, timeout)
-	if err != nil {
-		return -1, err
-	}
-	return result.latency, nil
-}
-
-func IcmpPingWithAddress(host string, timeout int32) (result *PingResult, err error) {
 	defer device.DeferPanicToError("ICMPPing", func(panicErr error) { err = panicErr })
 	host = strings.TrimSpace(host)
 	if host == "" {
-		return nil, errors.New("ICMP ping host is empty")
+		return -1, errors.New("ICMP ping host is empty")
 	}
 	probeTimeout := time.Duration(timeout) * time.Millisecond
 	if probeTimeout <= 0 {
-		return nil, errors.New("ICMP ping timeout must be positive")
+		return -1, errors.New("ICMP ping timeout must be positive")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), probeTimeout)
@@ -60,18 +43,18 @@ func IcmpPingWithAddress(host string, timeout int32) (result *PingResult, err er
 
 	addresses, err := resolveICMPPingAddresses(ctx, host, gLocalDNSTransport)
 	if err != nil {
-		return nil, err
+		return -1, err
 	}
 
 	payload := make([]byte, icmpPingPayloadSize)
 	if _, err = rand.Read(payload); err != nil {
-		return nil, fmt.Errorf("generate ICMP ping payload: %w", err)
+		return -1, fmt.Errorf("generate ICMP ping payload: %w", err)
 	}
 
 	var probeErrors []error
 	for _, address := range addresses {
 		if err = ctx.Err(); err != nil {
-			return nil, err
+			return -1, err
 		}
 		var elapsed time.Duration
 		elapsed, err = libping.IcmpPing(
@@ -81,14 +64,14 @@ func IcmpPingWithAddress(host string, timeout int32) (result *PingResult, err er
 			icmpPingProtectControl,
 		)
 		if err == nil {
-			return &PingResult{latency: int32(elapsed.Milliseconds()), address: address.String()}, nil
+			return int32(elapsed.Milliseconds()), nil
 		}
 		probeErrors = append(probeErrors, fmt.Errorf("ping %s: %w", address, err))
 	}
 	if err = ctx.Err(); err != nil {
-		return nil, err
+		return -1, err
 	}
-	return nil, errors.Join(probeErrors...)
+	return -1, errors.Join(probeErrors...)
 }
 
 func resolveICMPPingAddresses(

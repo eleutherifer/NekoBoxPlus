@@ -47,18 +47,6 @@
             app:title="@string/show_profile_count_on_tabs" />
         <moe.matsuri.nb4a.ui.MaterialSwitchPreference
             app:defaultValue="true"
-            app:icon="@drawable/baseline_public_24"
-            app:key="profileCountryIndicator"
-            app:summary="@string/profile_country_indicator_summary"
-            app:title="@string/profile_country_indicator" />
-        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
-            app:defaultValue="true"
-            app:icon="@drawable/baseline_public_24"
-            app:key="notificationCountryIndicator"
-            app:summary="@string/notification_country_indicator_summary"
-            app:title="@string/notification_country_indicator" />
-        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
-            app:defaultValue="true"
             app:icon="@drawable/baseline_keyboard_tab_24"
             app:key="tabDoubleTapToNavigate"
             app:summary="@string/tab_double_tap_to_navigate_summary"
@@ -253,24 +241,6 @@
             app:useSimpleSummaryProvider="true" />
         <moe.matsuri.nb4a.ui.MaterialSwitchPreference
             app:defaultValue="false"
-            app:icon="@drawable/ic_baseline_speed_24"
-            app:key="globalTcpFastOpen"
-            app:title="@string/tcp_fast_open" />
-        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
-            app:defaultValue="false"
-            app:icon="@drawable/ic_baseline_multiple_stop_24"
-            app:key="globalTcpMultiPath"
-            app:title="@string/multipath_tcp" />
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
-            app:defaultValue=""
-            app:entries="@array/connection_option_entries"
-            app:entryValues="@array/connection_option_values"
-            app:icon="@drawable/ic_baseline_call_split_24"
-            app:key="globalUdpFragment"
-            app:title="@string/udp_fragmentation"
-            app:useSimpleSummaryProvider="true" />
-        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
-            app:defaultValue="false"
             app:icon="@drawable/ic_baseline_flip_camera_android_24"
             app:key="networkChangeReconnect"
             app:title="@string/network_change_reconnect"
@@ -321,13 +291,6 @@
             app:icon="@drawable/ic_baseline_bug_report_24"
             app:key="logLevel"
             app:title="@string/log_level"
-            app:useSimpleSummaryProvider="true" />
-        <EditTextPreference
-            app:defaultValue="250kb"
-            app:dialogMessage="@string/logcat_retention_size_summary"
-            app:icon="@drawable/ic_baseline_save_24"
-            app:key="logBufSize"
-            app:title="@string/logcat_retention_size"
             app:useSimpleSummaryProvider="true" />
         <moe.matsuri.nb4a.ui.SimpleMenuPreference
             app:defaultValue="1"
@@ -481,7 +444,7 @@
             app:title="@string/ipv6"
             app:useSimpleSummaryProvider="true" />
         <moe.matsuri.nb4a.ui.SimpleMenuPreference
-            app:defaultValue="1"
+            app:defaultValue="0"
             app:entries="@array/rules_dat_provider"
             app:entryValues="@array/rules_provider_values"
             app:icon="@drawable/ic_baseline_rule_folder_24"
@@ -633,7 +596,7 @@
             app:title="@string/test_concurrency"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
-            app:defaultValue="10000"
+            app:defaultValue="5000"
             app:icon="@drawable/ic_baseline_timer_24"
             app:key="connectionTestTimeout"
             app:title="@string/connection_test_timeout"
@@ -746,14 +709,6 @@
             app:icon="@drawable/ic_baseline_lock_24"
             app:key="appTLSVersion"
             app:title="@string/app_tls_version"
-            app:useSimpleSummaryProvider="true" />
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
-            app:defaultValue=""
-            app:entries="@array/utls_fingerprint_entry"
-            app:entryValues="@array/utls_fingerprint_value"
-            app:icon="@drawable/ic_baseline_fingerprint_24"
-            app:key="appUTLSFingerprint"
-            app:title="@string/app_utls_fingerprint"
             app:useSimpleSummaryProvider="true" />
         <Preference
             app:icon="@drawable/baseline_undo_24"

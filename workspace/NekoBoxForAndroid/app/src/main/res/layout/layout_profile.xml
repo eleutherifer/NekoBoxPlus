@@ -49,19 +49,10 @@
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp">
 
-                <io.nekohasekai.sagernet.widget.CountryBadgeView
-                    android:id="@+id/country_badge"
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:visibility="gone"
-                    tools:visibility="visible" />
-
                 <TextView
                     android:id="@+id/profile_name"
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
-                    android:layout_weight="1"
                     android:maxLines="2"
                     android:ellipsize="end"
                     android:breakStrategy="simple"
@@ -71,7 +62,6 @@
                     android:textAppearance="?android:attr/textAppearanceSmall"
                     android:textColor="?attr/colorOnSurface"
                     android:textStyle="bold"
-                    tools:ignore="NestedWeights"
                     tools:text="A long profile name that wraps onto multiple lines" />
                 </LinearLayout>
 
@@ -225,7 +215,7 @@
                     android:textSize="13sp"
                     tools:text="VLESS TCP Reality" />
 
-                <io.nekohasekai.sagernet.widget.EndAlignedMarqueeTextView
+                <TextView
                     android:id="@+id/profile_status"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"

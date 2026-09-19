@@ -14,6 +14,8 @@ import android.text.Spanned
 import android.text.style.BackgroundColorSpan
 import android.util.Log
 import android.view.View
+import android.view.inputmethod.EditorInfo
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -32,7 +34,6 @@ import io.nekohasekai.sagernet.AppIconManager
 import io.nekohasekai.sagernet.BuildConfig
 import io.nekohasekai.sagernet.Key
 import io.nekohasekai.sagernet.LocalNetworkPermission
-import io.nekohasekai.sagernet.LogcatRetentionSize
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.SagerNet
 import io.nekohasekai.sagernet.TrafficFragmentation
@@ -158,8 +159,6 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat(), OnPreferenceDataS
                     Key.USE_TOOLBAR,
                     Key.CONFIGURE_TOOLBAR_LAYOUT,
                     Key.SHOW_PROFILE_COUNT_ON_TABS,
-                    Key.PROFILE_COUNTRY_INDICATOR,
-                    Key.NOTIFICATION_COUNTRY_INDICATOR,
                     Key.TAB_DOUBLE_TAP_TO_NAVIGATE,
                     Key.SHORT_PROFILE_PROTOCOL_INFO,
                     Key.DONT_HIGHLIGHT_INSECURE_PROFILES,
@@ -199,9 +198,6 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat(), OnPreferenceDataS
                     Key.EXCLAVE_FRAGMENT_METHOD,
                     Key.EXCLAVE_FRAGMENT_FOR_DIRECT,
                     Key.BYEDPI_FRAGMENT_CLI,
-                    Key.GLOBAL_TCP_FAST_OPEN,
-                    Key.GLOBAL_TCP_MULTI_PATH,
-                    Key.GLOBAL_UDP_FRAGMENT,
                     Key.NETWORK_CHANGE_RECONNECT,
                     Key.NETWORK_CHANGE_RESET_CONNECTIONS,
                     Key.WAKE_RECONNECT,
@@ -218,7 +214,6 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat(), OnPreferenceDataS
                     Key.OVERLOAD_WATCHDOG,
                     Key.MEMORY_LIMIT,
                     Key.LOG_LEVEL,
-                    Key.LOG_BUF_SIZE,
                     Key.CERT_PROVIDER,
                     Key.GLOBAL_CUSTOM_CONFIG,
                     Key.PREVIEW_SING_BOX_CONFIG,
@@ -333,7 +328,6 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat(), OnPreferenceDataS
                     Key.GLOBAL_ALLOW_INSECURE,
                     Key.ALLOW_INSECURE_ON_REQUEST,
                     Key.APP_TLS_VERSION,
-                    Key.APP_UTLS_FINGERPRINT,
                     KEY_RESET_SETTINGS,
                     Key.CLEAR_CACHE,
                     Key.RUN_STORAGE_MAINTENANCE,
@@ -559,8 +553,6 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat(), OnPreferenceDataS
         val strictRoute = findPreference<MaterialSwitchPreference>(Key.STRICT_ROUTE)!!
 
         val showDirectSpeed = findPreference<MaterialSwitchPreference>(Key.SHOW_DIRECT_SPEED)!!
-        val notificationCountryIndicator =
-            findPreference<MaterialSwitchPreference>(Key.NOTIFICATION_COUNTRY_INDICATOR)!!
         val persistentStatusNotification =
             findPreference<MaterialSwitchPreference>(Key.PERSISTENT_STATUS_NOTIFICATION)!!
         val ipv6Mode = findPreference<Preference>(Key.IPV6_MODE)!!
@@ -588,12 +580,8 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat(), OnPreferenceDataS
         val exclaveFragmentMethod = findPreference<SimpleMenuPreference>(Key.EXCLAVE_FRAGMENT_METHOD)!!
         val exclaveFragmentForDirect = findPreference<MaterialSwitchPreference>(Key.EXCLAVE_FRAGMENT_FOR_DIRECT)!!
         val byedpiFragmentCli = findPreference<EditTextPreference>(Key.BYEDPI_FRAGMENT_CLI)!!
-        val globalTcpFastOpen = findPreference<MaterialSwitchPreference>(Key.GLOBAL_TCP_FAST_OPEN)!!
-        val globalTcpMultiPath = findPreference<MaterialSwitchPreference>(Key.GLOBAL_TCP_MULTI_PATH)!!
-        val globalUdpFragment = findPreference<SimpleMenuPreference>(Key.GLOBAL_UDP_FRAGMENT)!!
 
         val logLevel = findPreference<LongClickListPreference>(Key.LOG_LEVEL)!!
-        val logBufSize = findPreference<EditTextPreference>(Key.LOG_BUF_SIZE)!!
         val mtu = findPreference<EditTextPreference>(Key.MTU)!!
         mtu.setOnBindEditTextListener(EditTextPreferenceModifiers.Number)
         memoryLimit.setOnBindEditTextListener(EditTextPreferenceModifiers.Number)
@@ -639,6 +627,7 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat(), OnPreferenceDataS
             true
         }
 
+        logLevel.dialogLayoutResource = R.layout.layout_loglevel_help
         logLevel.setOnPreferenceChangeListener { _, newValue ->
             val selectedLevel = AppLogLevel.fromPreferenceValue(
                 newValue.toString().toIntOrNull() ?: Int.MIN_VALUE,
@@ -646,17 +635,26 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat(), OnPreferenceDataS
             applyLogLevel(selectedLevel)
             true
         }
-        logBufSize.setOnBindEditTextListener(EditTextPreferenceModifiers.Listener)
-        val effectiveLogBufSize = DataStore.logBufSizeValue
-        if (logBufSize.text != effectiveLogBufSize.text) {
-            logBufSize.text = effectiveLogBufSize.text
-        }
-        logBufSize.setOnPreferenceChangeListener { _, newValue ->
-            val parsed = LogcatRetentionSize.parse(newValue.toString())
-                ?: return@setOnPreferenceChangeListener false
-            logBufSize.text = parsed.text
-            needRestart()
-            false
+        logLevel.setOnLongClickListener {
+            if (context == null) return@setOnLongClickListener true
+
+            val view = EditText(context).apply {
+                inputType = EditorInfo.TYPE_CLASS_NUMBER
+                var size = DataStore.logBufSize
+                if (size == 0) size = 50
+                setText(size.toString())
+            }
+
+            MaterialAlertDialogBuilder(requireContext()).setTitle("Log buffer size (kb)")
+                .setView(view)
+                .setPositiveButton(android.R.string.ok) { _, _ ->
+                    DataStore.logBufSize = view.text.toString().toInt()
+                    if (DataStore.logBufSize <= 0) DataStore.logBufSize = 250
+                    needRestart()
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+            true
         }
 
         mixedListener.setOnBindEditTextListener(EditTextPreferenceModifiers.Listener)
@@ -814,10 +812,6 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat(), OnPreferenceDataS
         strictRoute.onPreferenceChangeListener = reloadListener
         showDirectSpeed.onPreferenceChangeListener = reloadListener
         persistentStatusNotification.onPreferenceChangeListener = reloadListener
-        notificationCountryIndicator.setOnPreferenceChangeListener { _, newValue ->
-            SagerNet.updateNotificationCountryIndicator(newValue as Boolean)
-            true
-        }
         trafficSniffing.onPreferenceChangeListener = reloadListener
         bypassLan.onPreferenceChangeListener = reloadListener
         bypassLanInCore.onPreferenceChangeListener = reloadListener
@@ -926,9 +920,6 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat(), OnPreferenceDataS
         exclaveFragmentMethod.onPreferenceChangeListener = reloadListener
         exclaveFragmentForDirect.onPreferenceChangeListener = reloadListener
         byedpiFragmentCli.onPreferenceChangeListener = reloadListener
-        globalTcpFastOpen.onPreferenceChangeListener = reloadListener
-        globalTcpMultiPath.onPreferenceChangeListener = reloadListener
-        globalUdpFragment.onPreferenceChangeListener = reloadListener
 
         // 恢复默认设置功能
         val resetSettings = findPreference<Preference>("resetSettings")!!

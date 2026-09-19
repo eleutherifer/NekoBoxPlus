@@ -20,7 +20,6 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.annotation.AttrRes
 import androidx.annotation.ColorRes
 import androidx.core.content.ContextCompat
-import androidx.core.view.doOnLayout
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
@@ -176,13 +175,10 @@ fun String.unUrlSafe(): String {
 }
 
 fun RecyclerView.scrollTo(index: Int, force: Boolean = false) {
-    fun isTargetFullyVisible(): Boolean {
-        val manager = layoutManager ?: return false
-        val target = manager.findViewByPosition(index) ?: return false
-        return manager.isViewPartiallyVisible(target, true, true)
+    if (force) post {
+        scrollToPosition(index)
     }
-
-    fun smoothScrollToTarget() {
+    postDelayed({
         try {
             layoutManager?.startSmoothScroll(object : LinearSmoothScroller(context) {
                 init {
@@ -195,20 +191,7 @@ fun RecyclerView.scrollTo(index: Int, force: Boolean = false) {
             })
         } catch (ignored: IllegalArgumentException) {
         }
-    }
-
-    doOnLayout {
-        if (isTargetFullyVisible()) return@doOnLayout
-
-        if (force) {
-            scrollToPosition(index)
-            postDelayed(::smoothScrollToTarget, 300L)
-        } else {
-            postDelayed({
-                if (!isTargetFullyVisible()) smoothScrollToTarget()
-            }, 300L)
-        }
-    }
+    }, 300L)
 }
 
 val app get() = SagerNet.application

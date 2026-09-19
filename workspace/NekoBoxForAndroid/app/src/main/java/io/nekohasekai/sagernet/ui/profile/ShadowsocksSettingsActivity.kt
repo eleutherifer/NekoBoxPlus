@@ -73,7 +73,7 @@ class ShadowsocksSettingsActivity : ProfileSettingsActivity<ShadowsocksBean>() {
 
         // Mux mode visibility control
         muxMode.preference.apply {
-            updateMuxMode(muxMode.readStringToIntFromCache())
+            updateMuxMode(muxMode.readIntFromCache())
             this as SimpleMenuPreference
             setOnPreferenceChangeListener { _, newValue ->
                 updateMuxMode((newValue as String).toInt())

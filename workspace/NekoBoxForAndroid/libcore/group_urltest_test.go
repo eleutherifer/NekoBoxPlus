@@ -325,7 +325,7 @@ func TestRunHardenedTCPPingRetriesConnections(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if latency.latency < 0 || latency.address != "192.0.2.40" || calls.Load() != 3 {
-		t.Fatalf("result = %+v, dials = %d", latency, calls.Load())
+	if latency < 0 || calls.Load() != 3 {
+		t.Fatalf("latency = %d, dials = %d", latency, calls.Load())
 	}
 }

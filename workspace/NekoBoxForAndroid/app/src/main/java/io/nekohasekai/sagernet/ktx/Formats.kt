@@ -6,8 +6,6 @@ import io.nekohasekai.sagernet.fmt.Serializable
 import io.nekohasekai.sagernet.fmt.shadowsocks.ShadowsocksBean
 import io.nekohasekai.sagernet.fmt.wireguard.AmneziaWGBean
 import io.nekohasekai.sagernet.fmt.wireguard.WireGuardBean
-import io.nekohasekai.sagernet.fmt.wireguard.parseAmneziaWGUri
-import io.nekohasekai.sagernet.fmt.wireguard.parseThroneWireGuardUri
 import io.nekohasekai.sagernet.fmt.v2ray.VMessBean
 import io.nekohasekai.sagernet.group.RawUpdater
 import io.nekohasekai.sagernet.fmt.http.parseHttp
@@ -314,24 +312,6 @@ suspend fun parseProxies(text: String): List<AbstractBean> {
             }.onFailure {
                 Logs.w(it)
             }
-        } else if (startsWith("wg://", ignoreCase = true) ||
-            startsWith("wireguard://", ignoreCase = true)
-        ) {
-            Logs.d("Try parse WireGuard link")
-            runCatching {
-                entities.add(parseThroneWireGuardUri(this))
-            }.onFailure {
-                Logs.w(it)
-            }
-        } else if (startsWith("amneziawg://", ignoreCase = true) ||
-            startsWith("awg://", ignoreCase = true)
-        ) {
-            Logs.d("Try parse AmneziaWG link")
-            runCatching {
-                entities.addAll(parseAmneziaWGUri(this))
-            }.onFailure {
-                Logs.w(it)
-            }
         } else if (startsWith("vpn://")) {
             Logs.d("Try parse AmneziaVPN vpn:// link: $this")
             runCatching {
@@ -367,11 +347,7 @@ suspend fun parseProxies(text: String): List<AbstractBean> {
             }
         }
     }
-    val parsed = if (entities.size > entitiesByLine.size) entities else entitiesByLine
-    val seenAmnezia = mutableSetOf<String>()
-    return parsed.filter { bean ->
-        bean !is AmneziaWGBean || seenAmnezia.add(bean.hash)
-    }
+    return if (entities.size > entitiesByLine.size) entities else entitiesByLine
 }
 
 /**

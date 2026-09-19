@@ -1,23 +1,18 @@
 package io.nekohasekai.sagernet.group
 
 import io.nekohasekai.sagernet.fmt.http.HttpBean
-import io.nekohasekai.sagernet.fmt.applySharedTLSOptions
 import io.nekohasekai.sagernet.fmt.hysteria.HysteriaBean
 import io.nekohasekai.sagernet.fmt.shadowsocks.ShadowsocksBean
 import io.nekohasekai.sagernet.fmt.socks.SOCKSBean
 import io.nekohasekai.sagernet.fmt.trojan.TrojanBean
 import io.nekohasekai.sagernet.fmt.v2ray.VMessBean
 import io.nekohasekai.sagernet.fmt.wireguard.WireGuardBean
-import moe.matsuri.nb4a.SingBoxOptions.OutboundECHOptions
-import moe.matsuri.nb4a.SingBoxOptions.OutboundTLSOptions
-import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.Base64
 
 class XrayParserTest {
     @Test
@@ -200,11 +195,9 @@ class XrayParserTest {
         assertEquals("h2\nhttp/1.1", vmess.alpn)
         assertEquals(16, vmess.muxConcurrency)
         assertEquals("X25519", vmess.tlsCurvePreferences)
-        assertTrue(vmess.tcpFastOpen)
-        assertTrue(vmess.tcpMultiPath)
         val custom = JSONObject(vmess.customOutboundJson)
-        assertFalse(custom.has("tcp_fast_open"))
-        assertFalse(custom.has("tcp_multi_path"))
+        assertTrue(custom.getBoolean("tcp_fast_open"))
+        assertTrue(custom.getBoolean("tcp_multi_path"))
         assertEquals("wlan0", custom.getString("bind_interface"))
         assertEquals(12, custom.getInt("routing_mark"))
 
@@ -215,15 +208,13 @@ class XrayParserTest {
         assertEquals("01234567", vless.realityShortId)
 
         val firstPeer = proxies[7] as WireGuardBean
-        assertEquals("¹ All Xray", proxies.first().name)
-        assertEquals("⁸ All Xray", firstPeer.name)
+        assertEquals("All Xray [wg] #1", firstPeer.name)
         assertEquals("wg1.example", firstPeer.serverAddress)
         assertEquals(51820, firstPeer.serverPort)
         assertEquals("10.0.0.2/32\nfd00::2/128", firstPeer.localAddress)
         assertEquals("1\n2\n3", firstPeer.reserved)
 
         val secondPeer = proxies[8] as WireGuardBean
-        assertEquals("⁹ All Xray", secondPeer.name)
         assertEquals("2001:db8::1", secondPeer.serverAddress)
         assertEquals(51821, secondPeer.serverPort)
         assertFalse(proxies.any { it.name == "direct" })
@@ -252,144 +243,7 @@ class XrayParserTest {
             )!!
 
         assertEquals(1, proxies.size)
-        assertEquals("Xray Socks", proxies.single().name)
-    }
-
-    @Test
-    fun numbersEveryProducedProfileWithoutUsingTags() {
-        val outbounds = JSONArray()
-        repeat(10) { index ->
-            outbounds.put(
-                JSONObject()
-                    .put("protocol", "socks")
-                    .put("tag", "technical-$index")
-                    .put("settings", JSONObject().put("address", "server-$index.example").put("port", 1080)),
-            )
-        }
-        val proxies = XrayParser.parse(JSONObject().put("remarks", "Fleet").put("outbounds", outbounds).toString())!!
-
-        assertEquals(10, proxies.size)
-        assertEquals("¹ Fleet", proxies.first().name)
-        assertEquals("¹⁰ Fleet", proxies.last().name)
-        assertFalse(proxies.any { it.name.contains("technical") })
-    }
-
-    @Test
-    fun convertsXrayCertificatePinsAndNormalizesTlsOptions() {
-        val firstPin = ByteArray(32) { it.toByte() }
-        val firstHex = firstPin.joinToString(":") { "%02X".format(it) }
-        val secondPin = ByteArray(32) { 0xFF.toByte() }
-        val bean = XrayParser.parse(
-            """
-            {
-              "remarks": "Pinned",
-              "outbounds": [{
-                "protocol": "vless",
-                "settings": {"address":"example.com","port":443,"id":"22222222-2222-2222-2222-222222222222"},
-                "streamSettings": {
-                  "security": "tls",
-                  "tlsSettings": {
-                    "serverName": "example.com",
-                    "curvePreferences": ["CurveP256", "X25519", "SecP384r1MLKEM1024"],
-                    "pinnedPeerCertSha256": "$firstHex,${"ff".repeat(32)}",
-                    "echConfigList": "AQID"
-                  }
-                }
-              }]
-            }
-            """.trimIndent(),
-        )!!.single() as VMessBean
-
-        assertEquals("P256\nX25519", bean.tlsCurvePreferences)
-        assertEquals(
-            listOf(firstPin, secondPin).joinToString("\n") { Base64.getEncoder().encodeToString(it) },
-            bean.tlsXrayCertificateSha256,
-        )
-        assertEquals(
-            "-----BEGIN ECH CONFIGS-----\nAQID\n-----END ECH CONFIGS-----",
-            bean.echConfig,
-        )
-        val tls = OutboundTLSOptions().apply { applySharedTLSOptions(bean) }
-        assertEquals(bean.tlsXrayCertificateSha256.lines(), tls.xray_certificate_sha256)
-        assertNull(tls.certificate_public_key_sha256)
-        assertEquals(listOf("P256", "X25519"), tls.curve_preferences)
-    }
-
-    @Test
-    fun usesGlobalDnsForXrayEchResolverUrls() {
-        fun parse(echConfigList: String) = XrayParser.parse(
-            """
-            {"outbounds":[{
-              "protocol":"vless",
-              "settings":{"address":"example.com","port":443,"id":"22222222-2222-2222-2222-222222222222"},
-              "streamSettings":{"security":"tls","tlsSettings":{"serverName":"example.com","echConfigList":"$echConfigList"}}
-            }]}
-            """.trimIndent(),
-        )!!.single() as VMessBean
-
-        val named = parse("ech.example+https://dns.example/dns-query")
-        assertTrue(named.enableECH)
-        assertEquals("", named.echConfig)
-        assertEquals("ech.example", named.echQueryServerName)
-        val namedTls = OutboundTLSOptions().apply {
-            ech = OutboundECHOptions().apply { enabled = true }
-            applySharedTLSOptions(named)
-        }.ech!!
-        assertTrue(namedTls.enabled == true)
-        assertEquals("ech.example", namedTls.query_server_name)
-
-        val defaultName = parse("https://dns.example/dns-query")
-        assertTrue(defaultName.enableECH)
-        assertEquals("", defaultName.echConfig)
-        assertEquals("", defaultName.echQueryServerName)
-    }
-
-    @Test
-    fun readsHttp2TransportSettings() {
-        val bean = XrayParser.parse(
-            """
-            {"outbounds":[{
-              "protocol":"vless",
-              "settings":{"address":"example.com","port":443,"id":"22222222-2222-2222-2222-222222222222"},
-              "streamSettings":{"network":"h2","httpSettings":{"host":["one.example","two.example"],"path":"/h2"}}
-            }]}
-            """.trimIndent(),
-        )!!.single() as VMessBean
-
-        assertEquals("http", bean.type)
-        assertEquals("one.example,two.example", bean.host)
-        assertEquals("/h2", bean.path)
-        assertEquals("none", bean.headerType)
-    }
-
-    @Test
-    fun treatsXrayUnsafeFingerprintAsStandardTls() {
-        val bean = XrayParser.parse(
-            """
-            {"outbounds":[{
-              "protocol":"vless",
-              "settings":{"address":"example.com","port":443,"id":"22222222-2222-2222-2222-222222222222"},
-              "streamSettings":{"security":"tls","tlsSettings":{"fingerprint":"unsafe"}}
-            }]}
-            """.trimIndent(),
-        )!!.single() as VMessBean
-
-        assertEquals("", bean.utlsFingerprint)
-    }
-
-    @Test
-    fun skipsOutboundWithMalformedCertificatePin() {
-        val proxies = XrayParser.parse(
-            """
-            {"outbounds":[
-              {"protocol":"vless","settings":{"address":"bad.example","port":443,"id":"22222222-2222-2222-2222-222222222222"},"streamSettings":{"security":"tls","tlsSettings":{"pinnedPeerCertSha256":"00:11"}}},
-              {"protocol":"socks","settings":{"address":"good.example","port":1080}}
-            ]}
-            """.trimIndent(),
-        )!!
-
-        assertEquals(1, proxies.size)
-        assertEquals("Xray Socks", proxies.single().name)
+        assertEquals("good", proxies.single().name)
     }
 
     @Test

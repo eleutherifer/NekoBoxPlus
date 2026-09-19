@@ -20,7 +20,6 @@ class AnyTLSSettingsActivity : ProfileSettingsActivity<AnyTLSBean>() {
     private val serverAddress = pbm.add(PreferenceBinding(Type.Text, "serverAddress"))
     private val serverPort = pbm.add(PreferenceBinding(Type.TextToInt, "serverPort"))
     private val password = pbm.add(PreferenceBinding(Type.Text, "password"))
-    private val clientMetadata = pbm.add(PreferenceBinding(Type.Text, "clientMetadata"))
     private val sni = pbm.add(PreferenceBinding(Type.Text, "sni"))
     private val alpn = pbm.add(PreferenceBinding(Type.Text, "alpn"))
     private val certificates = pbm.add(PreferenceBinding(Type.Text, "certificates"))

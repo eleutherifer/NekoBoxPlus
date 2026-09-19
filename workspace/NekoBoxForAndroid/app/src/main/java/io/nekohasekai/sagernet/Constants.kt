@@ -28,8 +28,6 @@ object Key {
     const val TOOLBAR_LAYOUT = "toolbarLayout"
     const val CONFIGURE_TOOLBAR_LAYOUT = "configureToolbarLayout"
     const val SHOW_PROFILE_COUNT_ON_TABS = "showProfileCountOnTabs"
-    const val PROFILE_COUNTRY_INDICATOR = "profileCountryIndicator"
-    const val NOTIFICATION_COUNTRY_INDICATOR = "notificationCountryIndicator"
     const val TAB_DOUBLE_TAP_TO_NAVIGATE = "tabDoubleTapToNavigate"
     const val SHORT_PROFILE_PROTOCOL_INFO = "shortProfileProtocolInfo"
     const val DONT_HIGHLIGHT_INSECURE_PROFILES = "dontHighlightInsecureProfiles"
@@ -139,9 +137,6 @@ object Key {
     const val NETWORK_CHANGE_RESET_CONNECTIONS = "networkChangeResetConnections"
     const val WAKE_RECONNECT = "wakeReconnect"
     const val WAKE_RESET_CONNECTIONS = "wakeResetConnections"
-    const val GLOBAL_TCP_FAST_OPEN = "globalTcpFastOpen"
-    const val GLOBAL_TCP_MULTI_PATH = "globalTcpMultiPath"
-    const val GLOBAL_UDP_FRAGMENT = "globalUdpFragment"
     const val RULES_PROVIDER = "rulesProvider"
     const val LOG_LEVEL = "logLevel"
     const val LOG_BUF_SIZE = "logBufSize"
@@ -312,7 +307,6 @@ object Key {
     //
 
     const val APP_TLS_VERSION = "appTLSVersion"
-    const val APP_UTLS_FINGERPRINT = "appUTLSFingerprint"
     const val ENABLE_CLASH_API = "enableClashAPI"
     const val HIDE_CLASH_API = "hideClashAPI"
     const val CLASH_API_SECRET = "clashApiSecret"
@@ -403,14 +397,10 @@ object Action {
     const val RELOAD = "io.nekohasekai.sagernet.RELOAD"
     const val EXTRA_PROFILE_ID = "io.nekohasekai.sagernet.extra.PROFILE_ID"
     const val EXTRA_REQUEST_ID = "io.nekohasekai.sagernet.extra.REQUEST_ID"
-    const val EXTRA_NOTIFICATION_COUNTRY_INDICATOR_ENABLED =
-        "io.nekohasekai.sagernet.extra.NOTIFICATION_COUNTRY_INDICATOR_ENABLED"
     const val RECOVER_CORE = "${BuildConfig.APPLICATION_ID}.RECOVER_CORE"
 
     // const val SWITCH_WAKE_LOCK = "io.nekohasekai.sagernet.SWITCH_WAKELOCK"
     const val RESET_UPSTREAM_CONNECTIONS = "${BuildConfig.APPLICATION_ID}.RESET_UPSTREAM_CONNECTIONS"
-    const val UPDATE_NOTIFICATION_COUNTRY_INDICATOR =
-        "${BuildConfig.APPLICATION_ID}.UPDATE_NOTIFICATION_COUNTRY_INDICATOR"
 }
 
 object Param {

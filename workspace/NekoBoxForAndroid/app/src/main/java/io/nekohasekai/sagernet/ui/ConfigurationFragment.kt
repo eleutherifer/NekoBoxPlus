@@ -42,7 +42,6 @@ import androidx.appcompat.widget.AppCompatImageButton
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
-import androidx.appcompat.widget.TooltipCompat
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.graphics.ColorUtils
 import androidx.core.content.withStyledAttributes
@@ -143,8 +142,6 @@ import io.nekohasekai.sagernet.ui.toolbar.ProfileToolbarActionCatalog
 import io.nekohasekai.sagernet.ui.toolbar.ProfileToolbarActionId
 import io.nekohasekai.sagernet.ui.toolbar.ProfileToolbarActionKind
 import io.nekohasekai.sagernet.ui.toolbar.ProfileToolbarLayout
-import io.nekohasekai.sagernet.widget.EndAlignedMarqueeTextView
-import io.nekohasekai.sagernet.widget.CountryBadgeView
 import io.nekohasekai.sagernet.widget.QRCodeDialog
 import io.nekohasekai.sagernet.widget.UndoSnackbarManager
 import kotlinx.coroutines.Job
@@ -167,7 +164,6 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import io.nekohasekai.sagernet.database.SubscriptionBean
 import io.nekohasekai.sagernet.ktx.AmneziaApiKeyUnsupportedException
-import io.nekohasekai.sagernet.utils.ProfileCountryResolver
 
 private const val STATE_PROFILE_SELECTION_MODE = "profile_selection_mode"
 private const val STATE_SELECTED_PROFILE_IDS = "selected_profile_ids"
@@ -199,7 +195,6 @@ class ConfigurationFragment @JvmOverloads constructor(
     private val selectedProfileIds = linkedSetOf<Long>()
     private val pendingBatchDeleteIds = linkedSetOf<Long>()
     private var pendingConfigurationZip: ByteArray? = null
-    private var pendingAmneziaWGJson: String? = null
 
     private val copyProfilesToGroup =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -442,7 +437,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                     adapter.refreshAllGroupTabs()
                 }
             } else if (store == DataStore.configurationStore &&
-                key in setOf(Key.SHORT_PROFILE_PROTOCOL_INFO, Key.PROFILE_COUNTRY_INDICATOR)
+                key == Key.SHORT_PROFILE_PROTOCOL_INFO
             ) {
                 if (::adapter.isInitialized) {
                     adapter.groupFragments.values.forEach { fragment ->
@@ -757,7 +752,9 @@ class ConfigurationFragment @JvmOverloads constructor(
 
     suspend fun import(proxies: List<AbstractBean>) {
         val targetId = DataStore.selectedGroupForImport()
-        ProfileManager.createProfiles(targetId, proxies)
+        for (proxy in proxies) {
+            ProfileManager.createProfile(targetId, proxy)
+        }
         onMainDispatcher {
             DataStore.editingGroup = targetId
             snackbar(
@@ -875,16 +872,6 @@ class ConfigurationFragment @JvmOverloads constructor(
 
             R.id.action_selection_config_file -> {
                 exportSelectedProfiles(BatchExportKind.Configuration, BatchExportTarget.File)
-                return true
-            }
-
-            R.id.action_selection_amneziawg_json_clipboard -> {
-                exportSelectedProfiles(BatchExportKind.AmneziaWGJson, BatchExportTarget.Clipboard)
-                return true
-            }
-
-            R.id.action_selection_amneziawg_json_file -> {
-                exportSelectedProfiles(BatchExportKind.AmneziaWGJson, BatchExportTarget.File)
                 return true
             }
 
@@ -1362,7 +1349,7 @@ class ConfigurationFragment @JvmOverloads constructor(
         GroupConnectionTestController.startUrlTest(this)
     }
 
-    private enum class BatchExportKind { Standard, Universal, Configuration, AmneziaWGJson }
+    private enum class BatchExportKind { Standard, Universal, Configuration }
     private enum class BatchExportTarget { Clipboard, Qr, File }
 
     private fun updateCurrentGroupSelection(operation: ProfileSelectionOperation) {
@@ -1523,7 +1510,6 @@ class ConfigurationFragment @JvmOverloads constructor(
                 BatchExportKind.Standard -> ProfileBatchExport.standardLinks(profiles)
                 BatchExportKind.Universal -> ProfileBatchExport.universalLinks(profiles)
                 BatchExportKind.Configuration -> ProfileBatchExport.configurations(profiles)
-                BatchExportKind.AmneziaWGJson -> ProfileBatchExport.amneziaWGJson(profiles)
             }
             exitProfileSelectionMode()
             if (result.entries.isEmpty()) {
@@ -1546,13 +1532,8 @@ class ConfigurationFragment @JvmOverloads constructor(
                         .showAllowingStateLoss(parentFragmentManager)
                 }
                 BatchExportTarget.File -> {
-                    if (kind == BatchExportKind.AmneziaWGJson) {
-                        pendingAmneziaWGJson = text
-                        startFilesForResult(exportSelectedAmneziaWGJson, "amneziawg.json")
-                    } else {
-                        pendingConfigurationZip = ProfileBatchExport.configurationZip(result.entries)
-                        startFilesForResult(exportSelectedConfigurations, "profiles.zip")
-                    }
+                    pendingConfigurationZip = ProfileBatchExport.configurationZip(result.entries)
+                    startFilesForResult(exportSelectedConfigurations, "profiles.zip")
                 }
             }
             if (result.skipped > 0) {
@@ -2452,11 +2433,8 @@ class ConfigurationFragment @JvmOverloads constructor(
             }
 
             var configurationIdList: MutableList<Long> = mutableListOf()
-            private var allConfigurationIdList: MutableList<Long> = mutableListOf()
-            private var searchQuery = ""
             val configurationList = HashMap<Long, ProxyEntity>()
             private val pendingTrafficUpdates = HashSet<Long>()
-            private val removedFullPositions = HashMap<Long, Int>()
 
             private fun getItem(profileId: Long): ProxyEntity {
                 var profile = configurationList[profileId]
@@ -2627,21 +2605,12 @@ class ConfigurationFragment @JvmOverloads constructor(
             private val updated = LinkedHashMap<Long, ProxyEntity>()
 
             fun filter(name: String) {
-                val candidates = ProfileSearchPolicy.candidates(
-                    searchQuery,
-                    name,
-                    configurationIdList,
-                    allConfigurationIdList,
-                )
-                searchQuery = name
-                configurationIdList = filteredProfileIds(candidates, name)
-                notifyDataSetChanged()
-            }
-
-            private fun filteredProfileIds(profileIds: List<Long>, query: String): MutableList<Long> {
-                if (query.isEmpty()) return profileIds.toMutableList()
-                val lower = query.lowercase()
-                return profileIds.filter { profileId ->
+                if (name.isEmpty()) {
+                    reloadProfiles()
+                    return
+                }
+                val lower = name.lowercase()
+                configurationIdList = configurationIdList.filter { profileId ->
                     val profile = configurationList[profileId] ?: return@filter false
                     profile.displayName().lowercase().contains(lower) ||
                             profile.profileCardType(DataStore.shortProfileProtocolInfo)
@@ -2649,36 +2618,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                                 .contains(lower) ||
                             profile.displayAddress().lowercase().contains(lower)
                 }.toMutableList()
-            }
-
-            private fun profileMatchesSearch(profileId: Long): Boolean {
-                return searchQuery.isEmpty() ||
-                        filteredProfileIds(listOf(profileId), searchQuery).isNotEmpty()
-            }
-
-            private fun syncFullListVisibleOrder() {
-                if (searchQuery.isEmpty()) {
-                    allConfigurationIdList = configurationIdList.toMutableList()
-                    return
-                }
-                val visibleIds = configurationIdList.toHashSet()
-                val reorderedVisibleIds = configurationIdList.iterator()
-                allConfigurationIdList = allConfigurationIdList.map { profileId ->
-                    if (profileId in visibleIds) reorderedVisibleIds.next() else profileId
-                }.toMutableList()
-            }
-
-            private fun visibleInsertionIndex(profileId: Long): Int {
-                val fullIndex = allConfigurationIdList.indexOf(profileId)
-                if (fullIndex < 0) return configurationIdList.size
-                val visibleIds = configurationIdList.toHashSet()
-                return allConfigurationIdList.take(fullIndex).count(visibleIds::contains)
-            }
-
-            private fun fullListInsertionIndex(profile: ProxyEntity): Int {
-                return allConfigurationIdList.indexOfFirst { profileId ->
-                    configurationList[profileId]?.userOrder?.let { it > profile.userOrder } == true
-                }.takeIf { it >= 0 } ?: allConfigurationIdList.size
+                notifyDataSetChanged()
             }
 
             fun move(from: Int, to: Int) {
@@ -2704,10 +2644,9 @@ class ConfigurationFragment @JvmOverloads constructor(
 
                 configurationIdList.removeAt(from)
                 configurationIdList.add(to, draggedItemId)
-                syncFullListVisibleOrder()
 
-                for (i in allConfigurationIdList.indices) {
-                    val item = getItem(allConfigurationIdList[i])
+                for (i in configurationIdList.indices) {
+                    val item = getItem(configurationIdList[i])
                     val newOrder = (i + 1).toLong()
                     if (item.userOrder != newOrder) {
                         item.userOrder = newOrder
@@ -2753,9 +2692,7 @@ class ConfigurationFragment @JvmOverloads constructor(
 
             fun remove(pos: Int) {
                 if (pos < 0) return
-                val profileId = configurationIdList.removeAt(pos)
-                removedFullPositions[profileId] = allConfigurationIdList.indexOf(profileId)
-                allConfigurationIdList.remove(profileId)
+                configurationIdList.removeAt(pos)
                 notifyItemRemoved(pos)
                 refreshFromPosition(pos - 1)
             }
@@ -2763,26 +2700,18 @@ class ConfigurationFragment @JvmOverloads constructor(
             fun hideProfiles(profileIds: Set<Long>) {
                 if (profileIds.isEmpty()) return
                 configurationIdList.removeAll(profileIds)
-                allConfigurationIdList.removeAll(profileIds)
                 profileIds.forEach(configurationList::remove)
                 notifyDataSetChanged()
             }
 
             override fun undo(actions: List<Pair<Int, ProxyEntity>>) {
-                for ((_, item) in actions) {
+                for ((index, item) in actions) {
                     configurationListView.post {
                         if (!isActiveAdapter()) return@post
                         configurationList[item.id] = item
-                        val fullIndex = removedFullPositions.remove(item.id)
-                            ?.coerceIn(0, allConfigurationIdList.size)
-                            ?: fullListInsertionIndex(item)
-                        allConfigurationIdList.add(fullIndex, item.id)
-                        if (profileMatchesSearch(item.id)) {
-                            val visibleIndex = visibleInsertionIndex(item.id)
-                            configurationIdList.add(visibleIndex, item.id)
-                            notifyItemInserted(visibleIndex)
-                            refreshFromPosition(visibleIndex - 1)
-                        }
+                        configurationIdList.add(index, item.id)
+                        notifyItemInserted(index)
+                        refreshFromPosition(index - 1)
                     }
                 }
             }
@@ -2804,14 +2733,11 @@ class ConfigurationFragment @JvmOverloads constructor(
                     if (::undoManager.isInitialized) {
                         undoManager.flush()
                     }
+                    val pos = itemCount
                     configurationList[profile.id] = profile
-                    allConfigurationIdList.add(profile.id)
-                    if (profileMatchesSearch(profile.id)) {
-                        val pos = itemCount
-                        configurationIdList.add(profile.id)
-                        notifyItemInserted(pos)
-                        refreshFromPosition(pos - 1)
-                    }
+                    configurationIdList.add(profile.id)
+                    notifyItemInserted(pos)
+                    refreshFromPosition(pos - 1)
                 }
             }
 
@@ -2819,6 +2745,8 @@ class ConfigurationFragment @JvmOverloads constructor(
                 if (profile.groupId != proxyGroup.id) return
                 configurationListView.post {
                     if (!isActiveAdapter()) return@post
+                    val index = configurationIdList.indexOf(profile.id)
+                    if (index < 0) return@post
                     if (::undoManager.isInitialized) {
                         undoManager.flush()
                     }
@@ -2833,18 +2761,10 @@ class ConfigurationFragment @JvmOverloads constructor(
                     val holder = configurationListView.findViewHolderForItemId(profile.id)
                         as? ConfigurationHolder
                     val previous = holder?.lastSelfHasMiddleRow
-                    val wasVisible = profile.id in configurationIdList
                     configurationList[profile.id] = updatedProfile
-                    val isVisible = profileMatchesSearch(profile.id)
-                    if (wasVisible != isVisible) {
-                        configurationIdList = filteredProfileIds(allConfigurationIdList, searchQuery)
-                        notifyDataSetChanged()
-                    } else if (isVisible) {
-                        val index = configurationIdList.indexOf(profile.id)
-                        notifyItemChanged(index)
-                        if (previous != null && previous != hasMiddleRow(updatedProfile)) {
-                            refreshSameRowNeighbours(index)
-                        }
+                    notifyItemChanged(index)
+                    if (previous != null && previous != hasMiddleRow(updatedProfile)) {
+                        refreshSameRowNeighbours(index)
                     }
                 }
             }
@@ -2899,18 +2819,15 @@ class ConfigurationFragment @JvmOverloads constructor(
             override suspend fun onRemoved(groupId: Long, profileId: Long) {
                 if (groupId != proxyGroup.id) return
                 (parentFragment as? ConfigurationFragment)?.removeProfileFromSelection(profileId)
+                val index = configurationIdList.indexOf(profileId)
+                if (index < 0) return
 
                 configurationListView.post {
                     if (!isActiveAdapter()) return@post
-                    val index = configurationIdList.indexOf(profileId)
-                    if (index >= 0) {
-                        configurationIdList.removeAt(index)
-                        notifyItemRemoved(index)
-                        refreshFromPosition(index - 1)
-                    }
-                    allConfigurationIdList.remove(profileId)
-                    removedFullPositions.remove(profileId)
+                    configurationIdList.removeAt(index)
                     configurationList.remove(profileId)
+                    notifyItemRemoved(index)
+                    refreshFromPosition(index - 1)
                 }
             }
 
@@ -3008,7 +2925,7 @@ class ConfigurationFragment @JvmOverloads constructor(
             }
 
             fun persistCurrentProfileOrder() {
-                persistProfileOrder(allConfigurationIdList.map { getItem(it) })
+                persistProfileOrder(configurationIdList.map { getItem(it) })
             }
 
             private fun applySubscriptionOriginOrder(profiles: List<ProxyEntity>): List<ProxyEntity> {
@@ -3045,9 +2962,6 @@ class ConfigurationFragment @JvmOverloads constructor(
 
             fun reloadProfiles(reason: ProfileReloadReason = ProfileReloadReason.General) {
                 var newProfiles = SagerDatabase.proxyDao.getByGroup(proxyGroup.id)
-                ProfileCountryResolver.backfillLiteralAddresses(newProfiles).takeIf {
-                    it.isNotEmpty()
-                }?.let(SagerDatabase.proxyDao::updateProxy)
                 val configurationFragment = parentFragment as? ConfigurationFragment
                 newProfiles = newProfiles.filterNot {
                     configurationFragment?.isPendingBatchDelete(it.id) == true
@@ -3107,8 +3021,8 @@ class ConfigurationFragment @JvmOverloads constructor(
 
                 configurationListView.post {
                     if (!isActiveAdapter()) return@post
-                    allConfigurationIdList = newProfileIds.toMutableList()
-                    configurationIdList = filteredProfileIds(allConfigurationIdList, searchQuery)
+                    configurationIdList.clear()
+                    configurationIdList.addAll(newProfileIds)
                     notifyDataSetChanged()
 
                     if (!didInitialPositionList) {
@@ -3171,11 +3085,6 @@ class ConfigurationFragment @JvmOverloads constructor(
                 holder.bind(subscription, current)
             }
 
-            override fun onViewRecycled(holder: SubscriptionBannerHolder) {
-                holder.recycle()
-                super.onViewRecycled(holder)
-            }
-
             fun refresh() {
                 presentation = proxyGroup.subscription?.let(::subscriptionBannerPresentation)
                 notifyDataSetChanged()
@@ -3189,9 +3098,6 @@ class ConfigurationFragment @JvmOverloads constructor(
             private val binding: LayoutSubscriptionBannerBinding,
         ) : RecyclerView.ViewHolder(binding.root) {
 
-            private var boundExpireAt: Long? = null
-            private val expirationRefresh = Runnable { bindExpiration() }
-
             fun bind(
                 subscription: io.nekohasekai.sagernet.database.SubscriptionBean,
                 presentation: SubscriptionBannerPresentation,
@@ -3200,7 +3106,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                 val hasAnnouncement = presentation.hasAnnouncementContent
                 val showTrafficText = presentation.traffic != null && presentation.showTrafficText
                 val showTrafficBar = presentation.traffic != null && presentation.showTrafficBar
-                val hasTraffic = showTrafficText || showTrafficBar || presentation.expireAt != null
+                val hasTraffic = showTrafficText || showTrafficBar
 
                 binding.bannerAnnouncementContainer.isVisible = hasAnnouncement
                 binding.bannerTrafficContainer.isVisible = hasTraffic
@@ -3223,11 +3129,6 @@ class ConfigurationFragment @JvmOverloads constructor(
                         ),
                     )
                 binding.bannerTraffic.setTextColor(onSurface)
-                binding.bannerExpiration.setTextColor(
-                    context.getColorAttr(
-                        com.google.android.material.R.attr.colorOnSurfaceVariant,
-                    ),
-                )
 
                 if (hasAnnouncement) {
                     binding.root.strokeWidth = dp2px(1)
@@ -3281,15 +3182,11 @@ class ConfigurationFragment @JvmOverloads constructor(
                             )
                         } ?: context.getString(R.string.subscription_used, used)
                 }
-                binding.root.removeCallbacks(expirationRefresh)
-                boundExpireAt = presentation.expireAt
-                bindExpiration()
                 val progress = traffic?.progress
                 val showUnlimitedBar = showTrafficBar && progress == null
                 binding.bannerTrafficProgress.isVisible = showTrafficBar && progress != null
                 binding.bannerTrafficUnlimited.isVisible = showUnlimitedBar
-                val progressMargin =
-                    if (showTrafficText || presentation.expireAt != null) dp2px(12) else 0
+                val progressMargin = if (showTrafficText) dp2px(12) else 0
                 (binding.bannerTrafficProgress.layoutParams as LinearLayout.LayoutParams).apply {
                     marginEnd = progressMargin
                     binding.bannerTrafficProgress.layoutParams = this
@@ -3335,49 +3232,6 @@ class ConfigurationFragment @JvmOverloads constructor(
                         null
                     },
                 )
-            }
-
-            fun recycle() {
-                binding.root.removeCallbacks(expirationRefresh)
-                boundExpireAt = null
-            }
-
-            private fun bindExpiration() {
-                val expireAt = boundExpireAt
-                binding.bannerExpiration.isVisible = expireAt != null
-                if (expireAt == null) return
-
-                val context = binding.root.context
-                binding.bannerExpiration.text =
-                    when (val expiration = subscriptionExpiration(expireAt, System.currentTimeMillis())) {
-                        SubscriptionExpiration.Expired ->
-                            context.getString(R.string.subscription_expiration_expired)
-                        SubscriptionExpiration.LessThanMinute ->
-                            context.getString(R.string.subscription_expiration_less_than_minute)
-                        is SubscriptionExpiration.Remaining -> {
-                            val resource = when (expiration.unit) {
-                                SubscriptionExpirationUnit.DAYS ->
-                                    R.plurals.subscription_expiration_days_left
-                                SubscriptionExpirationUnit.HOURS ->
-                                    R.plurals.subscription_expiration_hours_left
-                                SubscriptionExpirationUnit.MINUTES ->
-                                    R.plurals.subscription_expiration_minutes_left
-                            }
-                            context.resources.getQuantityString(
-                                resource,
-                                expiration.value.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
-                                expiration.value,
-                            )
-                        }
-                    }
-
-                val expireMillis =
-                    if (expireAt > Long.MAX_VALUE / 1000L) Long.MAX_VALUE else expireAt * 1000L
-                val remainingMillis = expireMillis - System.currentTimeMillis()
-                if (remainingMillis > 0L) {
-                    val delay = (remainingMillis % 60_000L).coerceAtLeast(50L)
-                    binding.root.postDelayed(expirationRefresh, delay)
-                }
             }
 
             private fun compactBlankLines(value: String): CharSequence {
@@ -3445,15 +3299,14 @@ class ConfigurationFragment @JvmOverloads constructor(
             private fun showShareMenu(anchor: View, proxyEntity: ProxyEntity) {
                 val popup = PopupMenu(anchor.context, anchor)
                 popup.menuInflater.inflate(R.menu.profile_share_menu, popup.menu)
-                val capabilities = ProfileShareCapabilities.from(proxyEntity)
 
                 when {
-                    !capabilities.links -> {
+                    !proxyEntity.haveLink() -> {
                         popup.menu.removeItem(R.id.action_group_qr)
                         popup.menu.removeItem(R.id.action_group_clipboard)
                     }
 
-                    !capabilities.standardLinks -> {
+                    !proxyEntity.haveStandardLink() -> {
                         popup.menu.findItem(R.id.action_group_qr).subMenu?.removeItem(R.id.action_standard_qr)
                         popup.menu.findItem(R.id.action_group_clipboard).subMenu?.removeItem(
                             R.id.action_standard_clipboard
@@ -3461,7 +3314,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                     }
                 }
 
-                if (!capabilities.configuration) {
+                if (proxyEntity.nekoBean != null) {
                     popup.menu.removeItem(R.id.action_group_configuration)
                 }
 
@@ -3472,7 +3325,6 @@ class ConfigurationFragment @JvmOverloads constructor(
             val profileName: TextView = view.findViewById<TextView>(R.id.profile_name).also {
                 it.isSelected = true
             }
-            val countryBadge: CountryBadgeView = view.findViewById(R.id.country_badge)
             val profileType: TextView = view.findViewById(R.id.profile_type)
             val profileAddress: TextView = view.findViewById<TextView>(R.id.profile_address).also {
                 it.isSelected = true
@@ -3636,30 +3488,24 @@ class ConfigurationFragment @JvmOverloads constructor(
                         Protocols.classifyConnectionTestError(err).type ==
                             Protocols.ConnectionTestErrorType.OTHER
                     ) {
-                        enablePlatformStatusMarqueeIfNeeded()
+                        profileStatus.ellipsize = TextUtils.TruncateAt.MARQUEE
+                        profileStatus.marqueeRepeatLimit = -1
+                        profileStatus.isSelected = true
                     }
                     profileStatus.setOnClickListener {
-                        view.callOnClick()
-                        if (!select && !pf.isProfileSelectionMode) {
-                            alert(err).tryToShow()
-                        }
+                        alert(err).tryToShow()
                     }
+                } else if (isCompact && entity.status == 2) {
+                    profileStatus.ellipsize = TextUtils.TruncateAt.MARQUEE
+                    profileStatus.marqueeRepeatLimit = -1
+                    profileStatus.isSelected = true
+                    profileStatus.setOnClickListener(null)
                 } else {
-                    if (isCompact && entity.status == 2) {
-                        enablePlatformStatusMarqueeIfNeeded()
-                    }
-                    profileStatus.setOnClickListener { view.callOnClick() }
+                    profileStatus.setOnClickListener(null)
                 }
                 profileStatus.isVisible = !isDoubleColumn || entity.status > 0
                 lastBoundTx = tx
                 lastBoundRx = rx
-            }
-
-            private fun enablePlatformStatusMarqueeIfNeeded() {
-                if (profileStatus is EndAlignedMarqueeTextView) return
-                profileStatus.ellipsize = TextUtils.TruncateAt.MARQUEE
-                profileStatus.marqueeRepeatLimit = -1
-                profileStatus.isSelected = true
             }
 
             fun bind(proxyEntity: ProxyEntity, trafficData: TrafficData? = null) {
@@ -3720,11 +3566,8 @@ class ConfigurationFragment @JvmOverloads constructor(
 
                     }
                 }
-                trafficText.setOnClickListener { view.callOnClick() }
 
-                val countryBadgeVisible = countryBadge.bind(proxyEntity)
-                profileName.text =
-                    ProfileCountryResolver.presentationName(proxyEntity, countryBadgeVisible)
+                profileName.text = proxyEntity.displayName()
                 profileType.text = proxyEntity.profileCardType(DataStore.shortProfileProtocolInfo)
                 profileType.setTextColor(view.context.getProtocolColor(proxyEntity.type))
                 if (DataStore.groupLayoutMode == GROUP_LAYOUT_ALTERNATE) {
@@ -3966,28 +3809,6 @@ class ConfigurationFragment @JvmOverloads constructor(
             }
         }
 
-    private val exportSelectedAmneziaWGJson =
-        registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { data ->
-            val content = pendingAmneziaWGJson
-            pendingAmneziaWGJson = null
-            if (data == null || content == null) return@registerForActivityResult
-            runOnDefaultDispatcher {
-                try {
-                    requireActivity().contentResolver.openOutputStream(data)!!
-                        .bufferedWriter()
-                        .use { it.write(content) }
-                    onMainDispatcher {
-                        snackbar(R.string.action_export_msg).show()
-                    }
-                } catch (e: Exception) {
-                    Logs.w(e)
-                    onMainDispatcher {
-                        snackbar(e.readableMessage).show()
-                    }
-                }
-            }
-        }
-
     private fun cancelSearch(searchView: SearchView) {
         searchView.setQuery("", false)
         searchView.isIconified = true
@@ -4028,45 +3849,31 @@ class ConfigurationFragment @JvmOverloads constructor(
     private fun setupQuickToolbar(view: View) {
         quickToolbar = view.findViewById(R.id.quick_toolbar)
         quickToolbarActions = view.findViewById(R.id.quick_toolbar_actions)
-        view.findViewById<View>(R.id.quick_toolbar_navigation)?.apply {
-            configureQuickToolbarButton(contentDescription)
-            setOnClickListener {
-                (activity as? MainActivity)?.binding?.drawerLayout?.openDrawer(
-                    androidx.core.view.GravityCompat.START
-                )
-            }
+        view.findViewById<View>(R.id.quick_toolbar_navigation)?.setOnClickListener {
+            (activity as? MainActivity)?.binding?.drawerLayout?.openDrawer(
+                androidx.core.view.GravityCompat.START
+            )
         }
-        view.findViewById<View>(R.id.quick_toolbar_search)?.apply {
-            configureQuickToolbarButton(contentDescription)
-            setOnClickListener {
-                quickSearchExpanded = true
-                selectionBackCallback?.isEnabled = true
-                syncToolbarMode()
-                toolbarOrNull()?.post {
-                    toolbarOrNull()?.menu?.findItem(R.id.action_search)?.apply {
-                        expandActionView()
-                        (actionView as? SearchView)?.apply {
-                            isIconified = false
-                            requestFocus()
-                        }
+        view.findViewById<View>(R.id.quick_toolbar_search)?.setOnClickListener {
+            quickSearchExpanded = true
+            selectionBackCallback?.isEnabled = true
+            syncToolbarMode()
+            toolbarOrNull()?.post {
+                toolbarOrNull()?.menu?.findItem(R.id.action_search)?.apply {
+                    expandActionView()
+                    (actionView as? SearchView)?.apply {
+                        isIconified = false
+                        requestFocus()
                     }
                 }
             }
         }
-        view.findViewById<View>(R.id.quick_toolbar_add)?.apply {
-            configureQuickToolbarButton(contentDescription)
-            setOnClickListener { showClonedSubmenu(it, R.id.action_add) }
+        view.findViewById<View>(R.id.quick_toolbar_add)?.setOnClickListener {
+            showClonedSubmenu(it, R.id.action_add)
         }
-        view.findViewById<View>(R.id.quick_toolbar_more)?.apply {
-            configureQuickToolbarButton(contentDescription)
-            setOnClickListener { showClonedSubmenu(it, R.id.action_misc) }
+        view.findViewById<View>(R.id.quick_toolbar_more)?.setOnClickListener {
+            showClonedSubmenu(it, R.id.action_misc)
         }
-    }
-
-    private fun View.configureQuickToolbarButton(label: CharSequence?) {
-        contentDescription = label
-        TooltipCompat.setTooltipText(this, label)
-        (background as? RippleDrawable)?.radius = dp2px(20)
     }
 
     private fun syncQuickToolbarBackground(activeToolbar: Toolbar = toolbar) {
@@ -4096,12 +3903,12 @@ class ConfigurationFragment @JvmOverloads constructor(
                 minimumWidth = 0
                 setPadding(dp2px(8), paddingTop, dp2px(8), paddingBottom)
                 setImageResource(action.iconRes)
+                contentDescription = getString(action.titleRes)
                 requireContext().withStyledAttributes(
                     attrs = intArrayOf(android.R.attr.selectableItemBackgroundBorderless)
                 ) {
                     background = getDrawable(0)
                 }
-                configureQuickToolbarButton(getString(action.titleRes))
                 alpha = if (action.kind == ProfileToolbarActionKind.TOGGLE &&
                     !isQuickToolbarToggleEnabled(actionId)
                 ) {
@@ -4158,8 +3965,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                 startActivity(Intent(requireContext(), RuleSetMatchActivity::class.java))
             ProfileToolbarActionId.CELLULAR_NETWORK ->
                 startActivity(Intent(requireContext(), CellularNetworkActivity::class.java))
-            ProfileToolbarActionId.BACKUP_PANEL ->
-                activity.displayToolsFragment(ToolsFragment.backupPanel())
+            ProfileToolbarActionId.BACKUP_PANEL -> activity.displayFragment(ToolsFragment.backupPanel())
 
             ProfileToolbarActionId.NAV_PROFILES ->
                 activity.displayFragmentWithId(R.id.nav_configuration)

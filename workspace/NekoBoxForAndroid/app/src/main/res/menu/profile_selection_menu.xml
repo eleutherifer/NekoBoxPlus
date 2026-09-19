@@ -97,16 +97,6 @@
                                 android:title="@string/action_export_file" />
                         </menu>
                     </item>
-                    <item android:title="@string/amneziawg_json">
-                        <menu>
-                            <item
-                                android:id="@+id/action_selection_amneziawg_json_clipboard"
-                                android:title="@string/action_export_clipboard" />
-                            <item
-                                android:id="@+id/action_selection_amneziawg_json_file"
-                                android:title="@string/action_export_file" />
-                        </menu>
-                    </item>
                 </menu>
             </item>
             <item

@@ -17,28 +17,6 @@ class ProfileListRecyclerView @JvmOverloads constructor(
 
     private val bottomScrollSpace =
         resources.getDimensionPixelSize(R.dimen.profile_list_bottom_scroll_space)
-    private val invalidateDecorations = object : Runnable {
-        override fun run() {
-            if (isComputingLayout) {
-                post(this)
-            } else {
-                invalidateItemDecorations()
-            }
-        }
-    }
-    private val adapterObserver = object : RecyclerView.AdapterDataObserver() {
-        override fun onChanged() = scheduleDecorationInvalidation()
-
-        override fun onItemRangeInserted(positionStart: Int, itemCount: Int) =
-            scheduleDecorationInvalidation()
-
-        override fun onItemRangeRemoved(positionStart: Int, itemCount: Int) =
-            scheduleDecorationInvalidation()
-
-        override fun onItemRangeMoved(fromPosition: Int, toPosition: Int, itemCount: Int) =
-            scheduleDecorationInvalidation()
-    }
-    private var observedAdapter: RecyclerView.Adapter<*>? = null
 
     init {
         addItemDecoration(BottomScrollSpaceDecoration(bottomScrollSpace))
@@ -47,19 +25,6 @@ class ProfileListRecyclerView @JvmOverloads constructor(
     // The space is content rather than padding so FastScroller draws through to the viewport edge.
     override fun getAvailableScrollHeight(adapterHeight: Int, yOffset: Int): Int {
         return super.getAvailableScrollHeight(adapterHeight, yOffset) + bottomScrollSpace
-    }
-
-    override fun setAdapter(adapter: RecyclerView.Adapter<*>?) {
-        observedAdapter?.unregisterAdapterDataObserver(adapterObserver)
-        super.setAdapter(adapter)
-        observedAdapter = adapter
-        adapter?.registerAdapterDataObserver(adapterObserver)
-        scheduleDecorationInvalidation()
-    }
-
-    private fun scheduleDecorationInvalidation() {
-        removeCallbacks(invalidateDecorations)
-        post(invalidateDecorations)
     }
 
     private class BottomScrollSpaceDecoration(

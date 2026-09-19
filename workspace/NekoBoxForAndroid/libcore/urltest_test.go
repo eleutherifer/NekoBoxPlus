@@ -358,27 +358,6 @@ func TestRunURLTestAttemptsReturnsLastError(t *testing.T) {
 	}
 }
 
-func TestRunURLTestAttemptsSharesTimeoutAcrossAttempts(t *testing.T) {
-	var deadline time.Time
-	var calls int
-	_, _ = runURLTestAttempts(t.Context(), 1000, 3, 0, func(ctx context.Context) (int32, error) {
-		currentDeadline, ok := ctx.Deadline()
-		if !ok {
-			t.Fatal("attempt context has no deadline")
-		}
-		if calls == 0 {
-			deadline = currentDeadline
-		} else if currentDeadline != deadline {
-			t.Fatalf("deadline changed between attempts: got %v, want %v", currentDeadline, deadline)
-		}
-		calls++
-		return -1, errors.New("failed")
-	})
-	if calls != 3 {
-		t.Fatalf("calls = %d, want 3", calls)
-	}
-}
-
 func TestRunURLTestAttemptsClampsAttemptCount(t *testing.T) {
 	var calls int
 	_, _ = runURLTestAttempts(t.Context(), 1000, 10, 0, func(context.Context) (int32, error) {

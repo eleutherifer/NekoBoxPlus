@@ -19,7 +19,6 @@ import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.SagerNet
 import io.nekohasekai.sagernet.aidl.SpeedDisplayData
 import io.nekohasekai.sagernet.database.DataStore
-import io.nekohasekai.sagernet.database.ProfileManager
 import io.nekohasekai.sagernet.database.ProxyEntity
 import io.nekohasekai.sagernet.database.SagerDatabase
 import io.nekohasekai.sagernet.ktx.app
@@ -27,9 +26,7 @@ import io.nekohasekai.sagernet.ktx.getColorAttr
 import io.nekohasekai.sagernet.ktx.preferSmallIcon
 import io.nekohasekai.sagernet.ktx.runOnMainDispatcher
 import io.nekohasekai.sagernet.ui.SwitchActivity
-import io.nekohasekai.sagernet.utils.ProfileCountryResolver
 import io.nekohasekai.sagernet.utils.Theme
-import io.nekohasekai.sagernet.widget.CountryFlagRenderer
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -45,7 +42,7 @@ import kotlinx.coroutines.sync.withLock
  */
 class ServiceNotification(
     private val service: BaseService.Interface, title: String,
-    channel: String, visible: Boolean = false, private var profile: ProxyEntity? = null,
+    channel: String, visible: Boolean = false,
 ) : BroadcastReceiver() {
     companion object {
         private const val ACTION_NOTIFICATION_DELETED =
@@ -56,20 +53,9 @@ class ServiceNotification(
         const val flags = PendingIntent.FLAG_IMMUTABLE
 
         fun genTitle(ent: ProxyEntity): String {
-            return genTitle(ent, ent.displayName())
-        }
-
-        fun genNotificationTitle(ent: ProxyEntity, countryIndicatorEnabled: Boolean): String {
-            return genTitle(
-                ent,
-                ProfileCountryResolver.presentationName(ent, countryIndicatorEnabled),
-            )
-        }
-
-        private fun genTitle(ent: ProxyEntity, profileName: String): String {
             val gn = if (DataStore.showGroupInNotification)
                 SagerDatabase.groupDao.getById(ent.groupId)?.displayName() else null
-            return if (gn == null) profileName else "[$gn] $profileName"
+            return if (gn == null) ent.displayName() else "[$gn] ${ent.displayName()}"
         }
     }
 
@@ -117,17 +103,6 @@ class ServiceNotification(
     suspend fun postNotificationTitle(newTitle: String) {
         useBuilder {
             it.setContentTitle(newTitle)
-        }
-        update()
-    }
-
-    suspend fun postNotificationCountryIndicator(enabled: Boolean) {
-        profile = profile?.let { ProfileManager.getProfile(it.id) ?: it }
-        useBuilder {
-            profile?.let { activeProfile ->
-                it.setContentTitle(genNotificationTitle(activeProfile, enabled))
-            }
-            it.setLargeIcon(countryIndicatorIcon(enabled))
         }
         update()
     }
@@ -197,7 +172,6 @@ class ServiceNotification(
         Theme.apply(app)
         Theme.apply(service)
         builder.color = service.getColorAttr(R.attr.colorPrimary)
-        builder.setLargeIcon(countryIndicatorIcon(DataStore.notificationCountryIndicator))
 
         val intentFilter = IntentFilter().apply {
             addAction(ACTION_NOTIFICATION_DELETED)
@@ -214,14 +188,6 @@ class ServiceNotification(
             updateActions()
             show()
         }
-    }
-
-    private fun countryIndicatorIcon(enabled: Boolean) = if (enabled) {
-        profile?.let(ProfileCountryResolver::effectiveCountryCode)?.let { countryCode ->
-            CountryFlagRenderer.renderNotificationIcon(service as Context, countryCode)
-        }
-    } else {
-        null
     }
 
     private suspend fun updateActions() {

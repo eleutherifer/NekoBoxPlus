@@ -97,7 +97,7 @@ append_version_ldflag VersionUBlock "$VERSION_UBLOCK"
 
 echo ">> module versions: amneziawg-go=${VERSION_AMNEZIA:-?} byedpi=${VERSION_BYEDPI:-?} masterdnsvpn=${VERSION_MASTERDNSVPN:-?} adblock-rust=${VERSION_ADBLOCK_RUST:-?} adblock-resources=${VERSION_ADBLOCK_RESOURCES:-?} uBlock=${VERSION_UBLOCK:-?}"
 
-gomobile bind -v -androidapi 23 -trimpath -ldflags="-s -w -checklinkname=0${VERSION_LDFLAGS}" -tags='with_conntrack,with_gvisor,with_quic,with_wireguard,with_awg,with_tailscale,with_utls,with_clash_api,with_naive_outbound,with_trusttunnel_cronet,with_adblock,with_adblock_cronet,badlinkname,tfogo_checklinkname0' . || exit 1
+gomobile bind -v -androidapi 23 -trimpath -ldflags="-s -w -checklinkname=0${VERSION_LDFLAGS}" -tags='with_conntrack,with_gvisor,with_quic,with_wireguard,with_awg,with_tailscale,with_utls,with_clash_api,with_naive_outbound,with_trusttunnel_cronet,with_adblock,with_adblock_cronet,with_grpc,badlinkname,tfogo_checklinkname0' . || exit 1
 rm -r libcore-sources.jar
 
 proj=../app/libs

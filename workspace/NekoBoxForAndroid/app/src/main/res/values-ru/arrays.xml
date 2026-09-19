@@ -1396,7 +1396,6 @@
         <item>@string/subscription_banner_announcement_urls</item>
         <item>@string/subscription_banner_traffic_text</item>
         <item>@string/subscription_banner_traffic_bar</item>
-        <item>@string/subscription_banner_expiration_time</item>
         <item>@string/subscription_banner_clickable</item>
     </string-array>
 </resources>

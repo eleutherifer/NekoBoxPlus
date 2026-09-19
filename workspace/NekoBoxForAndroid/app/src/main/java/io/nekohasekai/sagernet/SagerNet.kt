@@ -319,15 +319,6 @@ class SagerNet : Application(),
             )
         }
 
-        fun updateNotificationCountryIndicator(enabled: Boolean) {
-            application.sendBroadcast(
-                Intent(Action.UPDATE_NOTIFICATION_COUNTRY_INDICATOR)
-                    .setPackage(application.packageName)
-                    .putExtra(Action.EXTRA_REQUEST_ID, SystemClock.elapsedRealtimeNanos())
-                    .putExtra(Action.EXTRA_NOTIFICATION_COUNTRY_INDICATOR_ENABLED, enabled)
-            )
-        }
-
         var underlyingNetwork: Network? = null
 
         var appVersionNameForDisplay = {

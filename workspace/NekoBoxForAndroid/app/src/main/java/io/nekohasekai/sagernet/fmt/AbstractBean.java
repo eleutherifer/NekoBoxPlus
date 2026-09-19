@@ -29,9 +29,6 @@ public abstract class AbstractBean extends Serializable {
     public Boolean disableTcpKeepAlive;
     public String tcpKeepAlive;
     public String tcpKeepAliveInterval;
-    public Boolean tcpFastOpen;
-    public Boolean tcpMultiPath;
-    public Boolean udpFragment;
 
     // Android-usable sing-box 1.13 outbound TLS options.
     // These are persisted explicitly below and mapped into sing-box TLS options.
@@ -39,7 +36,6 @@ public abstract class AbstractBean extends Serializable {
     // Gson rejects a class hierarchy containing duplicate JSON field names.
     public transient String tlsCurvePreferences;
     public transient String tlsCertificatePublicKeySha256;
-    public transient String tlsXrayCertificateSha256;
     public transient String tlsClientCertificate;
     public transient String tlsClientKey;
     public transient String echQueryServerName;
@@ -96,11 +92,8 @@ public abstract class AbstractBean extends Serializable {
         if (disableTcpKeepAlive == null) disableTcpKeepAlive = false;
         if (tcpKeepAlive == null) tcpKeepAlive = "";
         if (tcpKeepAliveInterval == null) tcpKeepAliveInterval = "";
-        if (tcpFastOpen == null) tcpFastOpen = false;
-        if (tcpMultiPath == null) tcpMultiPath = false;
         if (tlsCurvePreferences == null) tlsCurvePreferences = "";
         if (tlsCertificatePublicKeySha256 == null) tlsCertificatePublicKeySha256 = "";
-        if (tlsXrayCertificateSha256 == null) tlsXrayCertificateSha256 = "";
         if (tlsClientCertificate == null) tlsClientCertificate = "";
         if (tlsClientKey == null) tlsClientKey = "";
         if (echQueryServerName == null) echQueryServerName = "";
@@ -111,7 +104,7 @@ public abstract class AbstractBean extends Serializable {
     public void serializeToBuffer(@NonNull ByteBufferOutput output) {
         serialize(output);
 
-        output.writeInt(4);
+        output.writeInt(2);
         output.writeString(name);
         output.writeString(customOutboundJson);
         output.writeString(customConfigJson);
@@ -123,10 +116,6 @@ public abstract class AbstractBean extends Serializable {
         output.writeString(tlsClientCertificate);
         output.writeString(tlsClientKey);
         output.writeString(echQueryServerName);
-        output.writeBoolean(tcpFastOpen);
-        output.writeBoolean(tcpMultiPath);
-        output.writeString(udpFragment == null ? "" : udpFragment.toString());
-        output.writeString(tlsXrayCertificateSha256);
     }
 
     @Override
@@ -147,19 +136,6 @@ public abstract class AbstractBean extends Serializable {
             tlsClientCertificate = input.readString();
             tlsClientKey = input.readString();
             echQueryServerName = input.readString();
-        }
-        if (extraVersion >= 3) {
-            tcpFastOpen = input.readBoolean();
-            tcpMultiPath = input.readBoolean();
-            String udpFragmentValue = input.readString();
-            if ("true".equalsIgnoreCase(udpFragmentValue)) {
-                udpFragment = true;
-            } else if ("false".equalsIgnoreCase(udpFragmentValue)) {
-                udpFragment = false;
-            }
-        }
-        if (extraVersion >= 4) {
-            tlsXrayCertificateSha256 = input.readString();
         }
     }
 

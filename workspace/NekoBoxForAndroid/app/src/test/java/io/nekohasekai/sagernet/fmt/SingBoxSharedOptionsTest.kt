@@ -14,92 +14,18 @@ import org.junit.Test
 class SingBoxSharedOptionsTest {
 
     @Test
-    fun sharedDialOptionsMapConnectionAndKeepAliveFields() {
+    fun sharedDialOptionsMapAllNewKeepAliveFields() {
         val bean = NaiveBean().apply {
             initializeDefaultValues()
-            tcpFastOpen = true
-            tcpMultiPath = true
-            udpFragment = false
             disableTcpKeepAlive = true
             tcpKeepAlive = "45s"
             tcpKeepAliveInterval = "15s"
         }
         val outbound = Outbound().apply { applySharedDialOptions(bean) }
 
-        assertEquals(true, outbound._hack_config_map["tcp_fast_open"])
-        assertEquals(true, outbound._hack_config_map["tcp_multi_path"])
-        assertEquals(false, outbound._hack_config_map["udp_fragment"])
         assertEquals(true, outbound._hack_config_map["disable_tcp_keep_alive"])
         assertEquals("45s", outbound._hack_config_map["tcp_keep_alive"])
         assertEquals("15s", outbound._hack_config_map["tcp_keep_alive_interval"])
-    }
-
-    @Test
-    fun sharedDialOptionsOmitDefaultsAndCanEnableUdpFragmentation() {
-        val defaults = NaiveBean().apply { initializeDefaultValues() }
-        val defaultOutbound = Outbound().apply { applySharedDialOptions(defaults) }
-
-        assertFalse(defaultOutbound._hack_config_map.containsKey("tcp_fast_open"))
-        assertFalse(defaultOutbound._hack_config_map.containsKey("tcp_multi_path"))
-        assertFalse(defaultOutbound._hack_config_map.containsKey("udp_fragment"))
-
-        defaults.udpFragment = true
-        val enabledOutbound = Outbound().apply { applySharedDialOptions(defaults) }
-        assertEquals(true, enabledOutbound._hack_config_map["udp_fragment"])
-    }
-
-    @Test
-    fun disabledGlobalSwitchesAndDefaultUdpPreserveProfileOptions() {
-        val defaults = Outbound().apply {
-            applyGlobalDialOverrides(
-                tcpFastOpen = false,
-                tcpMultiPath = false,
-                udpFragment = "",
-            )
-        }
-        assertFalse(defaults._hack_config_map.containsKey("tcp_fast_open"))
-        assertFalse(defaults._hack_config_map.containsKey("tcp_multi_path"))
-        assertFalse(defaults._hack_config_map.containsKey("udp_fragment"))
-
-        val outbound = Outbound().apply {
-            _hack_config_map["tcp_fast_open"] = true
-            _hack_config_map["tcp_multi_path"] = true
-            _hack_config_map["udp_fragment"] = false
-            applyGlobalDialOverrides(
-                tcpFastOpen = false,
-                tcpMultiPath = false,
-                udpFragment = "",
-            )
-        }
-
-        assertEquals(true, outbound._hack_config_map["tcp_fast_open"])
-        assertEquals(true, outbound._hack_config_map["tcp_multi_path"])
-        assertEquals(false, outbound._hack_config_map["udp_fragment"])
-    }
-
-    @Test
-    fun enabledGlobalSwitchesAndSelectedUdpOverrideProfileOptions() {
-        val enabledUdp = Outbound().apply {
-            _hack_config_map["tcp_fast_open"] = false
-            _hack_config_map["tcp_multi_path"] = false
-            _hack_config_map["udp_fragment"] = false
-            applyGlobalDialOverrides(
-                tcpFastOpen = true,
-                tcpMultiPath = true,
-                udpFragment = "true",
-            )
-        }
-
-        assertEquals(true, enabledUdp._hack_config_map["tcp_fast_open"])
-        assertEquals(true, enabledUdp._hack_config_map["tcp_multi_path"])
-        assertEquals(true, enabledUdp._hack_config_map["udp_fragment"])
-
-        enabledUdp.applyGlobalDialOverrides(
-            tcpFastOpen = false,
-            tcpMultiPath = false,
-            udpFragment = "false",
-        )
-        assertEquals(false, enabledUdp._hack_config_map["udp_fragment"])
     }
 
     @Test
@@ -121,18 +47,6 @@ class SingBoxSharedOptionsTest {
         assertNotNull(tls.ech)
         assertTrue(tls.ech.enabled == true)
         assertEquals("ech.example.com", tls.ech.query_server_name)
-    }
-
-    @Test
-    fun sharedTlsOptionsMapXrayCertificatePins() {
-        val bean = NaiveBean().apply {
-            initializeDefaultValues()
-            tlsXrayCertificateSha256 = "pin-a\npin-b"
-        }
-        val tls = OutboundTLSOptions().apply { applySharedTLSOptions(bean) }
-
-        assertEquals(listOf("pin-a", "pin-b"), tls.xray_certificate_sha256)
-        assertEquals(null, tls.certificate_public_key_sha256)
     }
 
     @Test

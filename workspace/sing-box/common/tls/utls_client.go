@@ -168,21 +168,12 @@ func NewUTLSClient(ctx context.Context, logger logger.ContextLogger, serverAddre
 		tlsConfig.InsecureServerNameToVerify = serverName
 	}
 	if len(options.CertificatePublicKeySHA256) > 0 {
-		if len(options.Certificate) > 0 || options.CertificatePath != "" || len(options.XrayCertificateSHA256) > 0 {
-			return nil, E.New("certificate_public_key_sha256 is conflict with certificate, certificate_path or xray_certificate_sha256")
+		if len(options.Certificate) > 0 || options.CertificatePath != "" {
+			return nil, E.New("certificate_public_key_sha256 is conflict with certificate or certificate_path")
 		}
 		tlsConfig.InsecureSkipVerify = true
 		tlsConfig.VerifyPeerCertificate = func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
 			return verifyPublicKeySHA256(options.CertificatePublicKeySHA256, rawCerts, tlsConfig.Time)
-		}
-	}
-	if len(options.XrayCertificateSHA256) > 0 {
-		if len(options.Certificate) > 0 || options.CertificatePath != "" {
-			return nil, E.New("xray_certificate_sha256 is conflict with certificate or certificate_path")
-		}
-		tlsConfig.InsecureSkipVerify = true
-		tlsConfig.VerifyPeerCertificate = func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
-			return verifyXrayCertificateSHA256(options.XrayCertificateSHA256, rawCerts, serverName, tlsConfig.Time)
 		}
 	}
 	if len(options.ALPN) > 0 {

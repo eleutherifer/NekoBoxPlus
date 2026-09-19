@@ -59,9 +59,9 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 class BackupFragment : NamedFragment(R.layout.layout_backup) {
 
     private lateinit var binding: LayoutBackupBinding
+    private lateinit var backupData: ByteArray
+    private var isWebDAVBackup = false
     private var isBackupInProgress = false
-    private var backupProgressDialog: androidx.appcompat.app.AlertDialog? = null
-    private var pendingExportOptions: BackupOptions? = null
     private var isRestoreInProgress = false
     private var currentJob: kotlinx.coroutines.Job? = null
     private var snackbar: Snackbar? = null
@@ -76,8 +76,6 @@ class BackupFragment : NamedFragment(R.layout.layout_backup) {
     }
 
     override fun onDestroyView() {
-        backupProgressDialog?.dismiss()
-        backupProgressDialog = null
         gitProgressDialog?.dismiss()
         gitProgressDialog = null
         super.onDestroyView()
@@ -100,15 +98,12 @@ class BackupFragment : NamedFragment(R.layout.layout_backup) {
 
     override fun name0() = app.getString(R.string.backup)
 
+    var content = ""
     private val exportSettings = registerForActivityResult(ActivityResultContracts.CreateDocument()) { data ->
-        val options = pendingExportOptions
-        pendingExportOptions = null
-        if (data != null && options != null) {
-            val activity = requireActivity()
-            beginBackupOperation {
+        if (data != null) {
+            runOnDefaultDispatcher {
                 try {
-                    val backupData = doBackup(options.profile, options.rule, options.setting)
-                    activity.contentResolver.openOutputStream(data)!!.use { os ->
+                    requireActivity().contentResolver.openOutputStream(data)!!.use { os ->
                         os.write(backupData)
                     }
                     onMainDispatcher {
@@ -131,56 +126,46 @@ class BackupFragment : NamedFragment(R.layout.layout_backup) {
         this.binding = binding
 
         binding.actionExport.setOnClickListener {
-            if (isBackupInProgress) {
-                showMessage(R.string.backup_in_progress)
-                return@setOnClickListener
+            runOnDefaultDispatcher {
+                backupData = doBackup(
+                    binding.backupConfigurations.isChecked,
+                    binding.backupRules.isChecked,
+                    binding.backupSettings.isChecked
+                )
+                onMainDispatcher {
+                    startFilesForResult(
+                        exportSettings, "nekobox_backup_${Date().toLocaleString()}.json"
+                    )
+                }
             }
-            pendingExportOptions = BackupOptions(
-                binding.backupConfigurations.isChecked,
-                binding.backupRules.isChecked,
-                binding.backupSettings.isChecked,
-            )
-            startFilesForResult(
-                exportSettings, "nekobox_backup_${Date().toLocaleString()}.json"
-            )
         }
 
         binding.actionShare.setOnClickListener {
-            val activity = requireActivity()
-            val options = BackupOptions(
-                binding.backupConfigurations.isChecked,
-                binding.backupRules.isChecked,
-                binding.backupSettings.isChecked,
-            )
-            beginBackupOperation {
-                try {
-                    val backupData = doBackup(options.profile, options.rule, options.setting)
-                    app.cacheDir.mkdirs()
-                    val cacheFile = File(
-                        app.cacheDir, "nekobox_backup_${Date().toLocaleString()}.json"
+            runOnDefaultDispatcher {
+                backupData = doBackup(
+                    binding.backupConfigurations.isChecked,
+                    binding.backupRules.isChecked,
+                    binding.backupSettings.isChecked
+                )
+                app.cacheDir.mkdirs()
+                val cacheFile = File(
+                    app.cacheDir, "nekobox_backup_${Date().toLocaleString()}.json"
+                )
+                cacheFile.writeBytes(backupData)
+                onMainDispatcher {
+                    startActivity(
+                        Intent.createChooser(
+                            Intent(Intent.ACTION_SEND).setType("application/json")
+                                .setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                .putExtra(
+                                    Intent.EXTRA_STREAM, FileProvider.getUriForFile(
+                                        app, BuildConfig.APPLICATION_ID + ".cache", cacheFile
+                                    )
+                                ), app.getString(R.string.abc_shareactionprovider_share_with)
+                        )
                     )
-                    cacheFile.writeBytes(backupData)
-                    onMainDispatcher {
-                        if (isAdded) {
-                            startActivity(
-                                Intent.createChooser(
-                                    Intent(Intent.ACTION_SEND).setType("application/json")
-                                        .setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                        .putExtra(
-                                            Intent.EXTRA_STREAM, FileProvider.getUriForFile(
-                                                app, BuildConfig.APPLICATION_ID + ".cache", cacheFile
-                                            )
-                                        ), app.getString(R.string.abc_shareactionprovider_share_with)
-                                )
-                            )
-                        }
-                    }
-                } catch (e: Exception) {
-                    Logs.w(e)
-                    onMainDispatcher {
-                        MessageStore.showMessage(activity, e.readableMessage)
-                    }
                 }
+
             }
         }
 
@@ -256,37 +241,6 @@ class BackupFragment : NamedFragment(R.layout.layout_backup) {
         if (isAdded && ::binding.isInitialized) {
             updateGitButtons()
         }
-    }
-
-    private fun beginBackupOperation(block: suspend kotlinx.coroutines.CoroutineScope.() -> Unit) {
-        if (isBackupInProgress) {
-            showMessage(R.string.backup_in_progress)
-            return
-        }
-        isBackupInProgress = true
-        val progress = LayoutProgressBinding.inflate(layoutInflater)
-        progress.content.setText(R.string.backup_creating)
-        backupProgressDialog = MaterialAlertDialogBuilder(requireContext())
-            .setView(progress.root)
-            .setCancelable(false)
-            .create()
-            .also {
-                it.setCanceledOnTouchOutside(false)
-                it.show()
-            }
-        runOnDefaultDispatcher {
-            try {
-                block()
-            } finally {
-                onMainDispatcher { finishBackupOperation() }
-            }
-        }
-    }
-
-    private fun finishBackupOperation() {
-        isBackupInProgress = false
-        backupProgressDialog?.dismiss()
-        backupProgressDialog = null
     }
 
     private fun backupToGit() = beginGitOperation(R.string.git_backing_up) { config ->
@@ -507,21 +461,23 @@ class BackupFragment : NamedFragment(R.layout.layout_backup) {
     }
 
     private fun backupToWebDAV() {
+        if (isBackupInProgress) {
+            showMessage(R.string.backup_in_progress)
+            return
+        }
+        isBackupInProgress = true
         val activity = requireActivity()
-        beginBackupOperation {
+        runOnDefaultDispatcher {
             try {
+                isWebDAVBackup = true
                 val backupData = doBackup(
                     true,  // 备份配置和分组
                     true,  // 备份路由规则
-                    true,  // 备份设置
-                    zip = true,
+                    true   // 备份设置
                 )
+                isWebDAVBackup = false
                 
-                val client = OkHttpClient.Builder()
-                    .connectTimeout(5, TimeUnit.MINUTES)
-                    .readTimeout(5, TimeUnit.MINUTES)
-                    .writeTimeout(5, TimeUnit.MINUTES)
-                    .build()
+                val client = OkHttpClient()
 
                 // 规范化 URL
                 val baseUrl = DataStore.webdavServer!!.trimEnd('/')
@@ -628,6 +584,7 @@ class BackupFragment : NamedFragment(R.layout.layout_backup) {
                     MessageStore.showMessage(activity, R.string.webdav_backup_success)
                 }
             } catch (e: Exception) {
+                isWebDAVBackup = false  // 确保发生异常时也重置标志
                 Logs.w(e)
 
                 val errorMessage = try {
@@ -643,6 +600,8 @@ class BackupFragment : NamedFragment(R.layout.layout_backup) {
                 onMainDispatcher {
                     MessageStore.showMessage(activity, errorMessage)
                 }
+            } finally {
+                isBackupInProgress = false
             }
         }
     }
@@ -856,7 +815,7 @@ class BackupFragment : NamedFragment(R.layout.layout_backup) {
         profile: Boolean,
         rule: Boolean,
         setting: Boolean,
-        zip: Boolean = false,
+        zip: Boolean = isWebDAVBackup,
     ): ByteArray {
         val out = JSONObject().apply {
             put("version", 1)
@@ -927,12 +886,6 @@ class BackupFragment : NamedFragment(R.layout.layout_backup) {
             jsonContent.toByteArray()
         }
     }
-
-    private data class BackupOptions(
-        val profile: Boolean,
-        val rule: Boolean,
-        val setting: Boolean,
-    )
 
     val importFile = registerForActivityResult(ActivityResultContracts.GetContent()) { file ->
         if (file != null) {

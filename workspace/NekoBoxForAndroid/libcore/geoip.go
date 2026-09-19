@@ -4,11 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"net/netip"
-	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/oschwald/maxminddb-golang"
 	C "github.com/sagernet/sing-box/constant"
@@ -16,22 +13,11 @@ import (
 	"github.com/sagernet/sing-box/option"
 )
 
-type countryReaderCache struct {
-	mu      sync.Mutex
-	reader  *geoip
-	path    string
-	size    int64
-	modTime int64
-}
-
-var globalCountryReader countryReaderCache
-
 type geoip struct {
-	geoipReader     *maxminddb.Reader
-	datEntries      map[string]*v2geoIP
-	countryPrefixes map[netip.Prefix]string
-	codes           []string
-	cachedRules     map[string]*headlessRuleEntry
+	geoipReader *maxminddb.Reader
+	datEntries  map[string]*v2geoIP
+	codes       []string
+	cachedRules map[string]*headlessRuleEntry
 }
 
 type headlessRuleEntry struct {
@@ -51,23 +37,6 @@ func (g *geoip) Open(path string) error {
 		return fmt.Errorf("open geoip as db: %w; open geoip as dat: %w", err, datErr)
 	}
 	g.datEntries = datEntries
-	g.countryPrefixes = make(map[netip.Prefix]string)
-	for countryCode, entry := range datEntries {
-		countryCode = validCountryCode(countryCode)
-		if countryCode == "" {
-			continue
-		}
-		for _, cidr := range entry.CIDR {
-			prefixValue, prefixErr := cidrString(cidr)
-			if prefixErr != nil {
-				continue
-			}
-			prefix, prefixErr := netip.ParsePrefix(prefixValue)
-			if prefixErr == nil {
-				g.countryPrefixes[prefix.Masked()] = countryCode
-			}
-		}
-	}
 	g.codes = codes
 	g.cachedRules = make(map[string]*headlessRuleEntry)
 	return nil
@@ -80,7 +49,6 @@ func (g *geoip) Close() error {
 	}
 	g.geoipReader = nil
 	g.datEntries = nil
-	g.countryPrefixes = nil
 	g.codes = nil
 	g.cachedRules = nil
 	return err
@@ -96,65 +64,6 @@ func (g *geoip) Rules(countryCode string) ([]option.HeadlessRule, error) {
 		return nil, err
 	}
 	return rules[countryCode], nil
-}
-
-func (g *geoip) Country(address netip.Addr) (string, error) {
-	address = address.Unmap()
-	if !address.IsValid() || !address.IsGlobalUnicast() || address.IsPrivate() {
-		return "", nil
-	}
-	if g.geoipReader != nil {
-		var countryCode string
-		if err := g.geoipReader.Lookup(net.IP(address.AsSlice()), &countryCode); err != nil {
-			return "", fmt.Errorf("lookup geoip country: %w", err)
-		}
-		return validCountryCode(countryCode), nil
-	}
-	for bits := address.BitLen(); bits >= 0; bits-- {
-		if countryCode := g.countryPrefixes[netip.PrefixFrom(address, bits).Masked()]; countryCode != "" {
-			return countryCode, nil
-		}
-	}
-	return "", nil
-}
-
-func validCountryCode(countryCode string) string {
-	countryCode = strings.ToUpper(strings.TrimSpace(countryCode))
-	if len(countryCode) != 2 || countryCode[0] < 'A' || countryCode[0] > 'Z' || countryCode[1] < 'A' || countryCode[1] > 'Z' {
-		return ""
-	}
-	return countryCode
-}
-
-// CountryCodeForIP returns an ISO alpha-2 country code from the bundled GeoIP asset.
-func CountryCodeForIP(ip string) (string, error) {
-	address, err := netip.ParseAddr(strings.Trim(strings.TrimSpace(ip), "[]"))
-	if err != nil {
-		return "", fmt.Errorf("parse IP address: %w", err)
-	}
-	path := filepath.Join(externalAssetsPath, geoipDat)
-	stat, err := os.Stat(path)
-	if err != nil {
-		return "", fmt.Errorf("stat geoip database: %w", err)
-	}
-
-	globalCountryReader.mu.Lock()
-	defer globalCountryReader.mu.Unlock()
-	if globalCountryReader.reader == nil || globalCountryReader.path != path ||
-		globalCountryReader.size != stat.Size() || globalCountryReader.modTime != stat.ModTime().UnixNano() {
-		reader := new(geoip)
-		if err = reader.Open(path); err != nil {
-			return "", err
-		}
-		if globalCountryReader.reader != nil {
-			_ = globalCountryReader.reader.Close()
-		}
-		globalCountryReader.reader = reader
-		globalCountryReader.path = path
-		globalCountryReader.size = stat.Size()
-		globalCountryReader.modTime = stat.ModTime().UnixNano()
-	}
-	return globalCountryReader.reader.Country(address)
 }
 
 func (g *geoip) RulesForCountries(countryCodes []string) (map[string][]option.HeadlessRule, error) {

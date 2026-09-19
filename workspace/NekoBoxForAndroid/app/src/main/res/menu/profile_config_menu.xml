@@ -14,51 +14,6 @@
         android:title="@string/apply"
         app:showAsAction="always" />
     <item
-        android:id="@+id/action_share_server"
-        android:icon="@drawable/ic_social_share"
-        android:title="@string/share_server"
-        android:visible="false"
-        app:showAsAction="never">
-        <menu>
-            <item
-                android:id="@+id/action_group_qr"
-                android:title="@string/share_qr_nfc">
-                <menu>
-                    <item
-                        android:id="@+id/action_standard_qr"
-                        android:title="@string/standard" />
-                    <item
-                        android:id="@+id/action_universal_qr"
-                        android:title="SN Link" />
-                </menu>
-            </item>
-            <item
-                android:id="@+id/action_group_clipboard"
-                android:title="@string/action_export_clipboard">
-                <menu>
-                    <item
-                        android:id="@+id/action_standard_clipboard"
-                        android:title="@string/standard" />
-                    <item
-                        android:id="@+id/action_universal_clipboard"
-                        android:title="SN Link" />
-                </menu>
-            </item>
-            <item
-                android:id="@+id/action_group_configuration"
-                android:title="@string/menu_configuration">
-                <menu>
-                    <item
-                        android:id="@+id/action_config_export_clipboard"
-                        android:title="@string/action_export_clipboard" />
-                    <item
-                        android:id="@+id/action_config_export_file"
-                        android:title="@string/action_export_file" />
-                </menu>
-            </item>
-        </menu>
-    </item>
-    <item
         android:id="@+id/action_create_shortcut"
         android:title="@string/create_shortcut"
         android:visible="false" />

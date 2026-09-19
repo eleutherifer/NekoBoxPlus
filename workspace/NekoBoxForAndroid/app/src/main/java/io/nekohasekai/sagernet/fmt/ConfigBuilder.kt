@@ -1491,11 +1491,6 @@ fun buildConfig(
 
                         currentOutbound.applyGroupForceUTLS(bean, proxyEntity, applyGroupForceUTLS)
                         currentOutbound.applySharedDialOptions(bean)
-                        currentOutbound.applyGlobalDialOverrides(
-                            DataStore.globalTcpFastOpen,
-                            DataStore.globalTcpMultiPath,
-                            DataStore.globalUdpFragment,
-                        )
 
                         // internal mux
                         if (bean !is ProxySetBean) {

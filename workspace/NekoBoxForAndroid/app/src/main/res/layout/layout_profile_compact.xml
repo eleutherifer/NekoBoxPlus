@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:id="@id/content"
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"
@@ -45,24 +44,16 @@
                     android:gravity="center_vertical"
                     android:paddingLeft="2.0dip">
 
-                    <io.nekohasekai.sagernet.widget.CountryBadgeView
-                        android:id="@+id/country_badge"
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:layout_marginEnd="3dp"
-                        android:visibility="gone" />
-
                     <TextView
                         android:id="@id/profile_name"
-                        android:layout_width="0dp"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1.0"
-                        android:ellipsize="end"
-                        android:maxLines="2"
+                        android:ellipsize="marquee"
+                        android:marqueeRepeatLimit="marquee_forever"
+                        android:singleLine="true"
                         android:textAppearance="?android:textAppearanceSmall"
                         android:textColor="?colorOnSurface"
-                        android:textStyle="bold"
-                        tools:ignore="NestedWeights" />
+                        android:textStyle="bold" />
                 </LinearLayout>
 
                 <androidx.appcompat.widget.AppCompatImageView

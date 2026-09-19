@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
 
 @Database(
     entities = [ProxyGroup::class, ProxyEntity::class, RuleEntity::class],
-    version = 27,
+    version = 26,
     autoMigrations = [
         AutoMigration(from = 3, to = 4),
         AutoMigration(from = 4, to = 5),
@@ -267,13 +267,6 @@ abstract class SagerDatabase : RoomDatabase() {
             }
         }
 
-        private val MIGRATION_26_27 = object : Migration(26, 27) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("ALTER TABLE proxy_entities ADD COLUMN countryCode TEXT NOT NULL DEFAULT ''")
-                database.execSQL("ALTER TABLE proxy_entities ADD COLUMN countrySource INTEGER NOT NULL DEFAULT 0")
-            }
-        }
-
         @OptIn(DelicateCoroutinesApi::class)
         @Suppress("EXPERIMENTAL_API_USAGE")
         val instance by lazy {
@@ -299,7 +292,6 @@ abstract class SagerDatabase : RoomDatabase() {
                     MIGRATION_23_24,
                     MIGRATION_24_25,
                     MIGRATION_25_26,
-                    MIGRATION_26_27,
                 )
                 .setJournalMode(JournalMode.TRUNCATE)
                 .allowMainThreadQueries()

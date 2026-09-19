@@ -24,23 +24,23 @@ class ProxyEntityGroupExportTest {
     }
 
     @Test
-    fun wireGuardUsesStandardGroupExport() {
+    fun wireGuardUsesUniversalGroupExport() {
         val entity = ProxyEntity().putBean(WireGuardBean().apply {
             initializeDefaultValues()
         })
 
-        assertTrue(entity.haveStandardLink())
-        assertFalse(entity.usesUniversalLinkForGroupExport())
+        assertFalse(entity.haveStandardLink())
+        assertTrue(entity.usesUniversalLinkForGroupExport())
     }
 
     @Test
-    fun amneziaWGUsesStandardGroupExport() {
+    fun amneziaWGUsesUniversalGroupExport() {
         val entity = ProxyEntity().putBean(AmneziaWGBean().apply {
             initializeDefaultValues()
         })
 
-        assertTrue(entity.haveStandardLink())
-        assertFalse(entity.usesUniversalLinkForGroupExport())
+        assertFalse(entity.haveStandardLink())
+        assertTrue(entity.usesUniversalLinkForGroupExport())
     }
 
     @Test

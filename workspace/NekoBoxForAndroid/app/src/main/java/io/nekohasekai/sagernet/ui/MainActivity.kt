@@ -610,11 +610,11 @@ class MainActivity :
         }
     }
 
-    fun urlTest(automatic: Boolean = false): Int {
+    fun urlTest(): Int {
         if (!DataStore.serviceState.connected || connection.service == null) {
             error("not started")
         }
-        return connection.service!!.urlTest(automatic)
+        return connection.service!!.urlTest()
     }
 
     suspend fun importSubscription(uri: Uri) {
@@ -721,7 +721,9 @@ class MainActivity :
     private suspend fun finishImportProfiles(profiles: List<AbstractBean>) {
         val targetId = DataStore.selectedGroupForImport()
 
-        ProfileManager.createProfiles(targetId, profiles)
+        for (profile in profiles) {
+            ProfileManager.createProfile(targetId, profile)
+        }
 
         onMainDispatcher {
             displayFragmentWithId(R.id.nav_configuration)
@@ -815,11 +817,6 @@ class MainActivity :
         fragment.openGroup(groupId, animate = false)
     }
 
-    fun displayToolsFragment(fragment: ToolsFragment = ToolsFragment()) {
-        displayFragment(fragment)
-        navigation.menu.findItem(R.id.nav_tools).isChecked = true
-    }
-
     private fun updateBottomControlsVisibility(
         fragment: ToolbarFragment? = supportFragmentManager.findFragmentById(R.id.fragment_holder) as? ToolbarFragment,
         animate: Boolean = true,
@@ -900,8 +897,7 @@ class MainActivity :
             }
 
             R.id.nav_tools -> {
-                displayToolsFragment()
-                return true
+                displayFragment(ToolsFragment())
             }
 
             R.id.nav_logcat -> {
@@ -1024,7 +1020,6 @@ class MainActivity :
     val connection = SagerConnection(SagerConnection.CONNECTION_ID_MAIN_ACTIVITY_FOREGROUND, true)
 
     override fun onServiceConnected(service: ISagerNetService) {
-        binding.stats.bindConnectionCheckService(service)
         val logLevel = AppLogLevel.fromPreferenceValue(DataStore.logLevel)
         runOnDefaultDispatcher {
             runCatching { service.setLogLevel(logLevel.singBoxName, logLevel.outputEnabled) }

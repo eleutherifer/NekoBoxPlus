@@ -2,8 +2,6 @@ package io.nekohasekai.sagernet.ui
 
 import io.nekohasekai.sagernet.database.ProxyEntity
 import io.nekohasekai.sagernet.fmt.toUniversalLink
-import io.nekohasekai.sagernet.fmt.wireguard.AmneziaWGBean
-import io.nekohasekai.sagernet.fmt.wireguard.buildAmneziaWGJsonContainer
 import java.io.ByteArrayOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -44,21 +42,6 @@ internal object ProfileBatchExport {
     fun configurations(profiles: List<ProxyEntity>) = collect(profiles) { profile ->
         val (content, fileName) = profile.exportConfig()
         ProfileBatchExportEntry(profile.displayName(), fileName, content)
-    }
-
-    fun amneziaWGJson(profiles: List<ProxyEntity>): ProfileBatchExportResult {
-        val beans = profiles.mapNotNull { it.requireBean() as? AmneziaWGBean }
-        if (beans.isEmpty()) return ProfileBatchExportResult(emptyList(), profiles.size)
-        return ProfileBatchExportResult(
-            entries = listOf(
-                ProfileBatchExportEntry(
-                    profileName = "AmneziaWG",
-                    fileName = "amneziawg.json",
-                    content = buildAmneziaWGJsonContainer(beans),
-                ),
-            ),
-            skipped = profiles.size - beans.size,
-        )
     }
 
     fun configurationClipboardText(entries: List<ProfileBatchExportEntry>): String =

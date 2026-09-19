@@ -8,7 +8,6 @@ import moe.matsuri.nb4a.utils.listByLineOrComma
 private val SHARED_TLS_FIELD_NAMES = setOf(
     "tlsCurvePreferences",
     "tlsCertificatePublicKeySha256",
-    "tlsXrayCertificateSha256",
     "tlsClientCertificate",
     "tlsClientKey",
     "echQueryServerName",
@@ -24,15 +23,6 @@ fun AbstractBean.supportsSharedTLSFieldInjection(): Boolean {
 }
 
 fun SingBoxOption.applySharedDialOptions(bean: AbstractBean) {
-    if (bean.tcpFastOpen == true) {
-        _hack_config_map["tcp_fast_open"] = true
-    }
-    if (bean.tcpMultiPath == true) {
-        _hack_config_map["tcp_multi_path"] = true
-    }
-    bean.udpFragment?.let {
-        _hack_config_map["udp_fragment"] = it
-    }
     if (bean.disableTcpKeepAlive == true) {
         _hack_config_map["disable_tcp_keep_alive"] = true
     }
@@ -41,23 +31,6 @@ fun SingBoxOption.applySharedDialOptions(bean: AbstractBean) {
     }
     bean.tcpKeepAliveInterval?.takeIf { it.isNotBlank() }?.let {
         _hack_config_map["tcp_keep_alive_interval"] = it.trim()
-    }
-}
-
-fun SingBoxOption.applyGlobalDialOverrides(
-    tcpFastOpen: Boolean,
-    tcpMultiPath: Boolean,
-    udpFragment: String,
-) {
-    if (tcpFastOpen) {
-        _hack_config_map["tcp_fast_open"] = true
-    }
-    if (tcpMultiPath) {
-        _hack_config_map["tcp_multi_path"] = true
-    }
-    when (udpFragment) {
-        "true" -> _hack_config_map["udp_fragment"] = true
-        "false" -> _hack_config_map["udp_fragment"] = false
     }
 }
 
@@ -72,12 +45,6 @@ fun OutboundTLSOptions.applySharedTLSOptions(bean: AbstractBean) {
             "TLS certificate authority and public-key pinning cannot be used together"
         }
         certificate_public_key_sha256 = it.listByLineOrComma()
-    }
-    bean.tlsXrayCertificateSha256?.takeIf { it.isNotBlank() }?.let {
-        require(certificate == null && certificate_public_key_sha256 == null) {
-            "Xray certificate pinning cannot be combined with other certificate verification options"
-        }
-        xray_certificate_sha256 = it.listByLineOrComma()
     }
     val clientCertificate = bean.tlsClientCertificate.orEmpty().trim()
     val clientKey = bean.tlsClientKey.orEmpty().trim()

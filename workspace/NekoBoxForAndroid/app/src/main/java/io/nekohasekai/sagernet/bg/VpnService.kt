@@ -11,7 +11,6 @@ import android.os.PowerManager
 import android.os.SystemClock
 import io.nekohasekai.sagernet.*
 import io.nekohasekai.sagernet.database.DataStore
-import io.nekohasekai.sagernet.database.ProxyEntity
 import io.nekohasekai.sagernet.database.SagerDatabase
 import io.nekohasekai.sagernet.fmt.LOCALHOST
 import io.nekohasekai.sagernet.fmt.hysteria.HysteriaBean
@@ -87,14 +86,7 @@ class VpnService :
     override val data = BaseService.Data(this)
     override val tag = "SagerNetVpnService"
 
-    override fun createNotification(profile: ProxyEntity?) = ServiceNotification(
-        this,
-        profile?.let {
-            ServiceNotification.genNotificationTitle(it, DataStore.notificationCountryIndicator)
-        }.orEmpty(),
-        "service-vpn",
-        profile = profile,
-    )
+    override fun createNotification(profileName: String) = ServiceNotification(this, profileName, "service-vpn")
 
     override fun onStartCommand(
         intent: Intent?,

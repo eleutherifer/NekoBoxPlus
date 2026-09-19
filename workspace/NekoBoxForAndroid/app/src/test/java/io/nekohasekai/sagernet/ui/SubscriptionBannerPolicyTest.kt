@@ -39,50 +39,6 @@ class SubscriptionBannerPolicyTest {
     }
 
     @Test
-    fun expirationMakesBannerVisibleAndRespectsLayout() {
-        val subscription = subscription {
-            subscriptionUserinfo = "expire=1787501803"
-        }
-
-        assertEquals(1_787_501_803L, subscriptionBannerPresentation(subscription).expireAt)
-        assertTrue(subscriptionBannerPresentation(subscription).visible)
-
-        subscription.bannerLayout = SubscriptionBannerLayout.TRAFFIC_TEXT
-        assertNull(subscriptionBannerPresentation(subscription).expireAt)
-        assertFalse(subscriptionBannerPresentation(subscription).visible)
-    }
-
-    @Test
-    fun formatsExpirationUsingLargestWholeUnit() {
-        val now = 1_000_000_000_000L
-
-        assertEquals(
-            SubscriptionExpiration.Remaining(20L, SubscriptionExpirationUnit.DAYS),
-            subscriptionExpiration(now / 1000L + 20L * 86_400L + 3_599L, now),
-        )
-        assertEquals(
-            SubscriptionExpiration.Remaining(23L, SubscriptionExpirationUnit.HOURS),
-            subscriptionExpiration(now / 1000L + 23L * 3_600L + 3_599L, now),
-        )
-        assertEquals(
-            SubscriptionExpiration.Remaining(59L, SubscriptionExpirationUnit.MINUTES),
-            subscriptionExpiration(now / 1000L + 59L * 60L + 59L, now),
-        )
-        assertEquals(
-            SubscriptionExpiration.LessThanMinute,
-            subscriptionExpiration(now / 1000L + 59L, now),
-        )
-        assertEquals(
-            SubscriptionExpiration.Expired,
-            subscriptionExpiration(now / 1000L, now),
-        )
-        assertEquals(
-            SubscriptionExpiration.Expired,
-            subscriptionExpiration(now / 1000L - 1L, now),
-        )
-    }
-
-    @Test
     fun unlimitedTrafficCanDisplayBarWithoutCounterText() {
         val subscription = subscription {
             bannerLayout = SubscriptionBannerLayout.TRAFFIC_BAR
@@ -161,7 +117,6 @@ class SubscriptionBannerPolicyTest {
             announcement = "Maintenance"
             announcementUrl = "https://status.example.com"
             supportEmail = "support@example.com"
-            expireAt = 1_787_501_803L
         }
 
         val restored = KryoConverters.deserialize(
@@ -174,7 +129,6 @@ class SubscriptionBannerPolicyTest {
         assertEquals("Maintenance", restored.announcement)
         assertEquals("https://status.example.com", restored.announcementUrl)
         assertEquals("support@example.com", restored.supportEmail)
-        assertEquals(1_787_501_803L, restored.expireAt)
         assertEquals(SubscriptionBannerLayout.ALL, legacyDefault.bannerLayout)
     }
 

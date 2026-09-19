@@ -32,10 +32,6 @@ class ToolsFragment : ToolbarFragment(R.layout.layout_tools) {
         val binding = LayoutToolsBinding.bind(view)
         ViewCompat.setOnApplyWindowInsetsListener(binding.root, ListListener)
         binding.toolsPager.adapter = ToolsAdapter(tools)
-        binding.toolsPager.setCurrentItem(
-            arguments?.getInt(ARG_INITIAL_PAGE, 0) ?: 0,
-            false,
-        )
 
         TabLayoutMediator(binding.toolsTab, binding.toolsPager) { tab, position ->
             tab.text = tools[position].name()
@@ -43,6 +39,10 @@ class ToolsFragment : ToolbarFragment(R.layout.layout_tools) {
                 true
             }
         }.attach()
+        binding.toolsPager.setCurrentItem(
+            arguments?.getInt(ARG_INITIAL_PAGE, 0) ?: 0,
+            false,
+        )
     }
 
     inner class ToolsAdapter(val tools: List<Fragment>) : FragmentStateAdapter(this) {

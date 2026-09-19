@@ -223,8 +223,10 @@ class ScannerActivity : ThemedActivity() {
                 }
                 DataStore.editingGroup = currentGroupId
 
-                ProfileManager.createProfiles(currentGroupId, importResult.profiles)
-                importedN.addAndGet(importResult.profiles.size)
+                for (profile in importResult.profiles) {
+                    ProfileManager.createProfile(currentGroupId, profile)
+                    importedN.addAndGet(1)
+                }
             }
             is QrCodeImportResult.Subscription -> onMainDispatcher {
                 startActivity(Intent(this@ScannerActivity, MainActivity::class.java).apply {

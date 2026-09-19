@@ -26,13 +26,12 @@ require (
 
 require (
 	github.com/golang/protobuf v1.5.4
-	github.com/metacubex/utls v1.8.4
 	github.com/refraction-networking/utls v1.8.2
 	github.com/sagernet/cronet-go v0.0.0-20260712143338-d22f2ea3630e
 	github.com/sagernet/cronet-go/all v0.0.0-20260712143338-d22f2ea3630e
 	github.com/sagernet/gomobile v0.1.12
 	github.com/sagernet/gvisor v0.0.0-20250811.0-sing-box-mod.1
-	github.com/sagernet/sing-quic v0.6.4-0.20260803041914-d83826c306d7
+	github.com/sagernet/sing-quic v0.6.4-0.20260727025224-43cdc830d7cf
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.54.0
 	golang.org/x/net v0.57.0
@@ -97,6 +96,7 @@ require (
 	github.com/metacubex/mihomo v1.19.13 // indirect
 	github.com/metacubex/randv2 v0.2.0 // indirect
 	github.com/metacubex/sing v0.5.5 // indirect
+	github.com/metacubex/utls v1.8.4 // indirect
 	github.com/mholt/acmez/v3 v3.1.6 // indirect
 	github.com/mitchellh/go-ps v1.0.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.26 // indirect
@@ -144,7 +144,7 @@ require (
 	github.com/sagernet/sing-shadowtls v0.2.1 // indirect
 	github.com/sagernet/sing-vmess v0.2.8-0.20250909125414-3aed155119a1 // indirect
 	github.com/sagernet/smux v1.5.50-sing-box-mod.1 // indirect
-	github.com/sagernet/tailscale v1.92.4-sing-box-1.13-mod.8 // indirect
+	github.com/sagernet/tailscale v1.92.4-sing-box-1.13-mod.7 // indirect
 	github.com/sagernet/wireguard-go v0.0.2-beta.1.0.20260224074747-506b7631853c // indirect
 	github.com/sagernet/ws v0.0.0-20231204124109-acfe8907c854 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect

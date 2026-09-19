@@ -28,7 +28,6 @@ import io.nekohasekai.sagernet.ktx.runOnDefaultDispatcher
 import io.nekohasekai.sagernet.ktx.runOnMainDispatcher
 import io.nekohasekai.sagernet.plugin.PluginManager
 import io.nekohasekai.sagernet.utils.DefaultNetworkListener
-import io.nekohasekai.sagernet.utils.ProfileCountryResolver
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -238,15 +237,9 @@ object GroupConnectionTestController {
                     val profile = profiles.poll() ?: break
                     profile.status = 0
                     try {
-                        val pingResult = Libcore.icmpPingWithAddress(
+                        profile.ping = Libcore.icmpPing(
                             profile.requireBean().serverAddress,
                             DataStore.connectionGroupTestTimeout,
-                        )
-                        profile.ping = pingResult.latency
-                        ProfileCountryResolver.updateFromAddress(
-                            profile.id,
-                            pingResult.address,
-                            ProfileCountryResolver.SOURCE_ENDPOINT,
                         )
                         if (!GroupConnectionTestController.isActive(runId)) break
                         profile.status = 1
@@ -306,18 +299,12 @@ object GroupConnectionTestController {
                     val bean = profile.requireBean()
                     if (DataStore.connectionTestHardened) {
                         try {
-                            val pingResult = Libcore.tcpPingWithAddress(
+                            profile.ping = Libcore.tcpPing(
                                 bean.serverAddress,
                                 bean.serverPort.toString(),
                                 3000,
                                 true,
                                 LocalResolverImpl,
-                            )
-                            profile.ping = pingResult.latency
-                            ProfileCountryResolver.updateFromAddress(
-                                profile.id,
-                                pingResult.address,
-                                ProfileCountryResolver.SOURCE_ENDPOINT,
                             )
                             if (!GroupConnectionTestController.isActive(runId)) break
                             profile.status = 1
@@ -372,7 +359,6 @@ object GroupConnectionTestController {
                     }
                     try {
                         var result: Int? = null
-                        var successfulAddress: String? = null
                         var lastError: Exception? = null
                         for ((index, address) in addresses.withIndex()) {
                             try {
@@ -383,7 +369,6 @@ object GroupConnectionTestController {
                                     false,
                                     LocalResolverImpl,
                                 )
-                                successfulAddress = address
                                 break
                             } catch (e: Exception) {
                                 lastError = e
@@ -394,13 +379,6 @@ object GroupConnectionTestController {
                         if (!GroupConnectionTestController.isActive(runId)) break
                         profile.status = 1
                         profile.ping = result
-                        successfulAddress?.let {
-                            ProfileCountryResolver.updateFromAddress(
-                                profile.id,
-                                it,
-                                ProfileCountryResolver.SOURCE_ENDPOINT,
-                            )
-                        }
                         update(runId, profile)
                     } catch (e: Exception) {
                         if (!GroupConnectionTestController.isActive(runId)) break
@@ -483,8 +461,6 @@ object GroupConnectionTestController {
                     } catch (e: Exception) {
                         profile.status = 3
                         profile.error = e.readableMessage
-                    } finally {
-                        ProfileCountryResolver.resolveAndUpdateDomain(profile.id)
                     }
 
                     update(runId, profile)

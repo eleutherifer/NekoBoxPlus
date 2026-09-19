@@ -1,7 +1,6 @@
 package io.nekohasekai.sagernet.ui.profile
 
 import android.annotation.SuppressLint
-import android.content.ActivityNotFoundException
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Build
@@ -36,12 +35,10 @@ import io.nekohasekai.sagernet.*
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.GroupManager
 import io.nekohasekai.sagernet.database.ProfileManager
-import io.nekohasekai.sagernet.database.ProxyEntity
 import io.nekohasekai.sagernet.database.SagerDatabase
 import io.nekohasekai.sagernet.database.preference.OnPreferenceDataStoreChangeListener
 import io.nekohasekai.sagernet.databinding.LayoutGroupItemBinding
 import io.nekohasekai.sagernet.fmt.AbstractBean
-import io.nekohasekai.sagernet.fmt.toUniversalLink
 import io.nekohasekai.sagernet.fmt.supportsSharedTLSFieldInjection
 import io.nekohasekai.sagernet.fmt.hysteria.HysteriaBean
 import io.nekohasekai.sagernet.fmt.internal.ChainBean
@@ -54,16 +51,13 @@ import io.nekohasekai.sagernet.fmt.tuic.TuicBean
 import io.nekohasekai.sagernet.fmt.v2ray.StandardV2RayBean
 import io.nekohasekai.sagernet.ktx.*
 import io.nekohasekai.sagernet.ui.ThemedActivity
-import io.nekohasekai.sagernet.ui.ProfileShareCapabilities
 import io.nekohasekai.sagernet.widget.ListListener
-import io.nekohasekai.sagernet.widget.QRCodeDialog
 import kotlinx.parcelize.Parcelize
 import moe.matsuri.nb4a.ui.showMaterialEditTextPreferenceDialog
 import moe.matsuri.nb4a.proxy.anytls.AnyTLSBean
 import moe.matsuri.nb4a.proxy.config.ConfigBean
 import moe.matsuri.nb4a.proxy.neko.NekoBean
 import moe.matsuri.nb4a.ui.MaterialSwitchPreference
-import moe.matsuri.nb4a.ui.SimpleMenuPreference
 import kotlin.properties.Delegates
 
 @Suppress("UNCHECKED_CAST")
@@ -112,38 +106,7 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
 
     val proxyEntity by lazy { SagerDatabase.proxyDao.getById(DataStore.editingId) }
     private var editingBean: T? = null
-    private var pendingSharedConfiguration: String? = null
     protected var isSubscription by Delegates.notNull<Boolean>()
-
-    private val exportSharedConfigurationLauncher =
-        registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
-            val configuration = pendingSharedConfiguration
-            pendingSharedConfiguration = null
-            if (uri == null || configuration == null) return@registerForActivityResult
-            runOnDefaultDispatcher {
-                try {
-                    contentResolver.openOutputStream(uri)!!.bufferedWriter().use {
-                        it.write(configuration)
-                    }
-                    onMainDispatcher {
-                        Toast.makeText(
-                            this@ProfileSettingsActivity,
-                            R.string.action_export_msg,
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                    }
-                } catch (e: Exception) {
-                    Logs.w(e)
-                    onMainDispatcher {
-                        Toast.makeText(
-                            this@ProfileSettingsActivity,
-                            e.readableMessage,
-                            Toast.LENGTH_LONG,
-                        ).show()
-                    }
-                }
-            }
-        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -185,7 +148,6 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
                     supportFragmentManager.beginTransaction()
                         .replace(R.id.settings, MyPreferenceFragmentCompat())
                         .commit()
-                    invalidateOptionsMenu()
                 }
             }
 
@@ -211,7 +173,7 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
             if (proxyEntity!!.id == DataStore.selectedProxy) {
                 SagerNet.stopService()
             }
-            ProfileManager.updateEditedProfile(proxyEntity!!.apply {
+            ProfileManager.updateProfile(proxyEntity!!.apply {
                 (requireBean() as T).apply {
                     serialize()
                     readSharedOptionsFromCache(this)
@@ -242,21 +204,6 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
         menu.findItem(R.id.action_custom_outbound_json)?.isVisible = true
         menu.findItem(R.id.action_custom_config_json)?.isVisible = true
         return true
-    }
-
-    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        val capabilities = editingBean?.let {
-            ProfileShareCapabilities.from(ProxyEntity().putBean(it))
-        }
-        menu.findItem(R.id.action_share_server)?.isVisible = capabilities != null
-        menu.findItem(R.id.action_group_qr)?.isVisible = capabilities?.links == true
-        menu.findItem(R.id.action_group_clipboard)?.isVisible = capabilities?.links == true
-        menu.findItem(R.id.action_standard_qr)?.isVisible = capabilities?.standardLinks == true
-        menu.findItem(R.id.action_standard_clipboard)?.isVisible =
-            capabilities?.standardLinks == true
-        menu.findItem(R.id.action_group_configuration)?.isVisible =
-            capabilities?.configuration == true
-        return super.onPrepareOptionsMenu(menu)
     }
 
     override fun onOptionsItemSelected(item: MenuItem) = child.onOptionsItemSelected(item)
@@ -305,12 +252,6 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
         }
 
     private fun writeSharedOptionsToCache(bean: AbstractBean) {
-        DataStore.profileCacheStore.putBoolean("tcpFastOpen", bean.tcpFastOpen)
-        DataStore.profileCacheStore.putBoolean("tcpMultiPath", bean.tcpMultiPath)
-        DataStore.profileCacheStore.putString(
-            "udpFragment",
-            bean.udpFragment?.toString().orEmpty(),
-        )
         DataStore.profileCacheStore.putBoolean("disableTcpKeepAlive", bean.disableTcpKeepAlive)
         DataStore.profileCacheStore.putString("tcpKeepAlive", bean.tcpKeepAlive)
         DataStore.profileCacheStore.putString("tcpKeepAliveInterval", bean.tcpKeepAliveInterval)
@@ -319,57 +260,21 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
             "tlsCertificatePublicKeySha256",
             bean.tlsCertificatePublicKeySha256,
         )
-        DataStore.profileCacheStore.putString("tlsXrayCertificateSha256", bean.tlsXrayCertificateSha256)
         DataStore.profileCacheStore.putString("tlsClientCertificate", bean.tlsClientCertificate)
         DataStore.profileCacheStore.putString("tlsClientKey", bean.tlsClientKey)
         DataStore.profileCacheStore.putString("echQueryServerName", bean.echQueryServerName)
     }
 
     private fun readSharedOptionsFromCache(bean: AbstractBean) {
-        bean.tcpFastOpen = DataStore.profileCacheStore.getBoolean("tcpFastOpen", false)
-        bean.tcpMultiPath = DataStore.profileCacheStore.getBoolean("tcpMultiPath", false)
-        bean.udpFragment = when (DataStore.profileCacheStore.getString("udpFragment")) {
-            "true" -> true
-            "false" -> false
-            else -> null
-        }
         bean.disableTcpKeepAlive = DataStore.profileCacheStore.getBoolean("disableTcpKeepAlive", false)
         bean.tcpKeepAlive = DataStore.profileCacheStore.getString("tcpKeepAlive").orEmpty()
         bean.tcpKeepAliveInterval = DataStore.profileCacheStore.getString("tcpKeepAliveInterval").orEmpty()
         bean.tlsCurvePreferences = DataStore.profileCacheStore.getString("tlsCurvePreferences").orEmpty()
         bean.tlsCertificatePublicKeySha256 =
             DataStore.profileCacheStore.getString("tlsCertificatePublicKeySha256").orEmpty()
-        bean.tlsXrayCertificateSha256 =
-            DataStore.profileCacheStore.getString("tlsXrayCertificateSha256").orEmpty()
         bean.tlsClientCertificate = DataStore.profileCacheStore.getString("tlsClientCertificate").orEmpty()
         bean.tlsClientKey = DataStore.profileCacheStore.getString("tlsClientKey").orEmpty()
         bean.echQueryServerName = DataStore.profileCacheStore.getString("echQueryServerName").orEmpty()
-    }
-
-    private fun currentShareEntity(): ProxyEntity {
-        val bean = (editingBean ?: error("Profile is not ready")).clone() as T
-        bean.serialize()
-        readSharedOptionsFromCache(bean)
-        val entity = if (DataStore.editingId == 0L) {
-            ProxyEntity(groupId = DataStore.editingGroup)
-        } else {
-            proxyEntity?.copy() ?: error("Profile no longer exists")
-        }
-        return entity.putBean(bean)
-    }
-
-    private fun exportSharedConfiguration(entity: ProxyEntity) {
-        val (configuration, fileName) = entity.exportConfig()
-        pendingSharedConfiguration = configuration
-        try {
-            exportSharedConfigurationLauncher.launch(fileName)
-        } catch (_: ActivityNotFoundException) {
-            pendingSharedConfiguration = null
-            Toast.makeText(this, R.string.file_manager_missing, Toast.LENGTH_LONG).show()
-        } catch (_: SecurityException) {
-            pendingSharedConfiguration = null
-            Toast.makeText(this, R.string.file_manager_missing, Toast.LENGTH_LONG).show()
-        }
     }
 
     private fun PreferenceFragmentCompat.addSharedOptions() {
@@ -379,28 +284,6 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
                 title = getString(R.string.sing_box_dial_options)
             }
             preferenceScreen.addPreference(category)
-            category.addPreference(MaterialSwitchPreference(requireContext()).apply {
-                key = "tcpFastOpen"
-                title = getString(R.string.tcp_fast_open)
-                icon = AppCompatResources.getDrawable(requireContext(), R.drawable.ic_baseline_speed_24)
-            })
-            category.addPreference(MaterialSwitchPreference(requireContext()).apply {
-                key = "tcpMultiPath"
-                title = getString(R.string.multipath_tcp)
-                icon = AppCompatResources.getDrawable(requireContext(), R.drawable.ic_baseline_multiple_stop_24)
-            })
-            category.addPreference(SimpleMenuPreference(requireContext()).apply {
-                key = "udpFragment"
-                title = getString(R.string.udp_fragmentation)
-                icon = AppCompatResources.getDrawable(requireContext(), R.drawable.ic_baseline_call_split_24)
-                entries = arrayOf(
-                    getString(R.string.connection_option_default),
-                    getString(R.string.connection_option_enabled),
-                    getString(R.string.connection_option_disabled),
-                )
-                entryValues = arrayOf("", "true", "false")
-                summaryProvider = androidx.preference.ListPreference.SimpleSummaryProvider.getInstance()
-            })
             category.addPreference(MaterialSwitchPreference(requireContext()).apply {
                 key = "disableTcpKeepAlive"
                 title = getString(R.string.disable_tcp_keep_alive)
@@ -438,11 +321,6 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
                 addText(
                     "tlsCertificatePublicKeySha256",
                     R.string.tls_certificate_public_key_sha256,
-                    R.drawable.ic_baseline_fingerprint_24,
-                )
-                addText(
-                    "tlsXrayCertificateSha256",
-                    R.string.tls_xray_certificate_sha256,
                     R.drawable.ic_baseline_fingerprint_24,
                 )
                 addText("tlsClientCertificate", R.string.tls_client_certificate, R.drawable.ic_action_copyright)
@@ -508,53 +386,7 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
         }
 
         @SuppressLint("CheckResult")
-        override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
-            R.id.action_standard_qr,
-            R.id.action_universal_qr,
-            R.id.action_standard_clipboard,
-            R.id.action_universal_clipboard,
-            R.id.action_config_export_clipboard,
-            R.id.action_config_export_file,
-            -> {
-                try {
-                    val host = activity ?: return true
-                    val entity = host.currentShareEntity()
-                    val content = when (item.itemId) {
-                        R.id.action_standard_qr,
-                        R.id.action_standard_clipboard,
-                        -> entity.toStdLink()
-                        R.id.action_universal_qr,
-                        R.id.action_universal_clipboard,
-                        -> entity.requireBean().toUniversalLink()
-                        R.id.action_config_export_clipboard -> entity.exportConfig().first
-                        else -> null
-                    }
-                    when (item.itemId) {
-                        R.id.action_standard_qr,
-                        R.id.action_universal_qr,
-                        -> QRCodeDialog(content!!, entity.displayName())
-                            .showAllowingStateLoss(parentFragmentManager)
-                        R.id.action_standard_clipboard,
-                        R.id.action_universal_clipboard,
-                        R.id.action_config_export_clipboard,
-                        -> Toast.makeText(
-                            requireContext(),
-                            if (SagerNet.trySetPrimaryClip(content!!)) {
-                                R.string.action_export_msg
-                            } else {
-                                R.string.action_export_err
-                            },
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                        R.id.action_config_export_file -> host.exportSharedConfiguration(entity)
-                    }
-                } catch (e: Exception) {
-                    Logs.w(e)
-                    Toast.makeText(requireContext(), e.readableMessage, Toast.LENGTH_LONG).show()
-                }
-                true
-            }
-
+        override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
             R.id.action_delete -> {
                 if (DataStore.editingId == 0L) {
                     requireActivity().finish()

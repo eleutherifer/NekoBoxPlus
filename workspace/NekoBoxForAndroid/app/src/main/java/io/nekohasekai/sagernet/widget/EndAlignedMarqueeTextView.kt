@@ -105,9 +105,6 @@ class EndAlignedMarqueeTextView @JvmOverloads constructor(
         textWidth = Layout.getDesiredWidth(text, paint)
         val availableWidth = width - compoundPaddingStart - compoundPaddingEnd
         val isOverflowing = availableWidth > 0 && textWidth > availableWidth
-        if (textAlignment != View.TEXT_ALIGNMENT_GRAVITY) {
-            textAlignment = View.TEXT_ALIGNMENT_GRAVITY
-        }
         val horizontalGravity = if (isOverflowing) Gravity.START else Gravity.END
         val updatedGravity =
             (gravity and Gravity.HORIZONTAL_GRAVITY_MASK.inv()) or horizontalGravity

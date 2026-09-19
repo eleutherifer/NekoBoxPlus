@@ -23,7 +23,6 @@ import io.nekohasekai.sagernet.aidl.ISagerNetServiceCallback
 import io.nekohasekai.sagernet.aidl.SpeedTestData
 import io.nekohasekai.sagernet.bg.proto.ProxyInstance
 import io.nekohasekai.sagernet.database.DataStore
-import io.nekohasekai.sagernet.database.ProxyEntity
 import io.nekohasekai.sagernet.database.RuleEntity
 import io.nekohasekai.sagernet.database.SagerDatabase
 import io.nekohasekai.sagernet.ktx.*
@@ -142,14 +141,6 @@ class BaseService {
                             .show()
                     }
                 }
-                Action.UPDATE_NOTIFICATION_COUNTRY_INDICATOR -> runOnDefaultDispatcher {
-                    notification?.postNotificationCountryIndicator(
-                        intent.getBooleanExtra(
-                            Action.EXTRA_NOTIFICATION_COUNTRY_INDICATOR_ENABLED,
-                            DataStore.notificationCountryIndicator,
-                        )
-                    )
-                }
 
                 else -> service.stopRunner()
             }
@@ -164,7 +155,6 @@ class BaseService {
             if (state == s && msg == null) return
             state = s
             DataStore.serviceState = s
-            if (s != State.Connected) binder.resetConnectionTestState()
             binder.stateChanged(s, msg)
         }
     }
@@ -200,7 +190,6 @@ class BaseService {
         private var speedTestSession: SpeedTestSession? = null
         @Volatile
         private var latestSpeedTestStatus = SpeedTestData()
-        private val connectionTestSession = ConnectionTestSessionState()
 
         suspend fun broadcast(work: (ISagerNetServiceCallback) -> Unit) {
             broadcastMutex.withLock {
@@ -230,19 +219,9 @@ class BaseService {
             }
         }
 
-        override fun urlTest(automatic: Boolean): Int {
+        override fun urlTest(): Int {
             val data = data ?: error("core not started")
             val box = data.proxy?.box ?: error("core not started")
-            val attempts = if (automatic) {
-                AutomaticConnectionTestPolicy.effectiveAttempts(DataStore.connectionTestAttempts)
-            } else {
-                DataStore.connectionTestAttempts
-            }
-            val pause = if (automatic) {
-                AutomaticConnectionTestPolicy.effectivePauseMillis(DataStore.connectionTestPause)
-            } else {
-                DataStore.connectionTestPause
-            }
             try {
                 return data.urlTestTracker.track {
                     Libcore.urlTest(
@@ -250,30 +229,14 @@ class BaseService {
                         DataStore.connectionTestURL,
                         DataStore.connectionTestTimeout,
                         DataStore.profileTestType,
-                        attempts,
-                        pause,
+                        DataStore.connectionTestAttempts,
+                        DataStore.connectionTestPause,
                         DataStore.connectionTestHardened,
                     )
                 }
             } catch (e: Exception) {
                 error(e.readableMessage)
             }
-        }
-
-        override fun claimAutomaticConnectionCheck(): Boolean {
-            return connectionTestSession.claim(data?.state == State.Connected)
-        }
-
-        override fun connectionTestStatus(): String? = connectionTestSession.presentation()?.status
-
-        override fun connectionTestIpInfo(): String? = connectionTestSession.presentation()?.ipInfo
-
-        override fun setConnectionTestPresentation(status: String?, ipInfo: String?) {
-            connectionTestSession.setPresentation(data?.state == State.Connected, status, ipInfo)
-        }
-
-        fun resetConnectionTestState() {
-            connectionTestSession.reset()
         }
 
         override fun startSpeedTest(
@@ -579,7 +542,7 @@ class BaseService {
     interface Interface {
         val data: Data
         val tag: String
-        fun createNotification(profile: ProxyEntity?): ServiceNotification
+        fun createNotification(profileName: String): ServiceNotification
 
         fun onBind(intent: Intent): IBinder? =
             if (intent.action == Action.SERVICE) data.binder else null
@@ -1205,7 +1168,7 @@ class BaseService {
             val profile = SagerDatabase.proxyDao.getById(requestedProfileId)
             this as Context
             if (profile == null) { // gracefully shutdown: https://stackoverflow.com/q/47337857/2245107
-                data.notification = createNotification(null)
+                data.notification = createNotification("")
                 stopRunner(false, getString(R.string.profile_empty))
                 return Service.START_NOT_STICKY
             }
@@ -1225,7 +1188,6 @@ class BaseService {
                         addAction(PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED)
                     }
                     addAction(Action.RESET_UPSTREAM_CONNECTIONS)
-                    addAction(Action.UPDATE_NOTIFICATION_COUNTRY_INDICATOR)
                 }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     registerReceiver(
@@ -1251,7 +1213,7 @@ class BaseService {
                 data.lifecycleMutex.withLock {
                     try {
                         withContext(Dispatchers.Main.immediate) {
-                            data.notification = createNotification(profile)
+                            data.notification = createNotification(ServiceNotification.genTitle(profile))
                         }
 
                         Executable.killAll()    // clean up old processes

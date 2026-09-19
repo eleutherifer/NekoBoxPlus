@@ -27,7 +27,6 @@
         <item quantity="other">Перемещено %d профиля.</item>
     </plurals>
     <string name="no_profiles_support_export">Ни один из выбранных профилей не поддерживает этот формат экспорта.</string>
-    <string name="amneziawg_json" translatable="false">AmneziaWG JSON</string>
     <string name="qr_code_data_too_large">Данные выбранных профилей слишком велики для QR-кода.</string>
     <plurals name="profiles_skipped">
         <item quantity="one">Пропущен %d профиль.</item>
@@ -117,10 +116,6 @@
     <string name="background_process_not_running">Фоновый процесс не запущен</string>
     <string name="show_profile_count_on_tabs">Показывать количество профилей на вкладках</string>
     <string name="show_profile_count_on_tabs_summary">Показывает пилюлю с количеством профилей на каждой вкладке группы</string>
-    <string name="profile_country_indicator">Индикатор страны профиля</string>
-    <string name="profile_country_indicator_summary">Показывать значки флагов стран и убирать соответствующие эмодзи стран из названий профилей.</string>
-    <string name="notification_country_indicator">Индикатор страны в уведомлении</string>
-    <string name="notification_country_indicator_summary">Показывать флаг страны активного профиля в уведомлении о подключении.</string>
     <string name="short_profile_protocol_info">Краткая информация о протоколе профиля</string>
     <string name="short_profile_protocol_info_summary">Показывать в карточках только сокращённый тип протокола.</string>
     <string name="tab_double_tap_to_navigate">Навигация по двойному нажатию на вкладку</string>
@@ -226,7 +221,6 @@
     <string name="copy_all_logs">Копировать весь журнал</string>
     <string name="logs_copied">Отладочная информация скопирована</string>
     <string name="scroll_to_bottom">Прокрутить вниз</string>
-    <string name="log_line_position">Строка %1$d из %2$d</string>
     <string name="log_level_panic">Паника</string>
     <string name="log_level_fatal">Критическая ошибка</string>
     <string name="log_level_error">Ошибка</string>
@@ -427,8 +421,6 @@
     <string name="license">Лицензия</string>
     <string name="lines">%d строк</string>
     <string name="log_level">Тип журнала</string>
-    <string name="logcat_retention_size">Размер хранимого журнала</string>
-    <string name="logcat_retention_size_summary">Максимальный объём данных в файле журнала. Используйте kb или mb (10kb–1024mb).</string>
     <string name="log_level_help">Удерживайте, чтобы задать размер буфера.</string>
     <string name="logcat">Экспорт журнала</string>
     <string name="mal_close">Закрыть</string>
@@ -622,7 +614,6 @@
     <string name="shadowsocks_plugin_simple_obfs">Simple Obfs (Shadowsocks Android)</string>
     <string name="shadowsocks_plugin_v2ray">V2Ray (Shadowsocks Android)</string>
     <string name="share">Поделиться</string>
-    <string name="share_server">Поделиться сервером</string>
     <string name="share_qr_nfc">QR-код</string>
     <string name="share_subscription">Поделиться подпиской</string>
     <string name="show_bottom_bar">Нижняя панель как в SagerNet</string>
@@ -741,7 +732,6 @@
     <string name="subscription_banner_announcement_urls">Ссылки объявлений</string>
     <string name="subscription_banner_traffic_text">Текст счётчика трафика</string>
     <string name="subscription_banner_traffic_bar">Индикатор трафика</string>
-    <string name="subscription_banner_expiration_time">Срок действия</string>
     <string name="subscription_banner_clickable">Нажатие на баннер</string>
     <string name="subscription_provider_announcement">Объявление провайдера</string>
     <string name="subscription_open_link_prompt">Какую ссылку открыть?</string>
@@ -749,26 +739,6 @@
     <string name="subscription_link_support">Поддержка</string>
     <string name="subscription_link_email_support">Поддержка по E-Mail</string>
     <string name="subscription_link_page">Страница подписки</string>
-    <plurals name="subscription_expiration_days_left">
-        <item quantity="one">Остался %d день</item>
-        <item quantity="few">Осталось %d дня</item>
-        <item quantity="many">Осталось %d дней</item>
-        <item quantity="other">Осталось %d дня</item>
-    </plurals>
-    <plurals name="subscription_expiration_hours_left">
-        <item quantity="one">Остался %d час</item>
-        <item quantity="few">Осталось %d часа</item>
-        <item quantity="many">Осталось %d часов</item>
-        <item quantity="other">Осталось %d часа</item>
-    </plurals>
-    <plurals name="subscription_expiration_minutes_left">
-        <item quantity="one">Осталась %d минута</item>
-        <item quantity="few">Осталось %d минуты</item>
-        <item quantity="many">Осталось %d минут</item>
-        <item quantity="other">Осталось %d минуты</item>
-    </plurals>
-    <string name="subscription_expiration_less_than_minute">&lt; 1 минуты</string>
-    <string name="subscription_expiration_expired">Срок истёк</string>
     <string name="subscription_traffic_total">%1$s / %2$s</string>
     <string name="subscription_traffic">%1$s использовано / %2$s осталось</string>
     <string name="subscription_traffic_unit">Единицы трафика подписок</string>
@@ -785,18 +755,11 @@
     <string name="tcp_connections">%d TCP-соединений</string>
     <string name="tcp_keep_alive_interval">Интервал TCP keep-alive</string>
     <string name="sing_box_dial_options">Параметры соединения sing-box</string>
-    <string name="tcp_fast_open">TCP Fast Open</string>
-    <string name="multipath_tcp">Multipath TCP</string>
-    <string name="udp_fragmentation">Фрагментация UDP</string>
-    <string name="connection_option_default">По умолчанию</string>
-    <string name="connection_option_enabled">Включено</string>
-    <string name="connection_option_disabled">Отключено</string>
     <string name="disable_tcp_keep_alive">Отключить TCP keep-alive</string>
     <string name="tcp_keep_alive">Начальный период TCP keep-alive</string>
     <string name="sing_box_tls_13_options">Параметры TLS 1.13 sing-box</string>
     <string name="tls_curve_preferences">Предпочтительные кривые TLS</string>
     <string name="tls_certificate_public_key_sha256">SHA-256 открытых ключей сервера</string>
-    <string name="tls_xray_certificate_sha256">SHA-256 сертификатов сервера Xray</string>
     <string name="tls_client_certificate">Клиентский сертификат (PEM)</string>
     <string name="tls_client_key">Закрытый ключ клиента (PEM)</string>
     <string name="telegram">Канал обновлений в Telegram</string>
@@ -907,7 +870,6 @@
     <string name="username">Логин</string>
     <string name="username_opt">Логин (необязательно)</string>
     <string name="utls_fingerprint">Отпечаток uTLS</string>
-    <string name="app_utls_fingerprint">uTLS для подписок</string>
     <string name="uuid">Логин пользователя</string>
     <string name="v7_preference_off">ВЫКЛ.</string>
     <string name="v7_preference_on">ВКЛ.</string>
@@ -983,7 +945,6 @@
     <string name="backup_webdav">Копия WebDAV</string>
     <string name="backup_to_webdav">Сделать копию в WebDAV</string>
     <string name="backup_in_progress">Копирование уже идет</string>
-    <string name="backup_creating">Создание резервной копии…</string>
     <string name="restore_from_webdav">Восстановить из WebDAV</string>
     <string name="restore_in_progress">Восстановление уже выполняется</string>
     <string name="restore_cancelled">Операция восстановления отменена</string>
@@ -1519,7 +1480,6 @@
     <string name="mieru_traffic_pattern">Паттерн трафика</string>
     <string name="action_naive">Naïve</string>
     <string name="action_anytls">AnyTLS</string>
-    <string name="anytls_client_metadata">Метаданные клиента</string>
     <string name="action_masque">MASQUE</string>
     <string name="action_tailscale">Tailscale</string>
     <string name="action_hysteria">Hysteria</string>
@@ -1759,5 +1719,4 @@
     <string name="subscription_routing_not_provided">Эта подписка не предоставляет данные маршрутизации. Будут применены текущие правила маршрутизации.</string>
     <string name="toolbar_restore_default">Восстановить по умолчанию</string>
     <string name="toolbar_restore_default_confirmation">Восстановить стандартную раскладку панели инструментов?</string>
-    <string name="profile_country">Страна профиля: %1$s</string>
 </resources>

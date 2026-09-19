@@ -132,24 +132,21 @@ func runURLTestAttempts(ctx context.Context, timeoutMillis int32, attempts int32
 	attempts = min(max(attempts, 1), 5)
 	timeout := time.Duration(timeoutMillis) * time.Millisecond
 	pause := time.Duration(max(pauseMillis, 0)) * time.Millisecond
-	operationCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
 	var lastErr error
 	for attempt := range attempts {
-		latency, err := test(operationCtx)
+		attemptCtx, cancel := context.WithTimeout(ctx, timeout)
+		latency, err := test(attemptCtx)
+		cancel()
 		if err == nil {
 			return latency, nil
 		}
 		lastErr = err
-		if cause := context.Cause(operationCtx); cause != nil {
-			return -1, cause
-		}
 		if attempt == attempts-1 {
 			break
 		}
 		select {
-		case <-operationCtx.Done():
-			return -1, context.Cause(operationCtx)
+		case <-ctx.Done():
+			return -1, context.Cause(ctx)
 		case <-time.After(pause):
 		}
 	}

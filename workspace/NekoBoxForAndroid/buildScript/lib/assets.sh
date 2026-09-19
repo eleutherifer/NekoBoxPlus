@@ -37,16 +37,16 @@ get_latest_release_json() {
     "https://api.github.com/repos/$1/releases/latest"
 }
 
-VERSION_GEOIP="$(get_latest_release "soffchen/sing-geoip")"
+VERSION_GEOIP="$(get_latest_release "SagerNet/sing-geoip")"
 echo "VERSION_GEOIP=$VERSION_GEOIP"
 printf '%s' "$VERSION_GEOIP" > geoip.version.txt
-curl -fLSsO "https://github.com/soffchen/sing-geoip/releases/download/$VERSION_GEOIP/geoip.db"
+curl -fLSsO "https://github.com/SagerNet/sing-geoip/releases/download/$VERSION_GEOIP/geoip.db"
 xz -9 --lzma2=dict=4MiB geoip.db
 
-VERSION_GEOSITE="$(get_latest_release "soffchen/sing-geosite")"
+VERSION_GEOSITE="$(get_latest_release "SagerNet/sing-geosite")"
 echo "VERSION_GEOSITE=$VERSION_GEOSITE"
 printf '%s' "$VERSION_GEOSITE" > geosite.version.txt
-curl -fLSsO "https://github.com/soffchen/sing-geosite/releases/download/$VERSION_GEOSITE/geosite.db"
+curl -fLSsO "https://github.com/SagerNet/sing-geosite/releases/download/$VERSION_GEOSITE/geosite.db"
 xz -9 --lzma2=dict=4MiB geosite.db
 
 THRONE_RULESET_SHA="$(

@@ -1,7 +1,6 @@
 package io.nekohasekai.sagernet.ui
 
 import io.nekohasekai.sagernet.database.SubscriptionBean
-import io.nekohasekai.sagernet.utils.parseSubscriptionUserinfo
 import java.net.URI
 
 object SubscriptionBannerLayout {
@@ -10,23 +9,19 @@ object SubscriptionBannerLayout {
     const val TRAFFIC_TEXT = 1 shl 2
     const val TRAFFIC_BAR = 1 shl 3
     const val CLICKABLE = 1 shl 4
-    const val EXPIRATION_TIME = 1 shl 5
-    const val ALL = ANNOUNCEMENTS or ANNOUNCEMENT_URLS or TRAFFIC_TEXT or TRAFFIC_BAR or
-        CLICKABLE or EXPIRATION_TIME
+    const val ALL = ANNOUNCEMENTS or ANNOUNCEMENT_URLS or TRAFFIC_TEXT or TRAFFIC_BAR or CLICKABLE
 
     const val VALUE_ANNOUNCEMENTS = "announcements"
     const val VALUE_ANNOUNCEMENT_URLS = "announcement_urls"
     const val VALUE_TRAFFIC_TEXT = "traffic_text"
     const val VALUE_TRAFFIC_BAR = "traffic_bar"
     const val VALUE_CLICKABLE = "clickable"
-    const val VALUE_EXPIRATION_TIME = "expiration_time"
 
     val allValues = setOf(
         VALUE_ANNOUNCEMENTS,
         VALUE_ANNOUNCEMENT_URLS,
         VALUE_TRAFFIC_TEXT,
         VALUE_TRAFFIC_BAR,
-        VALUE_EXPIRATION_TIME,
         VALUE_CLICKABLE,
     )
 
@@ -35,7 +30,6 @@ object SubscriptionBannerLayout {
         if (mask and ANNOUNCEMENT_URLS != 0) add(VALUE_ANNOUNCEMENT_URLS)
         if (mask and TRAFFIC_TEXT != 0) add(VALUE_TRAFFIC_TEXT)
         if (mask and TRAFFIC_BAR != 0) add(VALUE_TRAFFIC_BAR)
-        if (mask and EXPIRATION_TIME != 0) add(VALUE_EXPIRATION_TIME)
         if (mask and CLICKABLE != 0) add(VALUE_CLICKABLE)
     }
 
@@ -45,7 +39,6 @@ object SubscriptionBannerLayout {
         if (VALUE_ANNOUNCEMENT_URLS in values) mask = mask or ANNOUNCEMENT_URLS
         if (VALUE_TRAFFIC_TEXT in values) mask = mask or TRAFFIC_TEXT
         if (VALUE_TRAFFIC_BAR in values) mask = mask or TRAFFIC_BAR
-        if (VALUE_EXPIRATION_TIME in values) mask = mask or EXPIRATION_TIME
         if (VALUE_CLICKABLE in values) mask = mask or CLICKABLE
         return mask
     }
@@ -67,12 +60,11 @@ data class SubscriptionBannerPresentation(
     val traffic: SubscriptionTraffic?,
     val showTrafficText: Boolean,
     val showTrafficBar: Boolean,
-    val expireAt: Long?,
     val clickable: Boolean,
 ) {
     val visible: Boolean
         get() = announcement != null || announcementUrl != null ||
-            (traffic != null && (showTrafficText || showTrafficBar)) || expireAt != null
+            (traffic != null && (showTrafficText || showTrafficBar))
 
     val hasAnnouncementContent: Boolean
         get() = announcement != null || announcementUrl != null
@@ -91,18 +83,28 @@ data class SubscriptionBannerLink(
 )
 
 fun parseSubscriptionTraffic(value: String?): SubscriptionTraffic? {
-    val fields = parseSubscriptionUserinfo(value) ?: return null
-    val upload = fields.upload
-    val download = fields.download
+    val raw = value?.trim().orEmpty()
+    if (raw.isEmpty() || raw == "0") return null
+
+    val fields = raw.split(';').mapNotNull { component ->
+        val separator = component.indexOf('=')
+        if (separator <= 0) return@mapNotNull null
+        val key = component.substring(0, separator).trim().lowercase()
+        val number = component.substring(separator + 1).trim().toLongOrNull()
+            ?.takeIf { it >= 0L } ?: return@mapNotNull null
+        key to number
+    }.toMap()
+
+    val upload = fields["upload"] ?: 0L
+    val download = fields["download"] ?: 0L
     val used = if (Long.MAX_VALUE - upload < download) Long.MAX_VALUE else upload + download
-    val total = fields.total
+    val total = fields["total"]?.takeIf { it > 0L }
     if (used == 0L && total == null) return null
     return SubscriptionTraffic(used, total)
 }
 
 fun subscriptionBannerPresentation(subscription: SubscriptionBean): SubscriptionBannerPresentation {
     val mask = subscription.bannerLayout ?: SubscriptionBannerLayout.ALL
-    val parsedUserinfo = parseSubscriptionUserinfo(subscription.subscriptionUserinfo)
     return SubscriptionBannerPresentation(
         announcement = subscription.announcement
             ?.trim()
@@ -113,42 +115,8 @@ fun subscriptionBannerPresentation(subscription: SubscriptionBean): Subscription
         traffic = parseSubscriptionTraffic(subscription.subscriptionUserinfo),
         showTrafficText = mask and SubscriptionBannerLayout.TRAFFIC_TEXT != 0,
         showTrafficBar = mask and SubscriptionBannerLayout.TRAFFIC_BAR != 0,
-        expireAt = (subscription.expireAt?.takeIf { it > 0L } ?: parsedUserinfo?.expireAt)
-            ?.takeIf { mask and SubscriptionBannerLayout.EXPIRATION_TIME != 0 },
         clickable = mask and SubscriptionBannerLayout.CLICKABLE != 0,
     )
-}
-
-enum class SubscriptionExpirationUnit {
-    DAYS,
-    HOURS,
-    MINUTES,
-}
-
-sealed interface SubscriptionExpiration {
-    data object Expired : SubscriptionExpiration
-    data object LessThanMinute : SubscriptionExpiration
-    data class Remaining(val value: Long, val unit: SubscriptionExpirationUnit) :
-        SubscriptionExpiration
-}
-
-fun subscriptionExpiration(expireAt: Long, nowMillis: Long): SubscriptionExpiration {
-    val expireMillis = if (expireAt > Long.MAX_VALUE / 1000L) Long.MAX_VALUE else expireAt * 1000L
-    val remainingMillis = expireMillis - nowMillis
-    if (remainingMillis <= 0L) return SubscriptionExpiration.Expired
-    if (remainingMillis < 60_000L) return SubscriptionExpiration.LessThanMinute
-    val minutes = remainingMillis / 60_000L
-    return when {
-        minutes >= 24L * 60L -> SubscriptionExpiration.Remaining(
-            minutes / (24L * 60L),
-            SubscriptionExpirationUnit.DAYS,
-        )
-        minutes >= 60L -> SubscriptionExpiration.Remaining(
-            minutes / 60L,
-            SubscriptionExpirationUnit.HOURS,
-        )
-        else -> SubscriptionExpiration.Remaining(minutes, SubscriptionExpirationUnit.MINUTES)
-    }
 }
 
 private fun webUrlOrNull(value: String?): String? {

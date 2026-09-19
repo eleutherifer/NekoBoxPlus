@@ -12,8 +12,6 @@ import io.nekohasekai.sagernet.fmt.Serializable;
 
 public class SubscriptionBean extends Serializable {
 
-    private static final int BANNER_EXPIRATION_TIME = 1 << 5;
-
     public Integer type;
     public String link;
     public String token;
@@ -53,7 +51,6 @@ public class SubscriptionBean extends Serializable {
     // https://github.com/crossutility/Quantumult/blob/master/extra-subscription-feature.md
 
     public String subscriptionUserinfo;
-    public Long expireAt;
     public String announcement;
     public String announcementUrl;
     public String supportUrl;
@@ -66,7 +63,7 @@ public class SubscriptionBean extends Serializable {
 
     @Override
     public void serializeToBuffer(ByteBufferOutput output) {
-        output.writeInt(7);
+        output.writeInt(6);
 
         output.writeInt(type);
 
@@ -110,13 +107,10 @@ public class SubscriptionBean extends Serializable {
         output.writeInt(routingUpdateInterval);
         output.writeLong(routingLastUpdated);
         output.writeBoolean(routingOff);
-
-        // v7
-        output.writeLong(expireAt);
     }
 
     public void serializeForShare(ByteBufferOutput output) {
-        output.writeInt(2);
+        output.writeInt(1);
 
         output.writeInt(type);
 
@@ -182,11 +176,6 @@ public class SubscriptionBean extends Serializable {
             routingLastUpdated = input.readLong();
             routingOff = input.readBoolean();
         }
-        if (version >= 7) {
-            expireAt = input.readLong();
-        } else if (bannerLayout != null) {
-            bannerLayout |= BANNER_EXPIRATION_TIME;
-        }
     }
 
     public void deserializeFromShare(ByteBufferInput input) {
@@ -201,9 +190,6 @@ public class SubscriptionBean extends Serializable {
 
         if (version >= 1) {
             bannerLayout = input.readInt();
-        }
-        if (version < 2 && bannerLayout != null) {
-            bannerLayout |= BANNER_EXPIRATION_TIME;
         }
     }
 
@@ -224,14 +210,13 @@ public class SubscriptionBean extends Serializable {
         if (hwidEnabled == null) hwidEnabled = false;
         if (spoofApp == null) spoofApp = 0;
         if (serverDnsResolver == null) serverDnsResolver = "";
-        if (bannerLayout == null) bannerLayout = 63;
+        if (bannerLayout == null) bannerLayout = 31;
         if (announcement == null) announcement = "";
         if (announcementUrl == null) announcementUrl = "";
         if (supportUrl == null) supportUrl = "";
         if (supportEmail == null) supportEmail = "";
         if (profileWebPageUrl == null) profileWebPageUrl = "";
         if (homepage == null) homepage = "";
-        if (expireAt == null) expireAt = 0L;
         if (routingEnabled == null) routingEnabled = false;
         if (routingPayload == null) routingPayload = "";
         if (routingFormat == null) routingFormat = "";

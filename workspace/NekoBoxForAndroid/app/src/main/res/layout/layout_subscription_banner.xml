@@ -98,35 +98,16 @@
                 android:visibility="gone"
                 tools:visibility="visible" />
 
-            <LinearLayout
+            <TextView
+                android:id="@+id/banner_traffic"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:gravity="end"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/banner_traffic"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:ellipsize="end"
-                    android:gravity="end"
-                    android:maxLines="1"
-                    android:textColor="?attr/colorOnSurface"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    tools:text="38.4 GB / 100 GB" />
-
-                <TextView
-                    android:id="@+id/banner_expiration"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:ellipsize="end"
-                    android:gravity="end"
-                    android:maxLines="1"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    android:textSize="11sp"
-                    tools:text="20 days left" />
-            </LinearLayout>
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                tools:text="38.4 GB / 100 GB" />
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

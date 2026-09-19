@@ -21,15 +21,12 @@ import io.nekohasekai.sagernet.fmt.wireguard.AmneziaWGBean
 import io.nekohasekai.sagernet.fmt.wireguard.WireGuardBean
 import io.nekohasekai.sagernet.fmt.wireguard.WireGuardConfDocument
 import io.nekohasekai.sagernet.fmt.wireguard.WireGuardConfParser
-import io.nekohasekai.sagernet.fmt.wireguard.parseAmneziaWGJsonContainer
 import io.nekohasekai.sagernet.ktx.*
 import io.nekohasekai.sagernet.routing.SubscriptionRoutingExtractor
 import io.nekohasekai.sagernet.routing.SubscriptionRoutingRepository
-import io.nekohasekai.sagernet.utils.parseSubscriptionUserinfo
 import libcore.Libcore
 import moe.matsuri.nb4a.proxy.config.ConfigBean
 import moe.matsuri.nb4a.utils.Util
-import io.nekohasekai.sagernet.utils.ProfileCountryResolver
 import org.json.JSONArray
 import org.json.JSONObject
 import org.json.JSONTokener
@@ -243,7 +240,6 @@ object RawUpdater : GroupUpdater() {
         } else {
             val client =
                 Libcore.newHttpClient().apply {
-                    withUTLS(DataStore.appUTLSFingerprint)
                     setTimeoutMillis(GroupUpdater.SUBSCRIPTION_UPDATE_TIMEOUT_MILLIS)
                     tryH3Direct()
                     when (DataStore.appTLSVersion) {
@@ -297,12 +293,11 @@ object RawUpdater : GroupUpdater() {
                 }.onFailure(Logs::w)
                 val bodyHeaders = parseXraySubscriptionBodyHeaders(responseText)
 
-                subscription.subscriptionUserinfo = responseOrBodyHeader(
+                subscription.subscriptionUserinfo =
+                    responseOrBodyHeader(
                         Util.getStringBox(response.getHeader("Subscription-Userinfo")),
                         bodyHeaders.subscriptionUserinfo,
                     )
-                subscription.expireAt =
-                    parseSubscriptionUserinfo(subscription.subscriptionUserinfo)?.expireAt ?: 0L
                 subscription.announcement =
                     decodeProfileTitle(
                         responseOrBodyHeader(
@@ -511,7 +506,6 @@ object RawUpdater : GroupUpdater() {
                             userOrder = if (shouldApplyUpdateOrder) userOrder else appendedUserOrder++,
                         ).apply {
                             putBean(bean)
-                            ProfileCountryResolver.initialize(this)
                         },
                     )
                 originOrderIds.add(profileId)
@@ -752,10 +746,6 @@ object RawUpdater : GroupUpdater() {
 
         if (json is JSONObject) {
             when {
-                json.getStr("type") == "amneziawg" -> {
-                    return parseAmneziaWGJsonContainer(json)
-                }
-
                 json.getStr("type") == "mieru" -> {
                     return listOfNotNull(json.parseSingBoxMieru())
                 }

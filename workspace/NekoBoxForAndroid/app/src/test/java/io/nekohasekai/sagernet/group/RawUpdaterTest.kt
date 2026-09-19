@@ -1,24 +1,10 @@
 package io.nekohasekai.sagernet.group
 
-import io.nekohasekai.sagernet.utils.parseSubscriptionUserinfo
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 class RawUpdaterTest {
-    @Test
-    fun `parses expiration from subscription userinfo`() {
-        assertEquals(
-            1_787_501_803L,
-            parseSubscriptionUserinfo(
-                "upload=0; download=830851009; total=993211187200; expire=1787501803",
-            )?.expireAt,
-        )
-        assertNull(parseSubscriptionUserinfo("upload=1; expire=invalid")?.expireAt)
-        assertNull(parseSubscriptionUserinfo("upload=1; expire=-1")?.expireAt)
-        assertNull(parseSubscriptionUserinfo("upload=1")?.expireAt)
-    }
-
     @Test
     fun `decodes base64 profile title as UTF-8`() {
         assertEquals("Подписка 🚀", decodeProfileTitle("base64:0J/QvtC00L/QuNGB0LrQsCDwn5qA"))

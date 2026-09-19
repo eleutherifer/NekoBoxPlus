@@ -232,7 +232,6 @@ object SubscriptionRoutingRepository {
             return source to resolve(source)
         }
         val client = Libcore.newHttpClient().apply {
-            withUTLS(DataStore.appUTLSFingerprint)
             setTimeoutMillis(120_000)
             tryH3Direct()
             if (DataStore.appTLSVersion == "1.3") restrictedTLS()
@@ -361,7 +360,6 @@ object SubscriptionRoutingRepository {
 
     private fun downloadText(url: String): String {
         val client = Libcore.newHttpClient().apply {
-            withUTLS(DataStore.appUTLSFingerprint)
             modernTLS()
             keepAlive()
         }
@@ -388,7 +386,6 @@ object SubscriptionRoutingRepository {
         }
         val temporary = File(root, "$name.tmp")
         val client = Libcore.newHttpClient().apply {
-            withUTLS(DataStore.appUTLSFingerprint)
             modernTLS()
             keepAlive()
         }

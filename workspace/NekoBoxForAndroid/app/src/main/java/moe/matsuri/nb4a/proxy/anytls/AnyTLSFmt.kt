@@ -23,7 +23,6 @@ fun buildSingBoxOutboundAnyTLSBean(bean: AnyTLSBean): SingBoxOptions.Outbound_An
         server = bean.serverAddress
         server_port = bean.serverPort
         password = bean.password
-        client_metadata = bean.clientMetadata.blankAsNull()
 
         tls = SingBoxOptions.OutboundTLSOptions().apply {
             enabled = true

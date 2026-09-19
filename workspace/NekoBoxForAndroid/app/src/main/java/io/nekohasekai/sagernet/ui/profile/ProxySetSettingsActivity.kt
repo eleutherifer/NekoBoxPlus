@@ -25,7 +25,6 @@ import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.ProfileManager
 import io.nekohasekai.sagernet.database.ProxyEntity
 import io.nekohasekai.sagernet.database.profileCardType
-import io.nekohasekai.sagernet.utils.ProfileCountryResolver
 import io.nekohasekai.sagernet.database.SagerDatabase
 import io.nekohasekai.sagernet.databinding.LayoutAddEntityBinding
 import io.nekohasekai.sagernet.databinding.LayoutProfileBinding
@@ -415,7 +414,7 @@ class ProxySetSettingsActivity : ProfileSettingsActivity<ProxySetBean>(R.layout.
         }
     }
 
-    inner class ProfileHolder(private val binding: LayoutProfileBinding) : RecyclerView.ViewHolder(binding.root) {
+    inner class ProfileHolder(binding: LayoutProfileBinding) : RecyclerView.ViewHolder(binding.root) {
         private val profileCard = binding.root
         private val defaultCardStrokeColor = profileCard.strokeColorStateList
         private val defaultCardStrokeWidth = profileCard.strokeWidth
@@ -427,9 +426,7 @@ class ProxySetSettingsActivity : ProfileSettingsActivity<ProxySetBean>(R.layout.
         private val shareLayout = binding.share
 
         fun bind(proxyEntity: ProxyEntity) {
-            val countryBadgeVisible = binding.countryBadge.bind(proxyEntity)
-            profileName.text =
-                ProfileCountryResolver.presentationName(proxyEntity, countryBadgeVisible)
+            profileName.text = proxyEntity.displayName()
             profileType.text = proxyEntity.profileCardType(DataStore.shortProfileProtocolInfo)
             profileType.setTextColor(getProtocolColor(proxyEntity.type))
             profileCard.bindProfileSecurity(

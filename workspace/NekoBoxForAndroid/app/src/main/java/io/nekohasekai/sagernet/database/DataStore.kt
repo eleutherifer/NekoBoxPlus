@@ -14,7 +14,6 @@ import io.nekohasekai.sagernet.CoreProfilerMode
 import io.nekohasekai.sagernet.ExclaveFragmentationMethod
 import io.nekohasekai.sagernet.IPv6Mode
 import io.nekohasekai.sagernet.Key
-import io.nekohasekai.sagernet.LogcatRetentionSize
 import io.nekohasekai.sagernet.SagerNet
 import io.nekohasekai.sagernet.TrafficFragmentation
 import io.nekohasekai.sagernet.TunImplementation
@@ -174,7 +173,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
         )
 
     var appTLSVersion by configurationStore.string(Key.APP_TLS_VERSION)
-    var appUTLSFingerprint by configurationStore.string(Key.APP_UTLS_FINGERPRINT)
     var enableClashAPI by configurationStore.boolean(Key.ENABLE_CLASH_API) { true }
     var hideClashApi by configurationStore.boolean(Key.HIDE_CLASH_API) { true }
     var clashApiSecret: String
@@ -196,9 +194,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var networkChangeResetConnections by configurationStore.boolean(Key.NETWORK_CHANGE_RESET_CONNECTIONS) { true }
     var wakeReconnect by configurationStore.boolean(Key.WAKE_RECONNECT)
     var wakeResetConnections by configurationStore.boolean(Key.WAKE_RESET_CONNECTIONS)
-    var globalTcpFastOpen by configurationStore.boolean(Key.GLOBAL_TCP_FAST_OPEN)
-    var globalTcpMultiPath by configurationStore.boolean(Key.GLOBAL_TCP_MULTI_PATH)
-    var globalUdpFragment by configurationStore.string(Key.GLOBAL_UDP_FRAGMENT) { "" }
 
     @Volatile
     var pendingResetConnectionsAfterReconnect = false
@@ -218,10 +213,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var useToolbar by configurationStore.boolean(Key.USE_TOOLBAR)
     var toolbarLayout by configurationStore.string(Key.TOOLBAR_LAYOUT) { "" }
     var showProfileCountOnTabs by configurationStore.boolean(Key.SHOW_PROFILE_COUNT_ON_TABS)
-    var profileCountryIndicator by configurationStore.boolean(Key.PROFILE_COUNTRY_INDICATOR) { true }
-    var notificationCountryIndicator by configurationStore.boolean(
-        Key.NOTIFICATION_COUNTRY_INDICATOR,
-    ) { true }
     var tabDoubleTapToNavigate by configurationStore.boolean(Key.TAB_DOUBLE_TAP_TO_NAVIGATE) { true }
     var shortProfileProtocolInfo by configurationStore.boolean(Key.SHORT_PROFILE_PROTOCOL_INFO)
     var dontHighlightInsecureProfiles by configurationStore.boolean(Key.DONT_HIGHLIGHT_INSECURE_PROFILES)
@@ -268,9 +259,7 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var dnsDomainOverrides by configurationStore.string(Key.DNS_DOMAIN_OVERRIDES) { "" }
     var customDnsServers by configurationStore.string(Key.CUSTOM_DNS_SERVERS) { "" }
 
-    private var rulesProviderRaw by configurationStore.stringToInt(Key.RULES_PROVIDER) {
-        RULES_PROVIDER_LOYALSOLDIER
-    }
+    private var rulesProviderRaw by configurationStore.stringToInt(Key.RULES_PROVIDER)
     var rulesProvider: Int
         get() {
             migrateRulesProviderIfNeeded()
@@ -281,13 +270,7 @@ object DataStore : OnPreferenceDataStoreChangeListener {
             rulesProviderRaw = value
         }
     var logLevel by configurationStore.stringToInt(Key.LOG_LEVEL)
-    val logBufSize: Int
-        get() = logBufSizeValue.kilobytes
-    val logBufSizeValue: LogcatRetentionSize.Value
-        get() = LogcatRetentionSize.resolve(
-            configurationStore.getString(Key.LOG_BUF_SIZE),
-            configurationStore.getInt(Key.LOG_BUF_SIZE),
-        )
+    var logBufSize by configurationStore.int(Key.LOG_BUF_SIZE) { 0 }
     var enableCoreProfiling by configurationStore.boolean(Key.ENABLE_CORE_PROFILING)
     var coreProfilerMode by configurationStore.stringToInt(Key.CORE_PROFILER_MODE) { CoreProfilerMode.CPU }
     var connectionGuard by configurationStore.boolean(Key.CONNECTION_GUARD) { false }

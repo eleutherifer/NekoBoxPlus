@@ -3,7 +3,6 @@ package tls
 import (
 	"bytes"
 	"context"
-	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
@@ -113,21 +112,12 @@ func NewSTDClient(ctx context.Context, logger logger.ContextLogger, serverAddres
 		}
 	}
 	if len(options.CertificatePublicKeySHA256) > 0 {
-		if len(options.Certificate) > 0 || options.CertificatePath != "" || len(options.XrayCertificateSHA256) > 0 {
-			return nil, E.New("certificate_public_key_sha256 is conflict with certificate, certificate_path or xray_certificate_sha256")
+		if len(options.Certificate) > 0 || options.CertificatePath != "" {
+			return nil, E.New("certificate_public_key_sha256 is conflict with certificate or certificate_path")
 		}
 		tlsConfig.InsecureSkipVerify = true
 		tlsConfig.VerifyPeerCertificate = func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
 			return verifyPublicKeySHA256(options.CertificatePublicKeySHA256, rawCerts, tlsConfig.Time)
-		}
-	}
-	if len(options.XrayCertificateSHA256) > 0 {
-		if len(options.Certificate) > 0 || options.CertificatePath != "" {
-			return nil, E.New("xray_certificate_sha256 is conflict with certificate or certificate_path")
-		}
-		tlsConfig.InsecureSkipVerify = true
-		tlsConfig.VerifyPeerCertificate = func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
-			return verifyXrayCertificateSHA256(options.XrayCertificateSHA256, rawCerts, serverName, tlsConfig.Time)
 		}
 	}
 	if len(options.ALPN) > 0 {
@@ -231,9 +221,6 @@ func NewSTDClient(ctx context.Context, logger logger.ContextLogger, serverAddres
 }
 
 func verifyPublicKeySHA256(knownHashValues [][]byte, rawCerts [][]byte, timeFunc func() time.Time) error {
-	if len(rawCerts) == 0 {
-		return E.New("missing remote certificate")
-	}
 	leafCertificate, err := x509.ParseCertificate(rawCerts[0])
 	if err != nil {
 		return E.Cause(err, "failed to parse leaf certificate")
@@ -250,55 +237,4 @@ func verifyPublicKeySHA256(knownHashValues [][]byte, rawCerts [][]byte, timeFunc
 		}
 	}
 	return E.New("unrecognized remote public key: ", base64.StdEncoding.EncodeToString(hashValue[:]))
-}
-
-func verifyXrayCertificateSHA256(knownHashValues [][]byte, rawCerts [][]byte, serverName string, timeFunc func() time.Time) error {
-	if len(rawCerts) == 0 {
-		return E.New("missing remote certificate")
-	}
-	certificates := make([]*x509.Certificate, 0, len(rawCerts))
-	for index, rawCertificate := range rawCerts {
-		certificate, err := x509.ParseCertificate(rawCertificate)
-		if err != nil {
-			return E.Cause(err, "failed to parse remote certificate at index ", index)
-		}
-		certificates = append(certificates, certificate)
-	}
-	leafHash := sha256.Sum256(certificates[0].Raw)
-	for _, knownHashValue := range knownHashValues {
-		if hmac.Equal(knownHashValue, leafHash[:]) {
-			return nil
-		}
-	}
-	for _, certificate := range certificates[1:] {
-		if !certificate.IsCA {
-			continue
-		}
-		certificateHash := sha256.Sum256(certificate.Raw)
-		for _, knownHashValue := range knownHashValues {
-			if !hmac.Equal(knownHashValue, certificateHash[:]) {
-				continue
-			}
-			if serverName == "" {
-				return E.New("pinning CA requires a valid server_name")
-			}
-			verifyOptions := x509.VerifyOptions{
-				Roots:         x509.NewCertPool(),
-				Intermediates: x509.NewCertPool(),
-				DNSName:       serverName,
-			}
-			verifyOptions.Roots.AddCert(certificate)
-			for _, intermediate := range certificates[1:] {
-				if intermediate != certificate {
-					verifyOptions.Intermediates.AddCert(intermediate)
-				}
-			}
-			if timeFunc != nil {
-				verifyOptions.CurrentTime = timeFunc()
-			}
-			_, err := certificates[0].Verify(verifyOptions)
-			return err
-		}
-	}
-	return E.New("unrecognized remote certificate: ", base64.StdEncoding.EncodeToString(leafHash[:]))
 }

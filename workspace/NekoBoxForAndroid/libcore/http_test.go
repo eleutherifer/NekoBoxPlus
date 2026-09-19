@@ -6,7 +6,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"net/http/httptest"
 	"slices"
 	"strconv"
 	"testing"
@@ -14,69 +13,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 )
-
-func TestUTLSFingerprintValues(t *testing.T) {
-	values := []string{
-		"chrome", "firefox", "edge", "safari", "360", "qq", "ios", "android", "random", "randomized",
-		"golang", "custom", "randomizedalpn", "randomizednoalpn", "firefox_auto", "firefox_55", "firefox_56",
-		"firefox_63", "firefox_65", "firefox_99", "firefox_102", "firefox_105", "firefox_120", "firefox_148",
-		"chrome_auto", "chrome_58", "chrome_62", "chrome_70", "chrome_72", "chrome_83", "chrome_87", "chrome_96",
-		"chrome_100", "chrome_102", "chrome_100_psk", "chrome_112_psk_shuf", "chrome_114_padding_psk_shuf",
-		"chrome_115_pq", "chrome_115_pq_psk", "chrome_120", "chrome_120_pq", "chrome_131", "chrome_133",
-		"chrome_141_ta", "chrome_144_ta_pqs", "ios_auto", "ios_12_1", "ios_13", "ios_14",
-		"android_okhttp_auto", "android_11_okhttp", "android_16_okhttp", "edge_auto", "edge_85", "edge_106",
-		"safari_auto", "safari_16_0", "safari_26_3", "360_auto", "360_7_5", "360_11_0", "qq_auto", "qq_11_1",
-	}
-	for _, value := range values {
-		t.Run(value, func(t *testing.T) {
-			_, err := utlsClientHelloID(value)
-			require.NoError(t, err)
-		})
-	}
-	_, err := utlsClientHelloID("unsupported")
-	require.EqualError(t, err, "unknown uTLS fingerprint: unsupported")
-}
-
-func TestHTTPClientWithUTLSEmptyIsNoOp(t *testing.T) {
-	client := NewHttpClient().(*httpClient)
-	client.WithUTLS("")
-	require.Empty(t, client.utlsName)
-	require.Nil(t, client.utlsTransport)
-	require.Same(t, &client.h1h2Transport, client.h1h2Client.Transport)
-}
-
-func TestHTTPClientWithUTLSHTTPProtocols(t *testing.T) {
-	for _, testCase := range []struct {
-		name        string
-		enableHTTP2 bool
-		expected    int
-	}{
-		{name: "http1", expected: 1},
-		{name: "http2", enableHTTP2: true, expected: 2},
-	} {
-		t.Run(testCase.name, func(t *testing.T) {
-			server := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-				writer.Header().Set("X-Protocol", strconv.Itoa(request.ProtoMajor))
-				_, _ = writer.Write([]byte("ok"))
-			}))
-			server.EnableHTTP2 = testCase.enableHTTP2
-			server.StartTLS()
-			defer server.Close()
-
-			client := NewHttpClient()
-			client.WithUTLS("chrome")
-			client.SetTimeoutMillis(2_000)
-			defer client.Close()
-
-			request := client.NewRequest()
-			require.NoError(t, request.SetURL(server.URL))
-			request.AllowInsecure()
-			response, err := request.Execute()
-			require.NoError(t, err)
-			require.Equal(t, strconv.Itoa(testCase.expected), response.GetHeader("X-Protocol").Value)
-		})
-	}
-}
 
 func TestHTTPClientTrySocks5UsesConfiguredListener(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")

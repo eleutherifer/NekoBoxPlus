@@ -167,7 +167,6 @@ object RoutingImportManager {
         val target = File(directory, fileName)
         val temporary = File(directory, "$fileName.routing-import.tmp")
         val client = Libcore.newHttpClient().apply {
-            withUTLS(DataStore.appUTLSFingerprint)
             modernTLS()
             keepAlive()
             trySocks5(DataStore.mixedListener, DataStore.mixedPort, DataStore.mixedUsername, DataStore.mixedPassword)

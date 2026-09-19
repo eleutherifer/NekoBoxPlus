@@ -9,10 +9,6 @@ import io.nekohasekai.sagernet.fmt.tailscale.deleteTailscaleProfileState
 import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ktx.app
 import io.nekohasekai.sagernet.ktx.applyDefaultValues
-import io.nekohasekai.sagernet.utils.ProfileCountryResolver
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import java.io.IOException
 import java.sql.SQLException
 import java.util.*
@@ -79,37 +75,12 @@ object ProfileManager {
     }
 
     suspend fun createProfile(groupId: Long, bean: AbstractBean): ProxyEntity {
-        val profile = createProfileWithoutDomainLookup(groupId, bean)
-        ProfileCountryResolver.resolveAndUpdateDomain(profile.id)
-        return getProfile(profile.id) ?: profile
-    }
-
-    suspend fun createProfiles(groupId: Long, beans: List<AbstractBean>): List<ProxyEntity> {
-        val profiles = beans.map { createProfileWithoutDomainLookup(groupId, it) }
-        val domainProfiles = ProfileCountryResolver.domainLookupIndexes(
-            profiles.map { it.requireBean().serverAddress }
-        ).map(profiles::get)
-        coroutineScope {
-            domainProfiles.chunked(5).forEach { chunk ->
-                chunk.map { profile ->
-                    async { ProfileCountryResolver.resolveAndUpdateDomain(profile.id) }
-                }.awaitAll()
-            }
-        }
-        return profiles.map { getProfile(it.id) ?: it }
-    }
-
-    private suspend fun createProfileWithoutDomainLookup(
-        groupId: Long,
-        bean: AbstractBean,
-    ): ProxyEntity {
         bean.applyDefaultValues()
 
         val profile = ProxyEntity(groupId = groupId).apply {
             id = 0
             putBean(bean)
             userOrder = SagerDatabase.proxyDao.nextOrder(groupId) ?: 1
-            ProfileCountryResolver.initialize(this)
         }
         profile.id = SagerDatabase.proxyDao.addProxy(profile)
         iterator { onAdd(profile) }
@@ -119,19 +90,6 @@ object ProfileManager {
     suspend fun updateProfile(profile: ProxyEntity) {
         SagerDatabase.proxyDao.updateProxy(profile)
         iterator { onUpdated(profile, false) }
-    }
-
-    suspend fun updateEditedProfile(profile: ProxyEntity) {
-        val previous = getProfile(profile.id)
-        val previousBean = previous?.requireBean()
-        val bean = profile.requireBean()
-        val endpointChanged = previousBean == null ||
-            previousBean.name != bean.name ||
-            previousBean.serverAddress != bean.serverAddress ||
-            previousBean.serverPort != bean.serverPort
-        if (endpointChanged) ProfileCountryResolver.initialize(profile)
-        updateProfile(profile)
-        if (endpointChanged) ProfileCountryResolver.resolveAndUpdateDomain(profile.id)
     }
 
     suspend fun updateProfile(profiles: List<ProxyEntity>) {

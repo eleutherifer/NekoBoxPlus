@@ -1906,9 +1906,6 @@ public class SingBoxOptions {
         public List<String> certificate_public_key_sha256;
 
         // Generate note: Listable
-        public List<String> xray_certificate_sha256;
-
-        // Generate note: Listable
         public List<String> client_certificate;
 
         public String client_certificate_path;
@@ -4929,8 +4926,6 @@ public class SingBoxOptions {
         public OutboundTLSOptions tls;
 
         public String password;
-
-        public String client_metadata;
 
         public String idle_session_check_interval;
 
