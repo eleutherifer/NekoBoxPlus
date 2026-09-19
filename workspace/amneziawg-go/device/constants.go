@@ -24,7 +24,6 @@ const (
 	CookieRefreshTime       = time.Second * 120
 	HandshakeInitationRate  = time.Second / 50
 	PaddingMultiple         = 16
-	DefaultUdpWindow        = 500
 )
 
 const (

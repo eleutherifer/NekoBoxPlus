@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import io.nekohasekai.sagernet.ktx.AnsiLogFormatter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -21,8 +20,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import libcore.Libcore
 import moe.matsuri.nb4a.utils.SendLog
-import java.io.ByteArrayOutputStream
-import java.io.Closeable
 import java.io.File
 import java.io.RandomAccessFile
 import java.nio.charset.StandardCharsets
@@ -156,25 +153,6 @@ internal object LogVirtualPositionPolicy {
     }
 }
 
-internal object LogPagePolicy {
-    fun pageStarts(
-        lines: List<Long>,
-        lineCount: Long,
-        pageSize: Int,
-        maxPages: Int,
-        isCached: (Long) -> Boolean = { false },
-    ): List<Long> {
-        if (lineCount <= 0 || pageSize <= 0 || maxPages <= 0) return emptyList()
-        return lines.asSequence()
-            .map { it.coerceIn(0, lineCount - 1) }
-            .filterNot(isCached)
-            .map { line -> line / pageSize * pageSize }
-            .distinct()
-            .take(maxPages)
-            .toList()
-    }
-}
-
 internal object LogcatLineParser {
     private val bracketedSeverityPattern = Regex(
         "\\[(PANIC|FATAL|ERROR|WARN(?:ING)?|INFO|DEBUG|TRACE)]",
@@ -203,7 +181,7 @@ internal object LogcatLineParser {
 
     fun parseLine(number: Long, rawLine: String, inheritedSeverity: LogcatSeverity): LogcatLine {
         val rawText = "$rawLine\n"
-        val plainText = AnsiLogFormatter.plainText(rawLine)
+        val plainText = AnsiLogFormatter.parse(rawLine).text
         val explicitSeverity = explicitSeverity(plainText)
         return LogcatLine(number, rawText, plainText, explicitSeverity ?: inheritedSeverity)
     }
@@ -255,19 +233,20 @@ internal class LogFileIndex private constructor(
         if (count <= 0 || startLine >= lineCount || !file.isFile) return emptyList()
         val start = startLine.coerceAtLeast(0)
         val checkpoint = checkpointFor(start)
-        return BufferedUtf8LineReader(file, checkpoint.offset).use { input ->
+        return RandomAccessFile(file, "r").use { input ->
+            input.seek(checkpoint.offset)
             var lineNumber = checkpoint.line
             var inherited = checkpoint.inheritedSeverity
-            while (lineNumber < start) {
-                val skipped = input.readLine() ?: break
+            while (lineNumber < start && input.filePointer < input.length()) {
+                val skipped = input.readUtf8Line() ?: break
                 LogcatLineParser.severityInRawText(skipped)?.let {
                     inherited = it
                 }
                 lineNumber++
             }
             buildList {
-                while (size < count && lineNumber < lineCount) {
-                    val text = input.readLine() ?: break
+                while (size < count && lineNumber < lineCount && input.filePointer < input.length()) {
+                    val text = input.readUtf8Line() ?: break
                     val parsed = LogcatLineParser.parseLine(lineNumber, text, inherited)
                     add(parsed)
                     inherited = parsed.severity
@@ -293,14 +272,15 @@ internal class LogFileIndex private constructor(
         val mutableCheckpoints = checkpoints.toMutableList()
         var currentLine = lineCount
         var severity = finalSeverity
-        BufferedUtf8LineReader(file, fileLength).use { input ->
-            while (true) {
+        RandomAccessFile(file, "r").use { input ->
+            input.seek(fileLength)
+            while (input.filePointer < input.length()) {
                 if (currentLine % CHECKPOINT_INTERVAL == 0L &&
                     mutableCheckpoints.lastOrNull()?.line != currentLine
                 ) {
-                    mutableCheckpoints += LogCheckpoint(currentLine, input.offset, severity)
+                    mutableCheckpoints += LogCheckpoint(currentLine, input.filePointer, severity)
                 }
-                val text = input.readLine() ?: break
+                val text = input.readUtf8Line() ?: break
                 LogcatLineParser.severityInRawText(text)?.let {
                     severity = it
                 }
@@ -328,12 +308,12 @@ internal class LogFileIndex private constructor(
             val checkpoints = mutableListOf<LogCheckpoint>()
             var currentLine = 0L
             var severity = LogcatSeverity.INFO
-            BufferedUtf8LineReader(file).use { input ->
-                while (true) {
+            RandomAccessFile(file, "r").use { input ->
+                while (input.filePointer < input.length()) {
                     if (currentLine % CHECKPOINT_INTERVAL == 0L) {
-                        checkpoints += LogCheckpoint(currentLine, input.offset, severity)
+                        checkpoints += LogCheckpoint(currentLine, input.filePointer, severity)
                     }
-                    val text = input.readLine() ?: break
+                    val text = input.readUtf8Line() ?: break
                     LogcatLineParser.severityInRawText(text)?.let {
                         severity = it
                     }
@@ -352,69 +332,9 @@ internal class LogFileIndex private constructor(
     }
 }
 
-private class BufferedUtf8LineReader(file: File, startOffset: Long = 0L) : Closeable {
-    private val input = RandomAccessFile(file, "r").apply { seek(startOffset) }
-    private val buffer = ByteArray(BUFFER_SIZE)
-    private var bufferPosition = 0
-    private var bufferLimit = 0
-    var offset: Long = startOffset
-        private set
-
-    fun readLine(): String? {
-        var output: ByteArrayOutputStream? = null
-        var segmentStart = bufferPosition
-        while (true) {
-            if (bufferPosition >= bufferLimit) {
-                if (bufferPosition > segmentStart) {
-                    if (output == null) output = ByteArrayOutputStream()
-                    output.write(buffer, segmentStart, bufferPosition - segmentStart)
-                }
-                bufferLimit = input.read(buffer)
-                bufferPosition = 0
-                segmentStart = 0
-                if (bufferLimit < 0) {
-                    val bytes = output?.toByteArray() ?: return null
-                    return bytes.decodeLine()
-                }
-            }
-            val newline = buffer.indexOf('\n'.code.toByte(), bufferPosition, bufferLimit)
-            if (newline >= 0) {
-                val count = newline - segmentStart
-                val text = if (output == null) {
-                    String(buffer, segmentStart, count.withoutTrailingCr(buffer, segmentStart), StandardCharsets.UTF_8)
-                } else {
-                    output.write(buffer, segmentStart, count)
-                    output.toByteArray().decodeLine()
-                }
-                val consumed = newline + 1 - bufferPosition
-                bufferPosition = newline + 1
-                offset += consumed
-                return text
-            }
-            val consumed = bufferLimit - bufferPosition
-            bufferPosition = bufferLimit
-            offset += consumed
-        }
-    }
-
-    override fun close() = input.close()
-
-    private fun ByteArray.decodeLine(): String {
-        val size = if (isNotEmpty() && last() == '\r'.code.toByte()) size - 1 else size
-        return String(this, 0, size, StandardCharsets.UTF_8)
-    }
-
-    private fun Int.withoutTrailingCr(bytes: ByteArray, start: Int): Int =
-        if (this > 0 && bytes[start + this - 1] == '\r'.code.toByte()) this - 1 else this
-
-    private fun ByteArray.indexOf(value: Byte, start: Int, end: Int): Int {
-        for (index in start until end) if (this[index] == value) return index
-        return -1
-    }
-
-    private companion object {
-        const val BUFFER_SIZE = 16 * 1024
-    }
+private fun RandomAccessFile.readUtf8Line(): String? {
+    val latin1 = readLine() ?: return null
+    return String(latin1.toByteArray(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8)
 }
 
 private fun File.endsWithNewline(length: Long): Boolean {
@@ -431,7 +351,6 @@ internal class LogcatViewModel : ViewModel() {
     private val logFile = SendLog.logFile
     private val fileEvents = Channel<Unit>(Channel.CONFLATED)
     private val operationMutex = Mutex()
-    private val pageReadMutex = Mutex()
     private var index = LogFileIndex.build(File("/nonexistent"))
     private var initialized = false
     private var queryJob: Job? = null
@@ -515,22 +434,20 @@ internal class LogcatViewModel : ViewModel() {
     fun requestLines(lines: List<Long>) {
         if (!_uiState.value.virtualMode || index.lineCount == 0L) return
         val endpoint = endpointLineCount()
-        val cachedLines = _uiState.value.cachedLines
-        val starts = LogPagePolicy.pageStarts(
-            lines,
-            endpoint,
-            PAGE_SIZE,
-            MAX_VIEWPORT_PAGES,
-            cachedLines::containsKey,
-        )
+        val starts = lines.asSequence()
+            .map { it.coerceIn(0, endpoint - 1) }
+            .map { target ->
+                (target - PAGE_SIZE / 2).coerceAtLeast(0)
+                    .coerceAtMost((endpoint - PAGE_SIZE).coerceAtLeast(0))
+            }
+            .distinct()
+            .take(MAX_VIEWPORT_PAGES)
+            .toList()
         if (starts.isEmpty()) return
         val requestId = pageRequests.incrementAndGet()
         pageJob?.cancel()
         pageJob = viewModelScope.launch(Dispatchers.IO) {
-            val loaded = pageReadMutex.withLock {
-                ensureActive()
-                starts.flatMap { index.read(logFile, it, PAGE_SIZE) }
-            }
+            val loaded = starts.flatMap { index.read(logFile, it, PAGE_SIZE) }
             if (requestId != pageRequests.get()) return@launch
             operationMutex.withLock {
                 if (requestId != pageRequests.get() || !_uiState.value.virtualMode) return@withLock

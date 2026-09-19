@@ -25,6 +25,7 @@ import (
 	mieruconstant "github.com/enfein/mieru/v3/apis/constant"
 	mierumodel "github.com/enfein/mieru/v3/apis/model"
 	mieruserver "github.com/enfein/mieru/v3/apis/server"
+	mierutp "github.com/enfein/mieru/v3/apis/trafficpattern"
 	mierupb "github.com/enfein/mieru/v3/pkg/appctl/appctlpb"
 	"google.golang.org/protobuf/proto"
 )
@@ -293,7 +294,7 @@ func buildMieruServerConfig(_ context.Context, options option.MieruInboundOption
 		})
 		userNames = append(userNames, user.Name)
 	}
-	trafficPattern, _ := buildMieruTrafficPattern(options.TrafficPattern, options.LowEntropyMode, options.LowEntropyMaskRotation)
+	trafficPattern, _ := mierutp.Decode(options.TrafficPattern)
 	var advancedSettings *mierupb.ServerAdvancedSettings
 	if options.UserHintIsMandatory {
 		advancedSettings = &mierupb.ServerAdvancedSettings{
@@ -325,8 +326,14 @@ func validateMieruInboundOptions(options option.MieruInboundOptions) error {
 			return E.New("password is empty")
 		}
 	}
-	if _, err := buildMieruTrafficPattern(options.TrafficPattern, options.LowEntropyMode, options.LowEntropyMaskRotation); err != nil {
-		return err
+	if options.TrafficPattern != "" {
+		trafficPattern, err := mierutp.Decode(options.TrafficPattern)
+		if err != nil {
+			return fmt.Errorf("failed to decode traffic pattern %q: %w", options.TrafficPattern, err)
+		}
+		if err := mierutp.Validate(trafficPattern); err != nil {
+			return fmt.Errorf("invalid traffic pattern %q: %w", options.TrafficPattern, err)
+		}
 	}
 	return nil
 }

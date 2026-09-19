@@ -550,8 +550,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var serverMieruMuxLevel by profileCacheStore.stringToInt(Key.SERVER_MIERU_MUX_LEVEL)
     var serverMieruHandshakeMode by profileCacheStore.stringToInt(Key.SERVER_MIERU_HANDSHAKE_MODE)
     var serverMieruTrafficPattern by profileCacheStore.string(Key.SERVER_MIERU_TRAFFIC_PATTERN)
-    var serverMieruLowEntropyMode by profileCacheStore.string(Key.SERVER_MIERU_LOW_ENTROPY_MODE)
-    var serverMieruLowEntropyMaskRotation by profileCacheStore.string(Key.SERVER_MIERU_LOW_ENTROPY_MASK_ROTATION)
 
     var serverUserId by profileCacheStore.string(Key.SERVER_USER_ID)
     var serverPinnedCertChainSha256 by profileCacheStore.string(Key.SERVER_PINNED_CERT_CHAIN_SHA256)

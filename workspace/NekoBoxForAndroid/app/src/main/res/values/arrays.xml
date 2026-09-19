@@ -808,50 +808,6 @@
         <item>1</item>
     </string-array>
 
-    <string-array name="mieru_low_entropy_mode" translatable="false">
-        <item></item>
-        <item>LOW_ENTROPY_MODE_OFF</item>
-        <item>LOW_ENTROPY_MODE_32</item>
-        <item>LOW_ENTROPY_MODE_40</item>
-        <item>LOW_ENTROPY_MODE_48</item>
-        <item>LOW_ENTROPY_MODE_56</item>
-    </string-array>
-
-    <string-array name="mieru_low_entropy_mask_rotation" translatable="false">
-        <item></item>
-        <item>LOW_ENTROPY_MASK_NO_ROTATION</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_RIGHT_1</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_RIGHT_2</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_RIGHT_3</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_RIGHT_4</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_RIGHT_5</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_RIGHT_6</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_RIGHT_7</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_RIGHT_8</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_RIGHT_9</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_RIGHT_10</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_RIGHT_11</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_RIGHT_12</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_RIGHT_13</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_RIGHT_14</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_RIGHT_15</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_LEFT_1</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_LEFT_2</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_LEFT_3</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_LEFT_4</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_LEFT_5</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_LEFT_6</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_LEFT_7</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_LEFT_8</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_LEFT_9</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_LEFT_10</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_LEFT_11</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_LEFT_12</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_LEFT_13</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_LEFT_14</item>
-        <item>LOW_ENTROPY_MASK_ROTATE_LEFT_15</item>
-    </string-array>
-
     <string-array name="naive_proto_entry">
         <item>HTTPS</item>
         <item>QUIC</item>

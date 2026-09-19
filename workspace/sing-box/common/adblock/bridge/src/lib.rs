@@ -906,6 +906,108 @@ pub unsafe extern "C" fn sing_box_adblock_engine_hidden_class_id_selectors(
     }
 }
 
+unsafe fn tags_from_c(tags: *const *const c_char, tags_len: usize) -> Result<Vec<String>, String> {
+    cstr_array_to_vec(tags, tags_len, "tags")
+}
+
+fn tag_result(result: Result<bool, String>) -> CheckResult {
+    match result {
+        Ok(matched) => CheckResult {
+            matched: u8::from(matched),
+            error: ptr::null_mut(),
+        },
+        Err(message) => CheckResult {
+            matched: 0,
+            error: error_string(message),
+        },
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn sing_box_adblock_engine_use_tags(
+    engine: usize,
+    tags: *const *const c_char,
+    tags_len: usize,
+) -> CheckResult {
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        if engine == 0 {
+            return Err("engine is null".to_owned());
+        }
+        let tags = tags_from_c(tags, tags_len)?;
+        let tag_refs = tags.iter().map(|tag| tag.as_str()).collect::<Vec<_>>();
+        let engine = &mut *(engine as *mut Engine);
+        engine.use_tags(&tag_refs);
+        Ok(false)
+    }));
+    match result {
+        Ok(value) => tag_result(value),
+        Err(_) => tag_result(Err("adblock use_tags panicked".to_owned())),
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn sing_box_adblock_engine_enable_tags(
+    engine: usize,
+    tags: *const *const c_char,
+    tags_len: usize,
+) -> CheckResult {
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        if engine == 0 {
+            return Err("engine is null".to_owned());
+        }
+        let tags = tags_from_c(tags, tags_len)?;
+        let tag_refs = tags.iter().map(|tag| tag.as_str()).collect::<Vec<_>>();
+        let engine = &mut *(engine as *mut Engine);
+        engine.enable_tags(&tag_refs);
+        Ok(false)
+    }));
+    match result {
+        Ok(value) => tag_result(value),
+        Err(_) => tag_result(Err("adblock enable_tags panicked".to_owned())),
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn sing_box_adblock_engine_disable_tags(
+    engine: usize,
+    tags: *const *const c_char,
+    tags_len: usize,
+) -> CheckResult {
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        if engine == 0 {
+            return Err("engine is null".to_owned());
+        }
+        let tags = tags_from_c(tags, tags_len)?;
+        let tag_refs = tags.iter().map(|tag| tag.as_str()).collect::<Vec<_>>();
+        let engine = &mut *(engine as *mut Engine);
+        engine.disable_tags(&tag_refs);
+        Ok(false)
+    }));
+    match result {
+        Ok(value) => tag_result(value),
+        Err(_) => tag_result(Err("adblock disable_tags panicked".to_owned())),
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn sing_box_adblock_engine_tag_exists(
+    engine: usize,
+    tag: *const c_char,
+) -> CheckResult {
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        if engine == 0 {
+            return Err("engine is null".to_owned());
+        }
+        let tag = cstr_to_str(tag, "tag")?;
+        let engine = &*(engine as *mut Engine);
+        Ok(engine.tag_exists(tag))
+    }));
+    match result {
+        Ok(value) => tag_result(value),
+        Err(_) => tag_result(Err("adblock tag_exists panicked".to_owned())),
+    }
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn sing_box_adblock_engine_check(
     engine: usize,

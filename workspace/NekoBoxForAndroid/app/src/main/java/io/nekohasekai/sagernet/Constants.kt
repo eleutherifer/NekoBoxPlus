@@ -240,8 +240,6 @@ object Key {
     const val SERVER_MIERU_MUX_LEVEL = "serverMieruMuxLevel"
     const val SERVER_MIERU_HANDSHAKE_MODE = "serverMieruHandshakeMode"
     const val SERVER_MIERU_TRAFFIC_PATTERN = "serverMieruTrafficPattern"
-    const val SERVER_MIERU_LOW_ENTROPY_MODE = "serverMieruLowEntropyMode"
-    const val SERVER_MIERU_LOW_ENTROPY_MASK_ROTATION = "serverMieruLowEntropyMaskRotation"
 
     const val SERVER_USER_ID = "serverUserId"
     const val SERVER_PINNED_CERT_CHAIN_SHA256 = "serverPinnedCertChainSha256"

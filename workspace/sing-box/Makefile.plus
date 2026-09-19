@@ -1,7 +1,7 @@
 include Makefile
 
 ADBLOCK_RUST_REPO ?= https://github.com/brave/adblock-rust
-ADBLOCK_RUST_COMMIT ?= v0.13.2
+ADBLOCK_RUST_COMMIT ?= d5ed6133b853cc062865456678dfa5eca68e7e8e
 ADBLOCK_RUST_DIR ?= ../adblock-rust
 ADBLOCK_BRIDGE_DIR ?= common/adblock/bridge
 ADBLOCK_TAGS ?= $(TAGS),with_adblock
@@ -31,9 +31,9 @@ ADBLOCK_4PDA_PAGE ?= ../Logs/4pda/4PDA.html
 ADBLOCK_4PDA_CONFIG ?= ../adblock-test-with-filters.json
 ADBLOCK_4PDA_DATABASE ?= /tmp/adblock-sing-box.db
 ADBLOCK_RESOURCES_REPO ?= https://github.com/brave/adblock-resources.git
-ADBLOCK_RESOURCES_COMMIT ?= 9a0cc4312e155cb5b16b701afc0ab9285dc30f24
+ADBLOCK_RESOURCES_COMMIT ?= da7887026943b13dc1db9b56c08cf4d4a7142b70
 UBLOCK_REPO ?= https://github.com/gorhill/uBlock.git
-UBLOCK_COMMIT ?= 1.73.0
+UBLOCK_COMMIT ?= 1.72.2
 UBLOCK_DIR ?= ../uBlock
 
 ADBLOCK_DEBUG_LDFLAGS := \
@@ -103,7 +103,7 @@ adblock-rust-sync:
 		echo "$(ADBLOCK_RUST_DIR) has local changes; set ADBLOCK_RUST_FORCE=1 to override checkout"; \
 		exit 1; \
 	fi
-	git -C "$(ADBLOCK_RUST_DIR)" fetch origin tag "$(ADBLOCK_RUST_COMMIT)"
+	git -C "$(ADBLOCK_RUST_DIR)" fetch origin "$(ADBLOCK_RUST_COMMIT)"
 	git -C "$(ADBLOCK_RUST_DIR)" checkout "$(ADBLOCK_RUST_COMMIT)"
 
 adblock-rust-build: adblock-rust-sync

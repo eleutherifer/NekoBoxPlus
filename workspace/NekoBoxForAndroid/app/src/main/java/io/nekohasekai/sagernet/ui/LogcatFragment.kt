@@ -166,7 +166,11 @@ class LogcatFragment : ToolbarFragment(R.layout.layout_logcat),
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 if (event.actionMasked == MotionEvent.ACTION_UP) {
                     dragScrollbarTo(trackY)
-                    viewModel.seekToLine(scrollbarTargetLine)
+                    if (renderedState.virtualMode) {
+                        viewModel.finishVirtualScroll(scrollbarTargetLine)
+                    } else {
+                        viewModel.seekToLine(scrollbarTargetLine)
+                    }
                     view.performClick()
                 }
                 draggingScrollbar = false
@@ -206,10 +210,12 @@ class LogcatFragment : ToolbarFragment(R.layout.layout_logcat),
         }
         if (renderedState.virtualMode) {
             layoutManager.scrollToPositionWithOffset(targetPosition, 0)
+            viewModel.requestLine(scrollbarTargetLine)
         } else {
             renderedState.lines.indices.minByOrNull { position ->
                 kotlin.math.abs(renderedState.lines[position].number - scrollbarTargetLine)
             }?.let { layoutManager.scrollToPositionWithOffset(it, 0) }
+            viewModel.seekToLine(scrollbarTargetLine)
         }
     }
 

@@ -45,8 +45,6 @@ class MieruSettingsActivity : ProfileSettingsActivity<MieruBean>() {
         DataStore.serverMieruMuxLevel = multiplexingLevel
         DataStore.serverMieruHandshakeMode = handshakeMode
         DataStore.serverMieruTrafficPattern = trafficPattern
-        DataStore.serverMieruLowEntropyMode = lowEntropyMode
-        DataStore.serverMieruLowEntropyMaskRotation = lowEntropyMaskRotation
     }
 
     override fun MieruBean.serialize() {
@@ -60,8 +58,6 @@ class MieruSettingsActivity : ProfileSettingsActivity<MieruBean>() {
         multiplexingLevel = DataStore.serverMieruMuxLevel
         handshakeMode = DataStore.serverMieruHandshakeMode
         trafficPattern = DataStore.serverMieruTrafficPattern
-        lowEntropyMode = DataStore.serverMieruLowEntropyMode
-        lowEntropyMaskRotation = DataStore.serverMieruLowEntropyMaskRotation
     }
 
     override fun PreferenceFragmentCompat.createPreferences(

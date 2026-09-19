@@ -8,31 +8,6 @@ import java.io.File
 
 class LogcatPolicyTest {
     @Test
-    fun pageRequestsAreAlignedAndDeduplicated() {
-        val starts = LogPagePolicy.pageStarts(
-            lines = (480L..525L).toList(),
-            lineCount = 2_000,
-            pageSize = 500,
-            maxPages = 32,
-        )
-
-        assertEquals(listOf(0L, 500L), starts)
-    }
-
-    @Test
-    fun pageRequestsSkipCachedLinesAndRespectBounds() {
-        val starts = LogPagePolicy.pageStarts(
-            lines = listOf(-10L, 10L, 510L, 5_000L),
-            lineCount = 1_200,
-            pageSize = 500,
-            maxPages = 2,
-            isCached = { it == 10L },
-        )
-
-        assertEquals(listOf(0L, 500L), starts)
-    }
-
-    @Test
     fun filteredLineMapContainsOnlyStableVisiblePositions() {
         val builder = LogLineMap.Builder()
         listOf(4L, 19L, 42L).forEach(builder::add)
@@ -118,22 +93,6 @@ class LogcatPolicyTest {
         assertTrue(index.checkpoints.size >= 3)
         assertEquals((254L..258L).toList(), lines.map { it.number })
         assertEquals("line 254", lines.first().plainText)
-        file.delete()
-    }
-
-    @Test
-    fun bufferedIndexHandlesCrLfAndLinesLargerThanItsBuffer() {
-        val file = createTempFile()
-        val longLine = "я".repeat(20_000)
-        file.writeText("[Warning] first\r\n$longLine\r\nlast")
-
-        val index = LogFileIndex.build(file)
-        val lines = index.read(file, 0, 3)
-
-        assertEquals(3, index.lineCount)
-        assertEquals("[Warning] first", lines[0].plainText)
-        assertEquals(longLine, lines[1].plainText)
-        assertEquals(LogcatSeverity.WARN, lines[2].severity)
         file.delete()
     }
 

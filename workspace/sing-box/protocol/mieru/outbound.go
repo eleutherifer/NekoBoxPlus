@@ -224,8 +224,8 @@ func buildMieruClientConfig(options option.MieruOutboundOptions, dialer mieruDia
 	if handshakeMode, ok := mierupb.HandshakeMode_value[options.HandshakeMode]; ok {
 		config.Profile.HandshakeMode = mierupb.HandshakeMode(handshakeMode).Enum()
 	}
-	trafficPattern, _ := buildMieruTrafficPattern(options.TrafficPattern, options.LowEntropyMode, options.LowEntropyMaskRotation)
-	if trafficPattern != nil {
+	if options.TrafficPattern != "" {
+		trafficPattern, _ := mierutp.Decode(options.TrafficPattern)
 		config.Profile.TrafficPattern = trafficPattern
 	}
 	return config, nil
@@ -272,49 +272,16 @@ func validateMieruOptions(options option.MieruOutboundOptions) error {
 			return fmt.Errorf("invalid handshake mode: %s", options.HandshakeMode)
 		}
 	}
-	if _, err := buildMieruTrafficPattern(options.TrafficPattern, options.LowEntropyMode, options.LowEntropyMaskRotation); err != nil {
-		return err
+	if options.TrafficPattern != "" {
+		trafficPattern, err := mierutp.Decode(options.TrafficPattern)
+		if err != nil {
+			return fmt.Errorf("failed to decode traffic pattern %q: %w", options.TrafficPattern, err)
+		}
+		if err := mierutp.Validate(trafficPattern); err != nil {
+			return fmt.Errorf("invalid traffic pattern %q: %w", options.TrafficPattern, err)
+		}
 	}
 	return nil
-}
-
-func buildMieruTrafficPattern(encoded, lowEntropyMode, lowEntropyMaskRotation string) (*mierupb.TrafficPattern, error) {
-	if encoded == "" && lowEntropyMode == "" && lowEntropyMaskRotation == "" {
-		return nil, nil
-	}
-	var trafficPattern *mierupb.TrafficPattern
-	if encoded != "" {
-		var err error
-		trafficPattern, err = mierutp.Decode(encoded)
-		if err != nil {
-			return nil, fmt.Errorf("failed to decode traffic pattern %q: %w", encoded, err)
-		}
-	} else {
-		trafficPattern = &mierupb.TrafficPattern{}
-	}
-	if lowEntropyMode != "" || lowEntropyMaskRotation != "" {
-		if trafficPattern.LowEntropy == nil {
-			trafficPattern.LowEntropy = &mierupb.LowEntropyPattern{}
-		}
-		if lowEntropyMode != "" {
-			value, ok := mierupb.LowEntropyMode_value[lowEntropyMode]
-			if !ok {
-				return nil, fmt.Errorf("invalid low entropy mode: %s", lowEntropyMode)
-			}
-			trafficPattern.LowEntropy.Mode = mierupb.LowEntropyMode(value).Enum()
-		}
-		if lowEntropyMaskRotation != "" {
-			value, ok := mierupb.LowEntropyMaskRotation_value[lowEntropyMaskRotation]
-			if !ok {
-				return nil, fmt.Errorf("invalid low entropy mask rotation: %s", lowEntropyMaskRotation)
-			}
-			trafficPattern.LowEntropy.MaskRotation = mierupb.LowEntropyMaskRotation(value).Enum()
-		}
-	}
-	if err := mierutp.Validate(trafficPattern); err != nil {
-		return nil, fmt.Errorf("invalid traffic pattern: %w", err)
-	}
-	return trafficPattern, nil
 }
 
 func beginAndEndPortFromPortRange(portRange string) (int, int, error) {

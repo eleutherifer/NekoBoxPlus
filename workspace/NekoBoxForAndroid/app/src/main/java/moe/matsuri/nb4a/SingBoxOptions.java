@@ -4526,10 +4526,6 @@ public class SingBoxOptions {
 
         public String traffic_pattern;
 
-        public String low_entropy_mode;
-
-        public String low_entropy_mask_rotation;
-
     }
 
     public static class Outbound_SelectorOptions extends Outbound {

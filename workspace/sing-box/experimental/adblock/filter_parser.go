@@ -104,76 +104,9 @@ func parseFilterLinesWithEnvironment(content []byte, environment *option.Adblock
 			result.Advanced.add(advanced)
 			continue
 		}
-		rule = stripNetworkRuleTag(rule)
 		result.Rules = append(result.Rules, rule)
 	}
 	return result
-}
-
-func stripNetworkRuleTag(rule string) string {
-	optionsIndex := networkRuleOptionsIndex(rule)
-	if optionsIndex < 0 {
-		return rule
-	}
-
-	options := strings.Split(rule[optionsIndex+1:], ",")
-	filteredOptions := options[:0]
-	matchedTagOption := false
-	for _, currentOption := range options {
-		name, _, found := strings.Cut(currentOption, "=")
-		if !found || !strings.EqualFold(name, "tag") {
-			filteredOptions = append(filteredOptions, currentOption)
-			continue
-		}
-		matchedTagOption = true
-	}
-	if !matchedTagOption {
-		return rule
-	}
-	if len(filteredOptions) == 0 {
-		return rule[:optionsIndex]
-	}
-	return rule[:optionsIndex+1] + strings.Join(filteredOptions, ",")
-}
-
-func networkRuleOptionsIndex(rule string) int {
-	patternStart := 0
-	if strings.HasPrefix(rule, "@@") {
-		patternStart = 2
-	}
-	if patternStart < len(rule) && rule[patternStart] == '/' {
-		escaped := false
-		for index := patternStart + 1; index < len(rule); index++ {
-			switch rule[index] {
-			case '\\':
-				escaped = !escaped
-			case '/':
-				if !escaped && index+1 < len(rule) && rule[index+1] == '$' {
-					return index + 1
-				}
-				escaped = false
-			default:
-				escaped = false
-			}
-		}
-		return -1
-	}
-
-	escaped := false
-	for index := patternStart; index < len(rule); index++ {
-		switch rule[index] {
-		case '\\':
-			escaped = !escaped
-		case '$':
-			if !escaped {
-				return index
-			}
-			escaped = false
-		default:
-			escaped = false
-		}
-	}
-	return -1
 }
 
 func isGlobalCosmeticFilterRule(rule string) bool {

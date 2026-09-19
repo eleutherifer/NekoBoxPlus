@@ -1517,8 +1517,6 @@
     <string name="mieru_handshake_mode">Режим квитирования</string>
     <string name="mieru_port_range">Диапазон портов сервера</string>
     <string name="mieru_traffic_pattern">Паттерн трафика</string>
-    <string name="mieru_low_entropy_mode">Режим низкой энтропии</string>
-    <string name="mieru_low_entropy_mask_rotation">Вращение маски низкой энтропии</string>
     <string name="action_naive">Naïve</string>
     <string name="action_anytls">AnyTLS</string>
     <string name="anytls_client_metadata">Метаданные клиента</string>

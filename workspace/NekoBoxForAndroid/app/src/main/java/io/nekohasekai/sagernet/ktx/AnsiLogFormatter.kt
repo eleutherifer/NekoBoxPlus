@@ -137,24 +137,6 @@ object AnsiLogFormatter {
         return ranges
     }
 
-    /** Removes complete ANSI CSI sequences without allocating style spans. */
-    fun plainText(text: String): String {
-        if (ESC !in text) return text
-        val cleanText = StringBuilder(text.length)
-        var index = 0
-        while (index < text.length) {
-            if (text[index] == ESC && index + 1 < text.length && text[index + 1] == '[') {
-                val sequenceEnd = findCsiEnd(text, index + 2)
-                if (sequenceEnd != -1) {
-                    index = sequenceEnd + 1
-                    continue
-                }
-            }
-            cleanText.append(text[index++])
-        }
-        return cleanText.toString()
-    }
-
     fun parse(
         text: String,
         fallbackLineColor: ((String) -> Int?)? = null,

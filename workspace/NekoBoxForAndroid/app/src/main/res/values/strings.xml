@@ -445,8 +445,6 @@
     <string name="mieru_handshake_mode">Handshake mode</string>
     <string name="mieru_port_range">Server port range</string>
     <string name="mieru_traffic_pattern">Traffic pattern</string>
-    <string name="mieru_low_entropy_mode">Low entropy mode</string>
-    <string name="mieru_low_entropy_mask_rotation">Low entropy mask rotation</string>
     <string name="action_naive" translatable="false">Naïve</string>
     <string name="action_anytls" translatable="false">AnyTLS</string>
     <string name="anytls_client_metadata">Client metadata</string>

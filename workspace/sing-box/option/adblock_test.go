@@ -116,6 +116,7 @@ func TestAdblockTLSCronetUnmarshal(t *testing.T) {
 func TestAdblockFilteringNewOptions(t *testing.T) {
 	var options AdblockOptions
 	if err := json.Unmarshal([]byte(`{
+		"tags": ["mobile", "trusted"],
 		"environment": {
 			"chromium": true,
 			"ubo": true,
@@ -140,6 +141,9 @@ func TestAdblockFilteringNewOptions(t *testing.T) {
 	}
 	if options.Filtering.ReplaceMaxBodyValue() != 1024 {
 		t.Fatalf("unexpected replace max body: %d", options.Filtering.ReplaceMaxBodyValue())
+	}
+	if len(options.Tags) != 2 || options.Tags[0] != "mobile" || options.Tags[1] != "trusted" {
+		t.Fatalf("unexpected tags: %#v", options.Tags)
 	}
 	if options.Environment == nil || !options.Environment.Chromium || !options.Environment.UBO || !options.Environment.HTMLFiltering || !options.Environment.IPAddress || !options.Environment.UserStylesheet {
 		t.Fatalf("unexpected environment: %#v", options.Environment)

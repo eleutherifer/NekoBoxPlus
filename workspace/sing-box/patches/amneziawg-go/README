@@ -2,5 +2,5 @@ All patches should be applied to amneziawg-go to get the version used by NekoBox
 
 Usage:
 1. Clone https://github.com/amnezia-vpn/amneziawg-go
-2. Checkout to v3.1.20260814
+2. Checkout to d57d98d55b1917cacebc06c9ee58710fe0ec2f29
 3. Apply all three patches in numeric order.

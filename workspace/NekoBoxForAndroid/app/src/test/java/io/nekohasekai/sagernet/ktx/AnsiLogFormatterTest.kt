@@ -7,12 +7,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AnsiLogFormatterTest {
-    @Test
-    fun plainTextMatchesParsedTextWithoutAllocatingSpans() {
-        val text = "before\u001B[31merror\u001B[0m\u001B[2K after \u001B[31"
-
-        assertEquals(AnsiLogFormatter.parse(text).text, AnsiLogFormatter.plainText(text))
-    }
 
     @Test
     fun parseRemovesSimpleAnsiSequences() {

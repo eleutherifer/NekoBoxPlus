@@ -827,8 +827,6 @@ object RawUpdater : GroupUpdater() {
                     else -> MieruBean.HANDSHAKE_DEFAULT
                 }
                 trafficPattern = getStr("traffic_pattern") ?: ""
-                lowEntropyMode = getStr("low_entropy_mode") ?: ""
-                lowEntropyMaskRotation = getStr("low_entropy_mask_rotation") ?: ""
             }
         }
 

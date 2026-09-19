@@ -94,11 +94,13 @@ the service cannot use them regardless of the rules in a list.
    content-filtering gap** for lists that rely on it (notably YouTube ad-skip
    rules such as `trusted-replace-fetch-response` / `replace=`).
 
-2. **All tags are enabled when the engine is built.**
-   Every `$tag=name` rule is included and its tag modifier is removed before
-   building the `adblock-rust` engine. This enables all tagged blocking and
-   exception rules without the crate's deprecated runtime tag APIs or a
-   configuration-level tag list.
+2. **Tags are not enabled at runtime.**
+   `adblock-rust` exposes `Engine::enable_tags` / `tag_exists`
+   (`adblock-rust/src/engine.rs:181,197`). The bridge never calls them; it only
+   forwards a static `permissions` mask at build time (`rule_set.permissions`).
+   Consequence: any `$tag`, `^$tag=`, or content-type-tagged rule set is inert,
+   and there is no way to attach request context (client, inbound, app) to the
+   engine dynamically.
 
 3. **`$permissions` (Permissions-Policy), `$header`, `$cookie`.**
    None of these modifiers appear in `BlockerResult` and none are surfaced.
@@ -262,8 +264,8 @@ Ranked by impact-to-effort for "make real-world lists actually work":
 3. **Broaden native HTML filtering selectors** beyond the current server-side
    subset so more uBO procedural HTML filters can run without scriptlet
    fallbacks.
-4. **Add per-request tagged rule sets** by rebuilding or selecting engines for
-   inbound/process contexts, so tagged lists can support per-app filtering.
+4. **Enable engine tags at runtime** (bridge `enable_tags` + per-request tag set
+   from inbound/process context) so tagged lists and per-app filtering work.
 5. **DNS options**: add block mode (NXDOMAIN vs zero-IP) and a configurable
    block TTL, plus a user-overridable CNAME allowlist.
 6. **`$permissions` / `$header` surfacing** — lower frequency in mainstream

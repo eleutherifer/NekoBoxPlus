@@ -50,6 +50,7 @@ type fakeAdblockEngine struct {
 	cosmeticResult  adblockrust.CosmeticResources
 	hiddenResult    []string
 	hiddenCallCount atomic.Int64
+	tags            []string
 }
 
 func (e *fakeAdblockEngine) Check(url string, sourceURL string, requestType string, method adblockrust.RequestMethod) (bool, error) {
@@ -85,6 +86,27 @@ func (e *fakeAdblockEngine) URLCosmeticResources(url string) (adblockrust.Cosmet
 func (e *fakeAdblockEngine) HiddenClassIDSelectors(classes []string, ids []string, exceptions []string) ([]string, error) {
 	e.hiddenCallCount.Add(1)
 	return e.hiddenResult, nil
+}
+
+func (e *fakeAdblockEngine) UseTags(tags []string) error {
+	e.tags = slices.Clone(tags)
+	return nil
+}
+
+func (e *fakeAdblockEngine) EnableTags(tags []string) error {
+	e.tags = append(e.tags, tags...)
+	return nil
+}
+
+func (e *fakeAdblockEngine) DisableTags(tags []string) error {
+	e.tags = slices.DeleteFunc(e.tags, func(tag string) bool {
+		return slices.Contains(tags, tag)
+	})
+	return nil
+}
+
+func (e *fakeAdblockEngine) TagExists(tag string) (bool, error) {
+	return slices.Contains(e.tags, tag), nil
 }
 
 func (e *fakeAdblockEngine) Close() error {
@@ -915,32 +937,6 @@ func TestParseFilterLinesDefaultEnvironmentStaysFirefoxCompatible(t *testing.T) 
 	expected := []string{"||firefox.example^", "||firefox-capabilities.example^"}
 	if !slices.Equal(parsedFilter.Rules, expected) {
 		t.Fatalf("unexpected default environment rules:\nwant %#v\ngot  %#v", expected, parsedFilter.Rules)
-	}
-}
-
-func TestParseFilterLinesEnablesAllTagsAtBuildTime(t *testing.T) {
-	content := []byte(strings.Join([]string{
-		"||always.example^",
-		"||mobile.example^$tag=mobile",
-		"||desktop.example^$script,TAG=desktop,third-party",
-		"||multi.example^$tag=one,tag=two,image",
-		`@@/price\$[0-9]+/$tag=mobile,script`,
-		"@@||allowed.example^$tag=trusted",
-		`||literal.example/price\$5`,
-	}, "\n"))
-
-	parsedFilter := parseFilterLines(content)
-	expected := []string{
-		"||always.example^",
-		"||mobile.example^",
-		"||desktop.example^$script,third-party",
-		"||multi.example^$image",
-		`@@/price\$[0-9]+/$script`,
-		"@@||allowed.example^",
-		`||literal.example/price\$5`,
-	}
-	if !slices.Equal(parsedFilter.Rules, expected) {
-		t.Fatalf("unexpected automatically tagged rules:\nwant %#v\ngot  %#v", expected, parsedFilter.Rules)
 	}
 }
 

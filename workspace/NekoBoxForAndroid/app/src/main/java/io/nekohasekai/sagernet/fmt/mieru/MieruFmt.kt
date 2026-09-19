@@ -53,8 +53,6 @@ fun parseMieru(link: String): List<MieruBean> {
     val multiplexing = url.queryParameter("multiplexing")?.toMieruMultiplexingLevel()
     val handshakeMode = url.queryParameter("handshake-mode")?.toMieruHandshakeMode()
     val trafficPattern = url.queryParameter("traffic-pattern")
-    val lowEntropyMode = url.queryParameter("low-entropy-mode")
-    val lowEntropyMaskRotation = url.queryParameter("low-entropy-mask-rotation")
     val profileName = url.queryParameter("profile") ?: url.fragment
 
     fun buildBean(protocol: Int, ports: List<String>) = MieruBean().apply {
@@ -72,8 +70,6 @@ fun parseMieru(link: String): List<MieruBean> {
         multiplexingLevel = multiplexing
         this.handshakeMode = handshakeMode
         this.trafficPattern = trafficPattern
-        this.lowEntropyMode = lowEntropyMode
-        this.lowEntropyMaskRotation = lowEntropyMaskRotation
         initializeDefaultValues()
     }
 
@@ -105,12 +101,6 @@ fun MieruBean.toUri(): String {
     if (trafficPattern.isNotBlank()) {
         builder.addQueryParameter("traffic-pattern", trafficPattern)
     }
-    if (lowEntropyMode.isNotBlank()) {
-        builder.addQueryParameter("low-entropy-mode", lowEntropyMode)
-    }
-    if (lowEntropyMaskRotation.isNotBlank()) {
-        builder.addQueryParameter("low-entropy-mask-rotation", lowEntropyMaskRotation)
-    }
     return builder.toLink("mierus", false)
 }
 
@@ -129,8 +119,6 @@ fun buildSingBoxOutboundMieruBean(bean: MieruBean): SingBoxOptions.Outbound_Mier
         bean.mieruMultiplexingName()?.let { multiplexing = it }
         bean.mieruHandshakeName()?.let { handshake_mode = it }
         traffic_pattern = bean.trafficPattern.takeIf { it.isNotBlank() }
-        low_entropy_mode = bean.lowEntropyMode.takeIf { it.isNotBlank() }
-        low_entropy_mask_rotation = bean.lowEntropyMaskRotation.takeIf { it.isNotBlank() }
     }
 }
 

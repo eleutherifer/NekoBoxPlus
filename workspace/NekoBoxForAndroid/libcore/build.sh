@@ -75,7 +75,7 @@ resolve_version() {
 	printf '%s' "$version"
 }
 
-VERSION_AMNEZIA="$(resolve_version ../../amneziawg-go tag)"
+VERSION_AMNEZIA="d57d98d"
 VERSION_BYEDPI="ba53229"
 VERSION_MASTERDNSVPN="v2026.06.13.234407-7de2476"
 VERSION_ADBLOCK_RUST="$(resolve_version ../../adblock-rust)"

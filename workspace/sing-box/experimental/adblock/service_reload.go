@@ -144,6 +144,12 @@ func (s *Service) reloadEngineFromStore(ctx context.Context) error {
 		return err
 	}
 
+	if len(s.options.Tags) > 0 {
+		if err := engine.UseTags(s.options.Tags); err != nil {
+			_ = engine.Close()
+			return err
+		}
+	}
 	oldEngine, ok := s.installEngine(ctx, engine, companion, htmlFilters, advanced)
 	if !ok {
 		s.debugContext(ctx, "engine reload canceled: ", ctx.Err())

@@ -390,8 +390,6 @@ internal object ClashParser {
                     else -> MieruBean.HANDSHAKE_DEFAULT
                 }
             trafficPattern = proxy.value("traffic-pattern")
-            lowEntropyMode = proxy.value("low-entropy-mode")
-            lowEntropyMaskRotation = proxy.value("low-entropy-mask-rotation")
         }
 
     private fun parseAnyTLS(proxy: Map<String, Any?>, globalFingerprint: String) =

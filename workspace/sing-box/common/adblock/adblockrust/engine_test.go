@@ -185,6 +185,49 @@ func TestEngineHostsRuleSet(t *testing.T) {
 	}
 }
 
+func TestEngineTags(t *testing.T) {
+	engine, err := NewEngine([]string{"||tagged.example^$tag=mobile"}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer engine.Close()
+
+	result, err := engine.CheckDetailed("https://tagged.example/ad.js", "https://example.com/", "script", RequestMethodGet)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Matched {
+		t.Fatal("expected tagged rule not to match before tag is enabled")
+	}
+	if err = engine.UseTags([]string{"mobile"}); err != nil {
+		t.Fatal(err)
+	}
+	exists, err := engine.TagExists("mobile")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !exists {
+		t.Fatal("expected enabled tag to exist")
+	}
+	result, err = engine.CheckDetailed("https://tagged.example/ad.js", "https://example.com/", "script", RequestMethodGet)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Matched {
+		t.Fatal("expected tagged rule to match after tag is enabled")
+	}
+	if err = engine.DisableTags([]string{"mobile"}); err != nil {
+		t.Fatal(err)
+	}
+	result, err = engine.CheckDetailed("https://tagged.example/ad.js", "https://example.com/", "script", RequestMethodGet)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Matched {
+		t.Fatal("expected tagged rule not to match after tag is disabled")
+	}
+}
+
 func TestEngineCosmeticResources(t *testing.T) {
 	engine, err := NewEngine([]string{
 		"example.com##.ad-banner",

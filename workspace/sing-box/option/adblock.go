@@ -17,6 +17,7 @@ type AdblockOptions struct {
 	Constraints      AdblockConstraints  `json:"constraints,omitempty"`       // constraints for adblock engine, if empty - no constraints
 	DatabasePath     string              `json:"database_path,omitempty"`     // bolt db
 	AdblockResources string              `json:"adblock_resources,omitempty"` // adblock-resources repository resources, if empty - no resources
+	Tags             []string            `json:"tags,omitempty"`              // runtime tags enabled for $tag rules
 	Environment      *AdblockEnvironment `json:"environment,omitempty"`       // filter preprocessor environment; defaults to Firefox-compatible
 }
 

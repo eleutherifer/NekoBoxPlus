@@ -345,6 +345,12 @@ func (s *Service) updateEngine(ctx context.Context) error {
 		s.debugContext(ctx, "engine build failed: ", err)
 		return err
 	}
+	if len(s.options.Tags) > 0 {
+		if err := engine.UseTags(s.options.Tags); err != nil {
+			_ = engine.Close()
+			return err
+		}
+	}
 	oldEngine, ok := s.installEngine(ctx, engine, companion, htmlFilters, advanced)
 	if !ok {
 		s.debugContext(ctx, "engine update canceled: ", ctx.Err())

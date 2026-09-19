@@ -67,6 +67,10 @@ sing_box_adblock_check_result sing_box_adblock_engine_check_exception(uintptr_t 
 sing_box_adblock_string_result sing_box_adblock_engine_csp_directives(uintptr_t engine, const char *url, const char *source_url, const char *request_type, sing_box_adblock_request_method method);
 sing_box_adblock_cosmetic_resources_result sing_box_adblock_engine_url_cosmetic_resources(uintptr_t engine, const char *url);
 sing_box_adblock_string_array_result sing_box_adblock_engine_hidden_class_id_selectors(uintptr_t engine, const char **classes, uintptr_t classes_len, const char **ids, uintptr_t ids_len, const char **exceptions, uintptr_t exceptions_len);
+sing_box_adblock_check_result sing_box_adblock_engine_use_tags(uintptr_t engine, const char **tags, uintptr_t tags_len);
+sing_box_adblock_check_result sing_box_adblock_engine_enable_tags(uintptr_t engine, const char **tags, uintptr_t tags_len);
+sing_box_adblock_check_result sing_box_adblock_engine_disable_tags(uintptr_t engine, const char **tags, uintptr_t tags_len);
+sing_box_adblock_check_result sing_box_adblock_engine_tag_exists(uintptr_t engine, const char *tag);
 void sing_box_adblock_engine_free(uintptr_t engine);
 void sing_box_adblock_string_free(char *value);
 void sing_box_adblock_string_array_free(sing_box_adblock_string_array array);
@@ -304,6 +308,46 @@ func (e *cgoEngine) HiddenClassIDSelectors(classes []string, ids []string, excep
 		return nil, E.New(C.GoString(result.error))
 	}
 	return stringArrayValues(result.array), nil
+}
+
+func (e *cgoEngine) UseTags(tags []string) error {
+	cTags, free := newCStringArray(tags)
+	defer free()
+	result := C.sing_box_adblock_engine_use_tags(e.handle, cTags, C.uintptr_t(len(tags)))
+	return checkResultError(result)
+}
+
+func (e *cgoEngine) EnableTags(tags []string) error {
+	cTags, free := newCStringArray(tags)
+	defer free()
+	result := C.sing_box_adblock_engine_enable_tags(e.handle, cTags, C.uintptr_t(len(tags)))
+	return checkResultError(result)
+}
+
+func (e *cgoEngine) DisableTags(tags []string) error {
+	cTags, free := newCStringArray(tags)
+	defer free()
+	result := C.sing_box_adblock_engine_disable_tags(e.handle, cTags, C.uintptr_t(len(tags)))
+	return checkResultError(result)
+}
+
+func (e *cgoEngine) TagExists(tag string) (bool, error) {
+	cTag := C.CString(tag)
+	defer C.free(unsafe.Pointer(cTag))
+	result := C.sing_box_adblock_engine_tag_exists(e.handle, cTag)
+	if result.error != nil {
+		defer C.sing_box_adblock_string_free(result.error)
+		return false, E.New(C.GoString(result.error))
+	}
+	return result.matched != 0, nil
+}
+
+func checkResultError(result C.sing_box_adblock_check_result) error {
+	if result.error != nil {
+		defer C.sing_box_adblock_string_free(result.error)
+		return E.New(C.GoString(result.error))
+	}
+	return nil
 }
 
 func stringResult(result C.sing_box_adblock_string_result) (string, error) {

@@ -154,12 +154,8 @@ func (device *Device) RoutineReceiveIncoming(
 			}
 
 			// get message padding and type based on information from S1-S4 and H1-H4
-			msgSize, msgType, padding := device.DeterminePacketTypeAndPadding(packet, typeHash)
-
+			msgType, padding := device.DeterminePacketTypeAndPadding(packet, MessageUnknownType, typeHash)
 			packet = packet[padding:]
-			if msgType != MessageTransportType {
-				packet = packet[:msgSize]
-			}
 
 			if cip != nil {
 				applyHash(packet[:4], packet[:4], typeHash)
@@ -514,12 +510,7 @@ func (peer *Peer) RoutineSequentialReceiver(maxBatchSize int) {
 			}
 			rxBytesLen += uint64(len(elem.packet) + MinMessageSize)
 
-			udpWindow := elem.padding + MessageTransportHeaderSize + uint32(len(elem.packet))
-			if peer.udpWindow.Load() < udpWindow {
-				peer.udpWindow.Store(udpWindow)
-			}
-
-			if len(elem.packet) == 0 || elem.packet[0] == 0 {
+			if len(elem.packet) == 0 {
 				device.log.Verbosef("%v - Receiving keepalive packet", peer)
 				continue
 			}
@@ -567,7 +558,7 @@ func (peer *Peer) RoutineSequentialReceiver(maxBatchSize int) {
 				continue
 			}
 
-			bufs = append(bufs, elem.buffer[int(elem.padding):int(elem.padding)+MessageTransportHeaderSize+len(elem.packet)])
+			bufs = append(bufs, elem.buffer[int(elem.padding):int(elem.padding)+MessageTransportOffsetContent+len(elem.packet)])
 		}
 
 		peer.rxBytes.Add(rxBytesLen)
@@ -601,58 +592,57 @@ func applyHash(dst, src, hash []byte) {
 	}
 }
 
-func (device *Device) DeterminePacketTypeAndPadding(packet []byte, typeHash []byte) (int, uint32, uint32) {
+func (device *Device) DeterminePacketTypeAndPadding(packet []byte, expectedType uint32, typeHash []byte) (uint32, uint32) {
 	var headerBytes [4]byte
-	var padding uint32
-	var header UintRange
-	var expectedSize int
-
 	size := len(packet)
-	randomTrailers := device.randomTrailers.Load()
 
-	padding = device.paddings.init.Load()
-	header = device.headers.init.Load()
-	expectedSize = int(padding) + MessageInitiationSize
+	if expectedType == MessageUnknownType || expectedType == MessageInitiationType {
+		padding := device.paddings.init.Load()
+		header := device.headers.init.Load()
 
-	if size == expectedSize || randomTrailers && size > expectedSize {
-		applyHash(headerBytes[:], packet[padding:padding+4], typeHash)
-		if header.Contains(binary.LittleEndian.Uint32(headerBytes[:])) {
-			return MessageInitiationSize, MessageInitiationType, padding
+		if size == int(padding)+MessageInitiationSize {
+			applyHash(headerBytes[:], packet[padding:padding+4], typeHash)
+			if header.Contains(binary.LittleEndian.Uint32(headerBytes[:])) {
+				return MessageInitiationType, padding
+			}
 		}
 	}
 
-	padding = device.paddings.response.Load()
-	header = device.headers.response.Load()
-	expectedSize = int(padding) + MessageResponseSize
+	if expectedType == MessageUnknownType || expectedType == MessageResponseType {
+		padding := device.paddings.response.Load()
+		header := device.headers.response.Load()
 
-	if size == expectedSize || randomTrailers && size > expectedSize {
-		applyHash(headerBytes[:], packet[padding:padding+4], typeHash)
-		if header.Contains(binary.LittleEndian.Uint32(headerBytes[:])) {
-			return MessageResponseSize, MessageResponseType, padding
+		if size == int(padding)+MessageResponseSize {
+			applyHash(headerBytes[:], packet[padding:padding+4], typeHash)
+			if header.Contains(binary.LittleEndian.Uint32(headerBytes[:])) {
+				return MessageResponseType, padding
+			}
 		}
 	}
 
-	padding = device.paddings.cookie.Load()
-	header = device.headers.cookie.Load()
-	expectedSize = int(padding) + MessageCookieReplySize
+	if expectedType == MessageUnknownType || expectedType == MessageCookieReplyType {
+		padding := device.paddings.cookie.Load()
+		header := device.headers.cookie.Load()
 
-	if size == expectedSize || randomTrailers && size > expectedSize {
-		applyHash(headerBytes[:], packet[padding:padding+4], typeHash)
-		if header.Contains(binary.LittleEndian.Uint32(headerBytes[:])) {
-			return MessageCookieReplySize, MessageCookieReplyType, padding
+		if size == int(padding)+MessageCookieReplySize {
+			applyHash(headerBytes[:], packet[padding:padding+4], typeHash)
+			if header.Contains(binary.LittleEndian.Uint32(headerBytes[:])) {
+				return MessageCookieReplyType, padding
+			}
 		}
 	}
 
-	padding = device.paddings.transport.Load()
-	header = device.headers.transport.Load()
-	expectedSize = int(padding) + MessageTransportSize
+	if expectedType == MessageUnknownType || expectedType == MessageTransportType {
+		padding := device.paddings.transport.Load()
+		header := device.headers.transport.Load()
 
-	if size >= expectedSize {
-		applyHash(headerBytes[:], packet[padding:padding+4], typeHash)
-		if header.Contains(binary.LittleEndian.Uint32(headerBytes[:])) {
-			return MessageTransportSize, MessageTransportType, padding
+		if size >= int(padding)+MessageTransportHeaderSize {
+			applyHash(headerBytes[:], packet[padding:padding+4], typeHash)
+			if header.Contains(binary.LittleEndian.Uint32(headerBytes[:])) {
+				return MessageTransportType, padding
+			}
 		}
 	}
 
-	return 0, MessageUnknownType, 0
+	return MessageUnknownType, 0
 }
