@@ -1,11 +1,6 @@
 package libcore
 
-import (
-	"path/filepath"
-	"testing"
-
-	"github.com/sagernet/bbolt"
-)
+import "testing"
 
 func TestCanonicalClashModeMatchesCaseInsensitive(t *testing.T) {
 	mode, ok := canonicalClashMode([]string{"Rule", "Streaming"}, "streaming")
@@ -43,44 +38,5 @@ func TestNilBoxClashModeMethodsAreEmptyNoOps(t *testing.T) {
 
 	if err := SetClashMode(nil, "Rule"); err != nil {
 		t.Fatal(err)
-	}
-}
-
-func TestLoadClashModeFromCacheReturnsPersistedMode(t *testing.T) {
-	cachePath := filepath.Join(t.TempDir(), "cache.db")
-	database, err := bbolt.Open(cachePath, 0o600, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := database.Update(func(transaction *bbolt.Tx) error {
-		bucket, err := transaction.CreateBucket([]byte("clash_mode"))
-		if err != nil {
-			return err
-		}
-		return bucket.Put([]byte("default"), []byte("Streaming"))
-	}); err != nil {
-		database.Close()
-		t.Fatal(err)
-	}
-	if err := database.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	mode, err := LoadClashModeFromCache(cachePath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if mode != "Streaming" {
-		t.Fatalf("expected persisted mode Streaming, got %q", mode)
-	}
-}
-
-func TestLoadClashModeFromCacheAllowsMissingCache(t *testing.T) {
-	mode, err := LoadClashModeFromCache(filepath.Join(t.TempDir(), "missing.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if mode != "" {
-		t.Fatalf("expected empty mode for missing cache, got %q", mode)
 	}
 }

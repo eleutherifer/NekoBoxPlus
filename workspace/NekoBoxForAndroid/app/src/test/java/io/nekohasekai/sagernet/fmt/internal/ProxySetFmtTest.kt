@@ -75,35 +75,6 @@ class ProxySetFmtTest {
     }
 
     @Test
-    fun embeddedProfilesSurviveSerializationAsUniversalLinks() {
-        val original = ProxySetBean().apply {
-            initializeDefaultValues()
-            setEmbeddedProfiles(
-                listOf(
-                    SOCKSBean().apply {
-                        serverAddress = "one.example"
-                        serverPort = 1080
-                        name = "One"
-                        initializeDefaultValues()
-                    },
-                    HttpBean().apply {
-                        serverAddress = "two.example"
-                        serverPort = 8080
-                        name = "Two"
-                        initializeDefaultValues()
-                    },
-                ),
-            )
-        }
-
-        val restored = KryoConverters.deserialize(ProxySetBean(), KryoConverters.serialize(original))
-
-        assertTrue(restored.hasEmbeddedProfiles())
-        assertEquals(listOf("One", "Two"), restored.decodeEmbeddedProfiles().map { it.displayName() })
-        assertEquals(listOf("one.example", "two.example"), restored.decodeEmbeddedProfiles().map { it.requireBean().serverAddress })
-    }
-
-    @Test
     fun versionTwoProfilesDefaultToNotSkipping() {
         val output = ByteArrayOutputStream()
         val buffer: ByteBufferOutput = output.byteBuffer()
@@ -128,7 +99,6 @@ class ProxySetFmtTest {
         val restored = KryoConverters.deserialize(ProxySetBean(), output.toByteArray())
 
         assertFalse(restored.skipInsecureProfiles)
-        assertEquals("[]", restored.embeddedProfilesJson)
     }
 
     private fun profile(id: Long, bean: io.nekohasekai.sagernet.fmt.AbstractBean): ProxyEntity {

@@ -4,12 +4,10 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.result.component1
 import androidx.activity.result.component2
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,14 +16,11 @@ import androidx.core.view.isVisible
 import androidx.preference.EditTextPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
-import androidx.appcompat.widget.PopupMenu
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import io.nekohasekai.sagernet.CONNECTION_TEST_URL
 import io.nekohasekai.sagernet.R
-import io.nekohasekai.sagernet.SagerNet
-import io.nekohasekai.sagernet.bg.proto.UrlTest
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.ProfileManager
 import io.nekohasekai.sagernet.database.ProxyEntity
@@ -35,19 +30,11 @@ import io.nekohasekai.sagernet.database.SagerDatabase
 import io.nekohasekai.sagernet.databinding.LayoutAddEntityBinding
 import io.nekohasekai.sagernet.databinding.LayoutProfileBinding
 import io.nekohasekai.sagernet.fmt.internal.ProxySetBean
-import io.nekohasekai.sagernet.fmt.internal.decodeEmbeddedProfiles
 import io.nekohasekai.sagernet.fmt.internal.filterInsecureProfiles
-import io.nekohasekai.sagernet.fmt.internal.hasEmbeddedProfiles
-import io.nekohasekai.sagernet.fmt.toUniversalLink
 import io.nekohasekai.sagernet.ktx.FixedLinearLayoutManager
-import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ktx.onMainDispatcher
-import io.nekohasekai.sagernet.ktx.readableMessage
 import io.nekohasekai.sagernet.ktx.runOnDefaultDispatcher
-import io.nekohasekai.sagernet.ktx.showAllowingStateLoss
 import io.nekohasekai.sagernet.ui.ProfileSelectActivity
-import io.nekohasekai.sagernet.ui.ProfileShareCapabilities
-import io.nekohasekai.sagernet.widget.QRCodeDialog
 import io.nekohasekai.sagernet.ui.bindProfileSecurity
 import io.nekohasekai.sagernet.widget.ListListener
 import moe.matsuri.nb4a.Protocols.getProtocolColor
@@ -72,32 +59,10 @@ class ProxySetSettingsActivity : ProfileSettingsActivity<ProxySetBean>(R.layout.
     override fun createEntity() = ProxySetBean()
 
     private val proxyList = ArrayList<ProxyEntity>()
-    private var hasEmbeddedMembers = false
-    private val testingEmbeddedIds = mutableSetOf<Long>()
-    private var pendingSharedConfiguration: String? = null
-
-    private val exportSharedConfiguration =
-        registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-            val content = pendingSharedConfiguration
-            pendingSharedConfiguration = null
-            if (uri == null || content == null) return@registerForActivityResult
-            runCatching {
-                contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(content) }
-                    ?: error("Unable to open output file")
-            }.onFailure {
-                Logs.w(it)
-                Toast.makeText(this, it.readableMessage, Toast.LENGTH_LONG).show()
-            }
-        }
 
     override fun ProxySetBean.init() {
-        hasEmbeddedMembers = hasEmbeddedProfiles()
-        if (hasEmbeddedMembers) {
-            proxyList.clear()
-            proxyList += decodeEmbeddedProfiles()
-        }
         DataStore.profileName = name
-        DataStore.serverProtocol = if (hasEmbeddedMembers) "" else proxies.joinToString(",")
+        DataStore.serverProtocol = proxies.joinToString(",")
         DataStore.profileCacheStore.putString(KEY_MODE, mode.toString())
         DataStore.profileCacheStore.putLong(KEY_DEFAULT_OUTBOUND, defaultOutbound)
         DataStore.profileCacheStore.putBoolean(KEY_INTERRUPT, interruptExistConnections)
@@ -113,27 +78,19 @@ class ProxySetSettingsActivity : ProfileSettingsActivity<ProxySetBean>(R.layout.
 
     override fun ProxySetBean.serialize() {
         name = DataStore.profileName
-        mode = if (hasEmbeddedMembers) {
-            ProxySetBean.MODE_URL_TEST
-        } else {
-            DataStore.profileCacheStore.getString(KEY_MODE)?.toIntOrNull() ?: ProxySetBean.MODE_SELECTOR
-        }
+        mode = DataStore.profileCacheStore.getString(KEY_MODE)?.toIntOrNull() ?: ProxySetBean.MODE_SELECTOR
         defaultOutbound = DataStore.profileCacheStore.getLong(KEY_DEFAULT_OUTBOUND) ?: 0L
         interruptExistConnections = DataStore.profileCacheStore.getBoolean(KEY_INTERRUPT) ?: false
         testURL = DataStore.profileCacheStore.getString(KEY_TEST_URL) ?: CONNECTION_TEST_URL
         testInterval = DataStore.profileCacheStore.getString(KEY_TEST_INTERVAL) ?: "3m"
         testIdleTimeout = DataStore.profileCacheStore.getString(KEY_TEST_IDLE_TIMEOUT) ?: "3m"
         testTolerance = DataStore.profileCacheStore.getString(KEY_TEST_TOLERANCE)?.toIntOrNull() ?: 50
-        type = if (hasEmbeddedMembers) {
-            ProxySetBean.TYPE_LIST
-        } else {
-            DataStore.profileCacheStore.getString(KEY_TYPE)?.toIntOrNull() ?: ProxySetBean.TYPE_LIST
-        }
+        type = DataStore.profileCacheStore.getString(KEY_TYPE)?.toIntOrNull() ?: ProxySetBean.TYPE_LIST
         groupId = DataStore.profileCacheStore.getString(KEY_GROUP)?.toLongOrNull() ?: 0L
         groupFilterNotRegex = DataStore.profileCacheStore.getString(KEY_GROUP_FILTER) ?: ""
         skipInsecureProfiles =
             DataStore.profileCacheStore.getBoolean(KEY_SKIP_INSECURE) ?: false
-        if (!hasEmbeddedMembers) proxies = proxyList.map { it.id }
+        proxies = proxyList.map { it.id }
         initializeDefaultValues()
     }
 
@@ -154,8 +111,6 @@ class ProxySetSettingsActivity : ProfileSettingsActivity<ProxySetBean>(R.layout.
 
         val mode = findPreference<SimpleMenuPreference>(KEY_MODE)!!
         val type = findPreference<SimpleMenuPreference>(KEY_TYPE)!!
-        mode.isEnabled = !hasEmbeddedMembers
-        type.isEnabled = !hasEmbeddedMembers
         fun updateVisibility(
             modeValue: Any? = mode.value,
             typeValue: Any? = type.value,
@@ -204,8 +159,8 @@ class ProxySetSettingsActivity : ProfileSettingsActivity<ProxySetBean>(R.layout.
         if (!::configurationList.isInitialized) return
         val divider = findViewById<View>(R.id.list_cell)
 
-        configurationList.isVisible = hasEmbeddedMembers || !isGroup
-        divider.isVisible = hasEmbeddedMembers || !isGroup
+        configurationList.isVisible = !isGroup
+        divider.isVisible = !isGroup
     }
 
     @SuppressLint("InlinedApi")
@@ -224,10 +179,10 @@ class ProxySetSettingsActivity : ProfileSettingsActivity<ProxySetBean>(R.layout.
             ItemTouchHelper.UP or ItemTouchHelper.DOWN, ItemTouchHelper.START
         ) {
             override fun getSwipeDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) =
-                if (!hasEmbeddedMembers && viewHolder is ProfileHolder) super.getSwipeDirs(recyclerView, viewHolder) else 0
+                if (viewHolder is ProfileHolder) super.getSwipeDirs(recyclerView, viewHolder) else 0
 
             override fun getDragDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) =
-                if (!hasEmbeddedMembers && viewHolder is ProfileHolder) super.getDragDirs(recyclerView, viewHolder) else 0
+                if (viewHolder is ProfileHolder) super.getDragDirs(recyclerView, viewHolder) else 0
 
             override fun onMove(
                 recyclerView: RecyclerView,
@@ -340,13 +295,6 @@ class ProxySetSettingsActivity : ProfileSettingsActivity<ProxySetBean>(R.layout.
 
     inner class ProxiesAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         suspend fun reload() {
-            if (hasEmbeddedMembers) {
-                onMainDispatcher {
-                    notifyDataSetChanged()
-                    updateDefaultOutboundSummary()
-                }
-                return
-            }
             val idList = DataStore.serverProtocol.split(",")
                 .mapNotNull { it.takeIf { value -> value.isNotBlank() }?.toLong() }
             if (idList.isNotEmpty()) {
@@ -378,12 +326,9 @@ class ProxySetSettingsActivity : ProfileSettingsActivity<ProxySetBean>(R.layout.
             DataStore.dirty = true
         }
 
-        private fun profileIndex(position: Int) = position - if (hasEmbeddedMembers) 0 else 1
-
-        override fun getItemId(position: Int) =
-            if (!hasEmbeddedMembers && position == 0) 0 else proxyList[profileIndex(position)].id
-        override fun getItemViewType(position: Int) = if (!hasEmbeddedMembers && position == 0) 0 else 1
-        override fun getItemCount() = proxyList.size + if (hasEmbeddedMembers) 0 else 1
+        override fun getItemId(position: Int) = if (position == 0) 0 else proxyList[position - 1].id
+        override fun getItemViewType(position: Int) = if (position == 0) 0 else 1
+        override fun getItemCount() = proxyList.size + 1
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
             return if (viewType == 0) {
@@ -394,7 +339,7 @@ class ProxySetSettingsActivity : ProfileSettingsActivity<ProxySetBean>(R.layout.
         }
 
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-            if (holder is AddHolder) holder.bind() else if (holder is ProfileHolder) holder.bind(proxyList[profileIndex(position)])
+            if (holder is AddHolder) holder.bind() else if (holder is ProfileHolder) holder.bind(proxyList[position - 1])
         }
     }
 
@@ -477,7 +422,6 @@ class ProxySetSettingsActivity : ProfileSettingsActivity<ProxySetBean>(R.layout.
         private val profileName = binding.profileName
         private val profileType = binding.profileType
         private val trafficText: TextView = binding.trafficText
-        private val profileStatus: TextView = binding.profileStatus
         private val editButton = binding.edit
         private val urlTestButton = binding.urlTest
         private val shareLayout = binding.share
@@ -494,94 +438,14 @@ class ProxySetSettingsActivity : ProfileSettingsActivity<ProxySetBean>(R.layout.
                 defaultCardStrokeWidth,
             )
             trafficText.isVisible = false
-            editButton.isVisible = !hasEmbeddedMembers
-            if (!hasEmbeddedMembers) {
-                editButton.setOnClickListener {
-                    replacing = bindingAdapterPosition
-                    selectProfileForAdd.launch(Intent(this@ProxySetSettingsActivity, ProfileSelectActivity::class.java).apply {
-                        putExtra(ProfileSelectActivity.EXTRA_SELECTED, proxyEntity)
-                    })
-                }
+            editButton.setOnClickListener {
+                replacing = bindingAdapterPosition
+                selectProfileForAdd.launch(Intent(this@ProxySetSettingsActivity, ProfileSelectActivity::class.java).apply {
+                    putExtra(ProfileSelectActivity.EXTRA_SELECTED, proxyEntity)
+                })
             }
-            urlTestButton.isVisible = hasEmbeddedMembers
-            urlTestButton.isEnabled = !UrlTest.isUnsupportedProfile(proxyEntity) && proxyEntity.id !in testingEmbeddedIds
-            urlTestButton.setOnClickListener { testEmbeddedProfile(proxyEntity) }
-            shareLayout.isVisible = hasEmbeddedMembers
-            shareLayout.setOnClickListener { showEmbeddedShareMenu(it, proxyEntity) }
-            profileStatus.text = when {
-                proxyEntity.id in testingEmbeddedIds -> getString(R.string.connection_test_testing)
-                proxyEntity.status == 1 -> getString(R.string.available, proxyEntity.ping)
-                proxyEntity.status >= 2 -> proxyEntity.error.orEmpty()
-                else -> ""
-            }
+            urlTestButton.isVisible = false
+            shareLayout.isVisible = false
         }
-    }
-
-    private fun testEmbeddedProfile(profile: ProxyEntity) {
-        if (!testingEmbeddedIds.add(profile.id)) return
-        configurationAdapter.notifyItemChanged(proxyList.indexOf(profile))
-        runOnDefaultDispatcher {
-            try {
-                profile.ping = UrlTest().doTest(profile)
-                profile.status = 1
-                profile.error = null
-            } catch (error: Exception) {
-                Logs.w(error)
-                profile.status = 3
-                profile.error = error.readableMessage
-            } finally {
-                onMainDispatcher {
-                    testingEmbeddedIds.remove(profile.id)
-                    val index = proxyList.indexOf(profile)
-                    if (index >= 0) configurationAdapter.notifyItemChanged(index)
-                }
-            }
-        }
-    }
-
-    private fun showEmbeddedShareMenu(anchor: View, profile: ProxyEntity) {
-        val popup = PopupMenu(this, anchor)
-        popup.menuInflater.inflate(R.menu.profile_share_menu, popup.menu)
-        val capabilities = ProfileShareCapabilities.from(profile)
-        if (!capabilities.links) {
-            popup.menu.removeItem(R.id.action_group_qr)
-            popup.menu.removeItem(R.id.action_group_clipboard)
-        } else if (!capabilities.standardLinks) {
-            popup.menu.findItem(R.id.action_group_qr).subMenu?.removeItem(R.id.action_standard_qr)
-            popup.menu.findItem(R.id.action_group_clipboard).subMenu?.removeItem(R.id.action_standard_clipboard)
-        }
-        if (!capabilities.configuration) popup.menu.removeItem(R.id.action_group_configuration)
-        popup.setOnMenuItemClickListener { shareEmbeddedProfile(it, profile) }
-        popup.show()
-    }
-
-    private fun shareEmbeddedProfile(item: MenuItem, profile: ProxyEntity): Boolean = try {
-        val content = when (item.itemId) {
-            R.id.action_standard_qr, R.id.action_standard_clipboard -> profile.toStdLink()
-            R.id.action_universal_qr, R.id.action_universal_clipboard -> profile.requireBean().toUniversalLink()
-            R.id.action_config_export_clipboard -> profile.exportConfig().first
-            R.id.action_config_export_file -> null
-            else -> return false
-        }
-        when (item.itemId) {
-            R.id.action_standard_qr, R.id.action_universal_qr ->
-                QRCodeDialog(content!!, profile.displayName()).showAllowingStateLoss(supportFragmentManager)
-            R.id.action_standard_clipboard, R.id.action_universal_clipboard,
-            R.id.action_config_export_clipboard -> Toast.makeText(
-                this,
-                if (SagerNet.trySetPrimaryClip(content!!)) R.string.action_export_msg else R.string.action_export_err,
-                Toast.LENGTH_SHORT,
-            ).show()
-            R.id.action_config_export_file -> {
-                val (configuration, fileName) = profile.exportConfig()
-                pendingSharedConfiguration = configuration
-                exportSharedConfiguration.launch(fileName)
-            }
-        }
-        true
-    } catch (error: Exception) {
-        Logs.w(error)
-        Toast.makeText(this, error.readableMessage, Toast.LENGTH_LONG).show()
-        true
     }
 }

@@ -314,7 +314,6 @@ class NativeInterface : BoxPlatformInterface, NB4AInterface {
         return JSONObject().apply {
             put("name", interfaceName)
             put("index", index)
-            put("network_handle", network.networkHandle)
             put("expensive", isExpensive(capabilities))
             put("constrained", false)
         }

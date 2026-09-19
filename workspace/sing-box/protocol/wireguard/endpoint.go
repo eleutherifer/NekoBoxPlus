@@ -28,7 +28,6 @@ import (
 var (
 	_ adapter.OutboundWithPreferredRoutes = (*Endpoint)(nil)
 	_ dialer.PacketDialerWithDestination  = (*Endpoint)(nil)
-	_ adapter.InterfaceUpdateListener     = (*Endpoint)(nil)
 )
 
 func RegisterEndpoint(registry *endpoint.Registry) {
@@ -155,10 +154,6 @@ func (w *Endpoint) Start(stage adapter.StartStage) error {
 func (w *Endpoint) Close() error {
 	w.started.Store(false)
 	return w.endpoint.Close()
-}
-
-func (w *Endpoint) InterfaceUpdated() {
-	w.endpoint.InterfaceUpdated()
 }
 
 func (w *Endpoint) PrepareConnection(network string, source M.Socksaddr, destination M.Socksaddr, routeContext tun.DirectRouteContext, timeout time.Duration) (tun.DirectRouteDestination, error) {

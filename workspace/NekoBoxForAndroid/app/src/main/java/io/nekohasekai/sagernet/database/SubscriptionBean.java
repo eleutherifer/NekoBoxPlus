@@ -23,7 +23,6 @@ public class SubscriptionBean extends Serializable {
     public String customUserAgent;
     public Boolean autoUpdate;
     public Integer autoUpdateDelay;
-    public Boolean providerAutoUpdateDefaultsApplied;
     public Integer lastUpdated;
     public Integer filterMode;
     public String filterRegex;
@@ -67,7 +66,7 @@ public class SubscriptionBean extends Serializable {
 
     @Override
     public void serializeToBuffer(ByteBufferOutput output) {
-        output.writeInt(8);
+        output.writeInt(7);
 
         output.writeInt(type);
 
@@ -114,9 +113,6 @@ public class SubscriptionBean extends Serializable {
 
         // v7
         output.writeLong(expireAt);
-
-        // v8
-        output.writeBoolean(providerAutoUpdateDefaultsApplied);
     }
 
     public void serializeForShare(ByteBufferOutput output) {
@@ -191,12 +187,6 @@ public class SubscriptionBean extends Serializable {
         } else if (bannerLayout != null) {
             bannerLayout |= BANNER_EXPIRATION_TIME;
         }
-        if (version >= 8) {
-            providerAutoUpdateDefaultsApplied = input.readBoolean();
-        } else {
-            // Existing subscriptions must never have provider defaults applied again.
-            providerAutoUpdateDefaultsApplied = true;
-        }
     }
 
     public void deserializeFromShare(ByteBufferInput input) {
@@ -228,7 +218,6 @@ public class SubscriptionBean extends Serializable {
         if (customUserAgent == null) customUserAgent = "";
         if (autoUpdate == null) autoUpdate = false;
         if (autoUpdateDelay == null) autoUpdateDelay = 1440;
-        if (providerAutoUpdateDefaultsApplied == null) providerAutoUpdateDefaultsApplied = false;
         if (lastUpdated == null) lastUpdated = 0;
         if (filterMode == null) filterMode = 0;
         if (filterRegex == null) filterRegex = "";

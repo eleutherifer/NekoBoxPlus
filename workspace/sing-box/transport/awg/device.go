@@ -15,9 +15,6 @@ import (
 	"github.com/sagernet/sing/common/logger"
 	"github.com/sagernet/sing/common/metadata"
 	"github.com/sagernet/sing/common/network"
-	"github.com/sagernet/sing/common/x/list"
-	"github.com/sagernet/sing/service"
-	"github.com/sagernet/sing/service/pause"
 )
 
 type DeviceOpts struct {
@@ -33,13 +30,11 @@ type DeviceOpts struct {
 }
 
 type Device struct {
-	awgDevice     *device.Device
-	tun           tunAdapter
-	bind          conn.Bind
-	logger        *device.Logger
-	ipcConfig     string
-	pause         pause.Manager
-	pauseCallback *list.Element[pause.Callback]
+	awgDevice *device.Device
+	tun       tunAdapter
+	bind      conn.Bind
+	logger    *device.Logger
+	ipcConfig string
 }
 
 func NewDevice(ctx context.Context, logger logger.ContextLogger, dial network.Dialer, ipcConfig string, opts DeviceOpts) (*Device, error) {
@@ -74,7 +69,6 @@ func NewDevice(ctx context.Context, logger logger.ContextLogger, dial network.Di
 		bind:      newBind(ctx, logger, dial, opts.LazyBind, opts.PeerEndpoint, opts.Reserved, opts.ReservedForEndpoint),
 		logger:    awgLogger,
 		ipcConfig: ipcConfig,
-		pause:     service.FromContext[pause.Manager](ctx),
 	}, nil
 }
 
@@ -92,40 +86,14 @@ func (d *Device) Start(stage adapter.StartStage) error {
 		return E.Cause(err, "tun start")
 	}
 
-	if err := d.awgDevice.Up(); err != nil {
-		return err
-	}
-	if d.pause != nil {
-		d.pauseCallback = d.pause.RegisterCallback(d.onPauseUpdated)
-	}
-	return nil
+	return d.awgDevice.Up()
 }
 
 func (d *Device) Close() error {
-	if d.pauseCallback != nil {
-		d.pause.UnregisterCallback(d.pauseCallback)
-		d.pauseCallback = nil
-	}
 	if d.awgDevice != nil {
 		d.awgDevice.Close()
 	}
 	return nil
-}
-
-func (d *Device) onPauseUpdated(event int) {
-	if d.awgDevice == nil {
-		return
-	}
-	switch event {
-	case pause.EventDevicePaused, pause.EventNetworkPause:
-		if err := d.awgDevice.Down(); err != nil {
-			d.logger.Errorf("device pause failed: %v", err)
-		}
-	case pause.EventDeviceWake, pause.EventNetworkWake:
-		if err := d.awgDevice.Up(); err != nil {
-			d.logger.Errorf("device wake failed: %v", err)
-		}
-	}
 }
 
 func (d *Device) InterfaceUpdated() {

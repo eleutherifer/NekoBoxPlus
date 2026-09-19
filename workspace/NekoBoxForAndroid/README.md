@@ -267,7 +267,7 @@ bash buildScript/lib/assets.sh
 bash buildScript/lib/core.docker.sh
 ```
 
-The containerized core build is required because it builds with the patched Go runtime used by this project. The runtime retains Go's standard monotonic timer behavior; Android device/network wake callbacks restore WG/AWG binds and keepalives without periodic background wakeups. Rebuild the image after changing Go versions, the Dockerfile, or a Go runtime patch:
+The containerized core build is required because it builds with the patched Go runtime used by this project. Rebuild the image after changing Go versions, the Dockerfile, or the Go runtime patch:
 
 ```bash
 bash buildScript/lib/core.docker.sh --rebuild-image

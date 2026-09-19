@@ -12,8 +12,6 @@ import io.nekohasekai.sagernet.fmt.http.toUri
 import io.nekohasekai.sagernet.fmt.hysteria.*
 import io.nekohasekai.sagernet.fmt.internal.ChainBean
 import io.nekohasekai.sagernet.fmt.internal.ProxySetBean
-import io.nekohasekai.sagernet.fmt.internal.decodeEmbeddedProfiles
-import io.nekohasekai.sagernet.fmt.internal.hasEmbeddedProfiles
 import io.nekohasekai.sagernet.fmt.masterdns.MasterDnsVPNBean
 import io.nekohasekai.sagernet.fmt.masque.MasqueBean
 import io.nekohasekai.sagernet.fmt.mieru.MieruBean
@@ -445,14 +443,10 @@ data class ProxyEntity(
             }
 
             is ProxySetBean -> {
-                val profiles = if (bean.hasEmbeddedProfiles()) {
-                    bean.decodeEmbeddedProfiles()
-                } else {
-                    when (bean.type) {
-                        ProxySetBean.TYPE_LIST -> SagerDatabase.proxyDao.getEntities(bean.proxies)
-                        ProxySetBean.TYPE_GROUP -> SagerDatabase.proxyDao.getByGroup(bean.groupId)
-                        else -> emptyList()
-                    }
+                val profiles = when (bean.type) {
+                    ProxySetBean.TYPE_LIST -> SagerDatabase.proxyDao.getEntities(bean.proxies)
+                    ProxySetBean.TYPE_GROUP -> SagerDatabase.proxyDao.getByGroup(bean.groupId)
+                    else -> emptyList()
                 }
                 profiles.any { it.id != id && it.containsByeDPI() }
             }
@@ -470,14 +464,10 @@ data class ProxyEntity(
             }
 
             is ProxySetBean -> {
-                val profiles = if (bean.hasEmbeddedProfiles()) {
-                    bean.decodeEmbeddedProfiles()
-                } else {
-                    when (bean.type) {
-                        ProxySetBean.TYPE_LIST -> SagerDatabase.proxyDao.getEntities(bean.proxies)
-                        ProxySetBean.TYPE_GROUP -> SagerDatabase.proxyDao.getByGroup(bean.groupId)
-                        else -> emptyList()
-                    }
+                val profiles = when (bean.type) {
+                    ProxySetBean.TYPE_LIST -> SagerDatabase.proxyDao.getEntities(bean.proxies)
+                    ProxySetBean.TYPE_GROUP -> SagerDatabase.proxyDao.getByGroup(bean.groupId)
+                    else -> emptyList()
                 }
                 profiles.any { it.id != id && it.containsMasterDnsVPN() }
             }

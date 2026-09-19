@@ -245,17 +245,6 @@ func (e *Endpoint) Close() error {
 	return nil
 }
 
-func (e *Endpoint) InterfaceUpdated() {
-	if e.device == nil {
-		return
-	}
-	if err := e.device.BindUpdate(); err != nil {
-		e.options.Logger.Error(E.Cause(err, "update WireGuard bind after interface change"))
-		return
-	}
-	e.device.SendKeepalivesToPeersWithCurrentKeypair()
-}
-
 func (e *Endpoint) Lookup(address netip.Addr) *device.Peer {
 	if e.allowedIPs == nil {
 		return nil

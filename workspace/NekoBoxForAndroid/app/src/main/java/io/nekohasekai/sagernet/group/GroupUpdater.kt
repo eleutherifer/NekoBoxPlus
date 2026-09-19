@@ -20,7 +20,6 @@ import java.net.InetAddress
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.coroutines.coroutineContext
 
 @Suppress("EXPERIMENTAL_API_USAGE")
 abstract class GroupUpdater {
@@ -125,7 +124,6 @@ abstract class GroupUpdater {
 
         val updating = Collections.synchronizedSet<Long>(mutableSetOf())
         val progress = Collections.synchronizedMap<Long, Progress>(mutableMapOf())
-        private val activeJobs = Collections.synchronizedMap<Long, Job>(mutableMapOf())
         const val SUBSCRIPTION_UPDATE_TIMEOUT_MILLIS = 2 * 60 * 1000L
 
         fun startUpdate(proxyGroup: ProxyGroup, byUser: Boolean) {
@@ -137,8 +135,6 @@ abstract class GroupUpdater {
         suspend fun executeUpdate(proxyGroup: ProxyGroup, byUser: Boolean): Boolean {
             return coroutineScope {
                 if (!updating.add(proxyGroup.id)) return@coroutineScope false
-                val updateJob = coroutineContext.job
-                activeJobs[proxyGroup.id] = updateJob
                 GroupManager.postReload(proxyGroup.id)
 
                 val subscription = proxyGroup.subscription!!
@@ -175,24 +171,9 @@ abstract class GroupUpdater {
                         false
                     }
                 } finally {
-                    synchronized(activeJobs) {
-                        if (activeJobs[proxyGroup.id] === updateJob) {
-                            activeJobs.remove(proxyGroup.id)
-                        }
-                    }
                     finishUpdate(proxyGroup)
                 }
             }
-        }
-
-        suspend fun cancelUpdate(groupId: Long) {
-            val job = activeJobs[groupId] ?: return
-            if (job === coroutineContext.job) return
-            job.cancelAndJoin()
-        }
-
-        suspend fun cancelUpdates(groupIds: Iterable<Long>) {
-            groupIds.forEach { cancelUpdate(it) }
         }
 
 

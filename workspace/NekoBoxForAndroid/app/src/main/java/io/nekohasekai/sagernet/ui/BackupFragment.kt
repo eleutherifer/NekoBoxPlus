@@ -12,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.FileProvider
 import androidx.core.view.isVisible
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.jakewharton.processphoenix.ProcessPhoenix
 import io.nekohasekai.sagernet.BuildConfig
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.SagerNet
@@ -20,6 +21,7 @@ import io.nekohasekai.sagernet.database.*
 import io.nekohasekai.sagernet.database.preference.KeyValuePair
 import io.nekohasekai.sagernet.database.preference.PublicDatabase
 import io.nekohasekai.sagernet.databinding.LayoutBackupBinding
+import io.nekohasekai.sagernet.databinding.LayoutImportBinding
 import io.nekohasekai.sagernet.databinding.LayoutProgressBinding
 import io.nekohasekai.sagernet.backup.BackupContainerCodec
 import io.nekohasekai.sagernet.backup.BackupPasswordException
@@ -71,22 +73,6 @@ class BackupFragment : NamedFragment(R.layout.layout_backup) {
         ActivityResultContracts.StartActivityForResult(),
     ) {
         if (::binding.isInitialized) updateGitButtons()
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        childFragmentManager.setFragmentResultListener(
-            BackupImportDialogFragment.RESULT_KEY,
-            this,
-        ) { _, result ->
-            val file = result.getString(BackupImportDialogFragment.RESULT_FILE) ?: return@setFragmentResultListener
-            importBackup(
-                File(file),
-                result.getBoolean(BackupImportDialogFragment.RESULT_PROFILES),
-                result.getBoolean(BackupImportDialogFragment.RESULT_RULES),
-                result.getBoolean(BackupImportDialogFragment.RESULT_SETTINGS),
-            )
-        }
     }
 
     override fun onDestroyView() {
@@ -414,7 +400,42 @@ class BackupFragment : NamedFragment(R.layout.layout_backup) {
         }
 
     private fun showGitImport(json: JSONObject) {
-        showImportDialog(json, showGitWarning = true)
+        val import = LayoutImportBinding.inflate(layoutInflater)
+        if (!json.has("profiles")) import.backupConfigurations.isVisible = false
+        if (!json.has("rules")) import.backupRules.isVisible = false
+        if (!json.has("settings")) import.backupSettings.isVisible = false
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.backup_import)
+            .setMessage(R.string.git_destructive_restore_warning)
+            .setView(import.root)
+            .setPositiveButton(R.string.backup_import) { _, _ ->
+                SagerNet.stopService()
+                val progress = LayoutProgressBinding.inflate(layoutInflater)
+                progress.content.text = getString(R.string.backup_importing)
+                val dialog = MaterialAlertDialogBuilder(requireContext())
+                    .setView(progress.root)
+                    .setCancelable(false)
+                    .show()
+                runOnDefaultDispatcher {
+                    runCatching {
+                        finishImport(
+                            json,
+                            import.backupConfigurations.isChecked,
+                            import.backupRules.isChecked,
+                            import.backupSettings.isChecked,
+                        )
+                        triggerFullRestart(requireContext())
+                    }.onFailure {
+                        Logs.w(it)
+                        onMainDispatcher {
+                            dialog.dismiss()
+                            MessageStore.showMessage(requireActivity(), it.readableMessage)
+                        }
+                    }
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun showCompactDialog() {
@@ -757,7 +778,58 @@ class BackupFragment : NamedFragment(R.layout.layout_backup) {
                         return@onMainDispatcher
                     }
 
-                    showImportDialog(json)
+                    val import = LayoutImportBinding.inflate(layoutInflater)
+                    if (!json.has("profiles")) {
+                        import.backupConfigurations.isVisible = false
+                    }
+                    if (!json.has("rules")) {
+                        import.backupRules.isVisible = false
+                    }
+                    if (!json.has("settings")) {
+                        import.backupSettings.isVisible = false
+                    }
+
+                    MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.backup_import)
+                        .setView(import.root)
+                        .setPositiveButton(R.string.backup_import) { _, _ ->
+                            SagerNet.stopService()
+
+                            val binding = LayoutProgressBinding.inflate(layoutInflater)
+                            binding.content.text = getString(R.string.backup_importing)
+                            val dialog = MaterialAlertDialogBuilder(requireContext())
+                                .setView(binding.root)
+                                .setCancelable(false)
+                                .show()
+                            runOnDefaultDispatcher {
+                                runCatching {
+                                    // 再次检查是否已被取消
+                                    if (!isAdded) {
+                                        MessageStore.showMessage(activity, R.string.restore_cancelled)
+                                        return@runOnDefaultDispatcher
+                                    }
+                                    finishImport(
+                                        json,
+                                        import.backupConfigurations.isChecked,
+                                        import.backupRules.isChecked,
+                                        import.backupSettings.isChecked
+                                    )
+                                    ProcessPhoenix.triggerRebirth(
+                                        activity, Intent(activity, MainActivity::class.java)
+                                    )
+                                }.onFailure {
+                                    Logs.w(it)
+                                    onMainDispatcher {
+                                        MessageStore.showMessage(activity, it.readableMessage)
+                                    }
+                                }
+
+                                onMainDispatcher {
+                                    dialog.dismiss()
+                                }
+                            }
+                        }
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show()
                 }
             } catch (e: Exception) {
                 Logs.w(e)
@@ -907,51 +979,53 @@ class BackupFragment : NamedFragment(R.layout.layout_backup) {
 
             val json = JSONObject(content)
             onMainDispatcher {
-                showImportDialog(json)
+                val import = LayoutImportBinding.inflate(layoutInflater)
+                if (!json.has("profiles")) {
+                    import.backupConfigurations.isVisible = false
+                }
+                if (!json.has("rules")) {
+                    import.backupRules.isVisible = false
+                }
+                if (!json.has("settings")) {
+                    import.backupSettings.isVisible = false
+                }
+                MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.backup_import)
+                    .setView(import.root)
+                    .setPositiveButton(R.string.backup_import) { _, _ ->
+                        SagerNet.stopService()
+
+                        val binding = LayoutProgressBinding.inflate(layoutInflater)
+                        binding.content.text = getString(R.string.backup_importing)
+                        val dialog = MaterialAlertDialogBuilder(requireContext())
+                            .setView(binding.root)
+                            .setCancelable(false)
+                            .show()
+                        runOnDefaultDispatcher {
+                            runCatching {
+                                finishImport(
+                                    json,
+                                    import.backupConfigurations.isChecked,
+                                    import.backupRules.isChecked,
+                                    import.backupSettings.isChecked
+                                )
+                                triggerFullRestart(requireContext())
+                            }.onFailure {
+                                Logs.w(it)
+                                onMainDispatcher {
+                                    dialog.dismiss()
+                                    MessageStore.showMessage(activity, it.readableMessage)
+                                }
+                            }
+                        }
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
             }
         } catch (e: Exception) {
             Logs.w(e)
             onMainDispatcher {
                 MessageStore.showMessage(activity, e.readableMessage)
             }
-        }
-    }
-
-    private fun showImportDialog(json: JSONObject, showGitWarning: Boolean = false) {
-        if (childFragmentManager.findFragmentByTag(BackupImportDialogFragment.TAG) != null) return
-        val directory = File(requireContext().cacheDir, "backup-import-dialog").apply { mkdirs() }
-        val file = File(directory, "${UUID.randomUUID()}.json")
-        file.writeText(json.toString())
-        BackupImportDialogFragment.newInstance(
-            file = file.absolutePath,
-            hasProfiles = json.has("profiles"),
-            hasRules = json.has("rules"),
-            hasSettings = json.has("settings"),
-            showGitWarning = showGitWarning,
-        ).show(childFragmentManager, BackupImportDialogFragment.TAG)
-    }
-
-    private fun importBackup(file: File, profile: Boolean, rule: Boolean, setting: Boolean) {
-        val activity = requireActivity()
-        SagerNet.stopService()
-        val progress = LayoutProgressBinding.inflate(layoutInflater)
-        progress.content.setText(R.string.backup_importing)
-        val dialog = MaterialAlertDialogBuilder(requireContext())
-            .setView(progress.root)
-            .setCancelable(false)
-            .show()
-        runOnDefaultDispatcher {
-            runCatching {
-                finishImport(JSONObject(file.readText()), profile, rule, setting)
-                triggerFullRestart(activity)
-            }.onFailure {
-                Logs.w(it)
-                onMainDispatcher {
-                    dialog.dismiss()
-                    MessageStore.showMessage(activity, it.readableMessage)
-                }
-            }
-            file.delete()
         }
     }
 

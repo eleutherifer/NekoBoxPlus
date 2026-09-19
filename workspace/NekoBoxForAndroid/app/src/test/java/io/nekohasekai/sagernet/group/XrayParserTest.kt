@@ -3,8 +3,6 @@ package io.nekohasekai.sagernet.group
 import io.nekohasekai.sagernet.fmt.http.HttpBean
 import io.nekohasekai.sagernet.fmt.applySharedTLSOptions
 import io.nekohasekai.sagernet.fmt.hysteria.HysteriaBean
-import io.nekohasekai.sagernet.fmt.internal.ProxySetBean
-import io.nekohasekai.sagernet.fmt.internal.decodeEmbeddedProfiles
 import io.nekohasekai.sagernet.fmt.shadowsocks.ShadowsocksBean
 import io.nekohasekai.sagernet.fmt.socks.SOCKSBean
 import io.nekohasekai.sagernet.fmt.trojan.TrojanBean
@@ -22,130 +20,6 @@ import org.junit.Test
 import java.util.Base64
 
 class XrayParserTest {
-    @Test
-    fun convertsBalancerMembersIntoEmbeddedUrlTest() {
-        val proxies = XrayParser.parse(
-            """
-            {
-              "remarks":"Fleet",
-              "outbounds":[
-                {"protocol":"socks","tag":"proxy-b","settings":{"address":"b.example","port":1080}},
-                {"protocol":"socks","tag":"other","settings":{"address":"other.example","port":1080}},
-                {"protocol":"socks","tag":"proxy-a","settings":{"address":"a.example","port":1080}}
-              ],
-              "routing":{"balancers":[{
-                "tag":"fastest","selector":["proxy-"],"strategy":{"type":"leastPing"}
-              }]},
-              "observatory":{"subjectSelector":["proxy-"],"probeURL":"https://probe.example/generate_204","probeInterval":"30s"}
-            }
-            """.trimIndent(),
-        )!!
-
-        assertEquals(2, proxies.size)
-        val urlTest = proxies.first() as ProxySetBean
-        assertEquals("Fleet", urlTest.name)
-        assertEquals(ProxySetBean.MODE_URL_TEST, urlTest.mode)
-        assertEquals("https://probe.example/generate_204", urlTest.testURL)
-        assertEquals("30s", urlTest.testInterval)
-        val members = urlTest.decodeEmbeddedProfiles()
-        assertEquals(listOf("³ Fleet", "¹ Fleet"), members.map { it.displayName() })
-        assertEquals(listOf("a.example", "b.example"), members.map { it.requireBean().serverAddress })
-        assertEquals("² Fleet", proxies.last().name)
-    }
-
-    @Test
-    fun convertsAllSupportedBalancerStrategiesIncludingDefaultRandom() {
-        listOf(null, "random", "round-robin", "least-load", "leastPing").forEach { strategy ->
-            val strategyJson = strategy?.let { "\"strategy\":{\"type\":\"$it\"}," }.orEmpty()
-            val parsed = XrayParser.parse(
-                """
-                {"outbounds":[
-                  {"protocol":"socks","tag":"proxy-a","settings":{"address":"a.example","port":1080}},
-                  {"protocol":"socks","tag":"proxy-b","settings":{"address":"b.example","port":1080}}
-                ],"routing":{"balancers":[{$strategyJson"tag":"set","selector":["proxy-"]}]}}
-                """.trimIndent(),
-            )!!
-            assertEquals(strategy ?: "default random", 1, parsed.size)
-            assertTrue(strategy ?: "default random", parsed.single() is ProxySetBean)
-        }
-    }
-
-    @Test
-    fun convertsLeastLoadBalancerWithSelectedFallbackAndProbeUrl() {
-        val parsed = XrayParser.parse(
-            """
-            [{
-              "remarks":"Auto fastest",
-              "outbounds":[
-                {"protocol":"socks","tag":"cand-fallback","settings":{"address":"fallback.example","port":1080}},
-                {"protocol":"socks","tag":"cand-01","settings":{"address":"a.example","port":1080}},
-                {"protocol":"socks","tag":"cand-02","settings":{"address":"b.example","port":1080}},
-                {"protocol":"freedom","tag":"direct"}
-              ],
-              "observatory":{
-                "probeInterval":"10s",
-                "probeUrl":"https://www.google.com/generate_204",
-                "subjectSelector":["cand-fallback","cand-01","cand-02"]
-              },
-              "routing":{"balancers":[{
-                "tag":"bal_price",
-                "selector":["cand-01","cand-02"],
-                "fallbackTag":"cand-fallback",
-                "strategy":{"type":"leastLoad","settings":{"expected":1,"maxRTT":"2s"}}
-              }]}
-            }]
-            """.trimIndent(),
-        )!!
-
-        assertTrue(parsed.single() is ProxySetBean)
-        val urlTest = parsed.single() as ProxySetBean
-        assertEquals("Auto fastest", urlTest.name)
-        assertEquals("https://www.google.com/generate_204", urlTest.testURL)
-        assertEquals("10s", urlTest.testInterval)
-        assertEquals(
-            listOf("a.example", "b.example", "fallback.example"),
-            urlTest.decodeEmbeddedProfiles().map { it.requireBean().serverAddress },
-        )
-    }
-
-    @Test
-    fun keepsFlatProfilesForFallbackAndMixedUnsafeBalancerMembers() {
-        val parsed = XrayParser.parse(
-            """
-            {"outbounds":[
-              {"protocol":"socks","tag":"a","settings":{"address":"a.example","port":1080}},
-              {"protocol":"socks","tag":"b","settings":{"address":"b.example","port":1080}},
-              {"protocol":"socks","tag":"c","settings":{"address":"c.example","port":1080}}
-            ],"routing":{"balancers":[
-              {"tag":"safe","selector":["a","b"],"strategy":{"type":"random"}},
-              {"tag":"unsafe","selector":["b"],"strategy":{"type":"unknown"}},
-              {"tag":"fallback","selector":["c"],"strategy":{"type":"leastPing"},"fallbackTag":"direct"}
-            ]}}
-            """.trimIndent(),
-        )!!
-
-        assertEquals(3, parsed.size)
-        assertTrue(parsed.first() is ProxySetBean)
-        assertEquals(listOf("b.example", "c.example"), parsed.drop(1).map { it.serverAddress })
-    }
-
-    @Test
-    fun conflictingObservatoriesLeaveUrlTestDefaults() {
-        val parsed = XrayParser.parse(
-            """
-            {"outbounds":[
-              {"protocol":"socks","tag":"proxy-a","settings":{"address":"a.example","port":1080}}
-            ],"routing":{"balancers":[{"tag":"set","selector":["proxy-"]}]},
-              "observatory":{"subjectSelector":["proxy-"],"probeURL":"https://one.example/","probeInterval":"10s"},
-              "burstObservatory":{"subjectSelector":["proxy-"],"pingConfig":{"destination":"https://two.example/","interval":"20s"}}
-            }
-            """.trimIndent(),
-        )!!.single() as ProxySetBean
-
-        assertEquals("https://www.gstatic.com/generate_204", parsed.testURL)
-        assertEquals("3m", parsed.testInterval)
-    }
-
     @Test
     fun importsEverySupportedXrayRemoteProtocol() {
         val proxies =

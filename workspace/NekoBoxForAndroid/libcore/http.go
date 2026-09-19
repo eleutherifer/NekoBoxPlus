@@ -54,7 +54,6 @@ type HTTPRequest interface {
 	SetContentString(content string)
 	SetUserAgent(userAgent string)
 	AllowInsecure()
-	Cancel()
 	Execute() (HTTPResponse, error)
 }
 
@@ -185,20 +184,7 @@ func (c *httpClient) Close() {
 
 type httpRequest struct {
 	*httpClient
-	request       http.Request
-	cancelAccess  sync.Mutex
-	cancelRequest context.CancelFunc
-	cancelled     bool
-}
-
-func (r *httpRequest) Cancel() {
-	r.cancelAccess.Lock()
-	r.cancelled = true
-	cancel := r.cancelRequest
-	r.cancelAccess.Unlock()
-	if cancel != nil {
-		cancel()
-	}
+	request http.Request
 }
 
 func (r *httpRequest) AllowInsecure() {
@@ -243,58 +229,23 @@ func (r *httpRequest) SetContentString(content string) {
 
 func (r *httpRequest) Execute() (HTTPResponse, error) {
 	defer device.DeferPanicToError("http execute", func(err error) { log.Println(err) })
-	ctx, cancel := context.WithCancel(context.Background())
-	finish := sync.OnceFunc(func() {
-		cancel()
-		r.cancelAccess.Lock()
-		r.cancelRequest = nil
-		r.cancelAccess.Unlock()
-	})
-	r.cancelAccess.Lock()
-	if r.cancelled {
-		r.cancelAccess.Unlock()
-		finish()
-		return nil, context.Canceled
-	}
-	r.cancelRequest = cancel
-	r.cancelAccess.Unlock()
-	request := r.request.Clone(ctx)
-	var response HTTPResponse
-	var err error
 	// full direct
 	if r.tryH3Direct && !r.trySocks5 && r.utlsName == "" {
-		response, err = r.doH3Direct(ctx)
-	} else {
-		var rawResponse *http.Response
-		rawResponse, err = r.h1h2Client.Do(request) //nolint:bodyclose // successful bodies are owned by the returned httpResponse.
-		if err != nil && r.tryH3Direct && r.utlsName == "" && errors.Is(err, errFailConnectSocks5) {
-			response, err = r.doH3Direct(ctx)
-		} else if err == nil {
-			httpResp := &httpResponse{Response: rawResponse}
-			if rawResponse.StatusCode != http.StatusOK {
-				err = errors.New(httpResp.errorString())
-			} else {
-				response = httpResp
-			}
-		}
+		return r.doH3Direct()
 	}
+	response, err := r.h1h2Client.Do(&r.request) //nolint:bodyclose // successful bodies are owned by the returned httpResponse.
 	if err != nil {
-		finish()
+		// trySocks5 && tryH3Direct
+		if r.tryH3Direct && r.utlsName == "" && errors.Is(err, errFailConnectSocks5) {
+			return r.doH3Direct()
+		}
 		return nil, err
 	}
-	httpResp := response.(*httpResponse)
-	if httpResp.Body == nil {
-		finish()
-	} else {
-		httpResp.Body = &closeOnCloseReadCloser{
-			ReadCloser: httpResp.Body,
-			closeFunc: func() error {
-				finish()
-				return nil
-			},
-		}
+	httpResp := &httpResponse{Response: response}
+	if response.StatusCode != http.StatusOK {
+		return nil, errors.New(httpResp.errorString())
 	}
-	return response, nil
+	return httpResp, nil
 }
 
 type requestFunc func() (response *http.Response, err error)
@@ -316,12 +267,12 @@ func (c *closeOnCloseReadCloser) Close() error {
 	return err
 }
 
-func (r *httpRequest) doH3Direct(parent context.Context) (HTTPResponse, error) {
+func (r *httpRequest) doH3Direct() (HTTPResponse, error) {
 	timeout := r.h1h2Client.Timeout
 	if timeout == 0 {
 		timeout = 10 * time.Second
 	}
-	ctx, cancel := context.WithTimeout(parent, timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	cancelOnReturn := true
 	defer func() {
 		if cancelOnReturn {

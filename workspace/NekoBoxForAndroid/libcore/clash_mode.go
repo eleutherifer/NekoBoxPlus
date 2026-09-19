@@ -1,19 +1,13 @@
 package libcore
 
 import (
-	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io/fs"
 	"libcore/device"
-	"os"
 	"strings"
 
 	"github.com/sagernet/sing-box/adapter"
-	"github.com/sagernet/sing-box/experimental/cachefile"
 	"github.com/sagernet/sing/service"
-	"github.com/sagernet/sing/service/filemanager"
 )
 
 type clashModeSetter interface {
@@ -61,21 +55,6 @@ func ClashModeList(b *BoxInstance) (modeListJson string, err error) {
 		return "", err
 	}
 	return string(modeList), nil
-}
-
-func LoadClashModeFromCache(cacheFilePath string) (mode string, err error) {
-	defer device.DeferPanicToError("LoadClashModeFromCache", func(err_ error) { err = err_ })
-
-	ctx := filemanager.WithDefault(service.ContextWithDefaultRegistry(context.Background()), workingPath, tempPath, os.Getuid(), os.Getgid())
-	cacheFile := cachefile.NewReadOnly(ctx, cacheFilePath)
-	if err = cacheFile.Start(adapter.StartStateInitialize); err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return "", nil
-		}
-		return "", err
-	}
-	defer cacheFile.Close()
-	return cacheFile.LoadMode(), nil
 }
 
 func SetClashMode(b *BoxInstance, newMode string) (err error) {

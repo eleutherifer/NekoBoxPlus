@@ -626,7 +626,7 @@ func (m *V2RayXHTTPXmuxOptions) Validate() error {
 
 func (m *V2RayXHTTPXmuxOptions) Normalize() error {
 	if m.isZero() {
-		m.MaxConnections = Xbadoption.Range{From: 3, To: 3}
+		m.MaxConnections = Xbadoption.Range{From: 6, To: 6}
 		m.HMaxRequestTimes = Xbadoption.Range{From: 600, To: 900}
 		m.HMaxReusableSecs = Xbadoption.Range{From: 1800, To: 3000}
 	}
@@ -656,7 +656,7 @@ func (m *V2RayXHTTPXmuxOptions) GetNormalizedMaxConcurrency() Xbadoption.Range {
 
 func (m *V2RayXHTTPXmuxOptions) GetNormalizedMaxConnections() Xbadoption.Range {
 	if m.isZero() {
-		return Xbadoption.Range{From: 3, To: 3}
+		return Xbadoption.Range{From: 6, To: 6}
 	}
 	return m.MaxConnections
 }

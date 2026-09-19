@@ -2,7 +2,6 @@ package io.nekohasekai.sagernet.database
 
 import io.nekohasekai.sagernet.GroupType
 import io.nekohasekai.sagernet.bg.SubscriptionUpdater
-import io.nekohasekai.sagernet.group.GroupUpdater
 import io.nekohasekai.sagernet.ktx.applyDefaultValues
 import io.nekohasekai.sagernet.routing.SubscriptionRoutingRepository
 
@@ -104,26 +103,12 @@ object GroupManager {
     }
 
     suspend fun updateGroup(group: ProxyGroup) {
-        val previous = SagerDatabase.groupDao.getById(group.id)
-        val previousSubscription = previous?.subscription
-        val updatedSubscription = group.subscription
-        if (
-            previous?.type == GroupType.SUBSCRIPTION &&
-            (
-                group.type != GroupType.SUBSCRIPTION ||
-                    previousSubscription?.link != updatedSubscription?.link ||
-                    (previousSubscription?.autoUpdate == true && updatedSubscription?.autoUpdate != true)
-            )
-        ) {
-            GroupUpdater.cancelUpdate(group.id)
-        }
         SagerDatabase.groupDao.updateGroup(group)
         iterator { groupUpdated(group) }
         SubscriptionUpdater.reconfigureUpdater()
     }
 
     suspend fun deleteGroup(groupId: Long) {
-        GroupUpdater.cancelUpdate(groupId)
         SubscriptionRoutingRepository.deleteFiles(groupId)
         SagerDatabase.groupDao.deleteById(groupId)
         SagerDatabase.proxyDao.deleteByGroup(groupId)
@@ -133,7 +118,6 @@ object GroupManager {
     }
 
     suspend fun deleteGroup(group: List<ProxyGroup>) {
-        GroupUpdater.cancelUpdates(group.map { it.id })
         group.forEach { SubscriptionRoutingRepository.deleteFiles(it.id) }
         SagerDatabase.groupDao.deleteGroup(group)
         SagerDatabase.proxyDao.deleteByGroup(group.map { it.id }.toLongArray())

@@ -37,7 +37,7 @@ class EndAlignedMarqueeTextView @JvmOverloads constructor(
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
-        updateOverflowState(measuredWidth)
+        updateOverflowState()
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -101,14 +101,9 @@ class EndAlignedMarqueeTextView @JvmOverloads constructor(
         updateMarquee()
     }
 
-    override fun onVisibilityAggregated(isVisible: Boolean) {
-        super.onVisibilityAggregated(isVisible)
-        updateMarquee()
-    }
-
-    private fun updateOverflowState(viewWidth: Int = width) {
+    private fun updateOverflowState() {
         textWidth = Layout.getDesiredWidth(text, paint)
-        val availableWidth = viewWidth - compoundPaddingStart - compoundPaddingEnd
+        val availableWidth = width - compoundPaddingStart - compoundPaddingEnd
         val isOverflowing = availableWidth > 0 && textWidth > availableWidth
         if (textAlignment != View.TEXT_ALIGNMENT_GRAVITY) {
             textAlignment = View.TEXT_ALIGNMENT_GRAVITY

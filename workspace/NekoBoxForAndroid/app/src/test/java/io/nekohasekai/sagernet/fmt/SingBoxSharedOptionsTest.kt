@@ -1,11 +1,9 @@
 package io.nekohasekai.sagernet.fmt
 
 import io.nekohasekai.sagernet.fmt.masque.MasqueBean
-import io.nekohasekai.sagernet.fmt.masterdns.MasterDnsVPNBean
 import io.nekohasekai.sagernet.fmt.naive.NaiveBean
 import io.nekohasekai.sagernet.fmt.trusttunnel.TrustTunnelBean
 import moe.matsuri.nb4a.SingBoxOptions.Outbound
-import moe.matsuri.nb4a.SingBoxOptions.Outbound_MasterDnsVPNOptions
 import moe.matsuri.nb4a.SingBoxOptions.OutboundTLSOptions
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -102,50 +100,6 @@ class SingBoxSharedOptionsTest {
             udpFragment = "false",
         )
         assertEquals(false, enabledUdp._hack_config_map["udp_fragment"])
-    }
-
-    @Test
-    fun configuredDialOptionsAreNotAppliedToMasterDnsVPN() {
-        val bean = MasterDnsVPNBean().apply {
-            initializeDefaultValues()
-            tcpFastOpen = true
-            tcpMultiPath = true
-            udpFragment = true
-        }
-        val nativeOutbound = Outbound_MasterDnsVPNOptions().apply { type = "masterdnsvpn" }
-
-        nativeOutbound.applyConfiguredDialOptions(
-            bean,
-            tcpFastOpen = true,
-            tcpMultiPath = true,
-            udpFragment = "false",
-        )
-
-        assertFalse(nativeOutbound._hack_config_map.containsKey("tcp_fast_open"))
-        assertFalse(nativeOutbound._hack_config_map.containsKey("tcp_multi_path"))
-        assertFalse(nativeOutbound._hack_config_map.containsKey("udp_fragment"))
-    }
-
-    @Test
-    fun configuredDialOptionsAreNotAppliedToCustomMasterDnsVPNOutbound() {
-        val bean = NaiveBean().apply {
-            initializeDefaultValues()
-            tcpFastOpen = true
-            tcpMultiPath = true
-            udpFragment = true
-        }
-        val customOutbound = Outbound().apply { type = "masterdnsvpn" }
-
-        customOutbound.applyConfiguredDialOptions(
-            bean,
-            tcpFastOpen = true,
-            tcpMultiPath = true,
-            udpFragment = "false",
-        )
-
-        assertFalse(customOutbound._hack_config_map.containsKey("tcp_fast_open"))
-        assertFalse(customOutbound._hack_config_map.containsKey("tcp_multi_path"))
-        assertFalse(customOutbound._hack_config_map.containsKey("udp_fragment"))
     }
 
     @Test

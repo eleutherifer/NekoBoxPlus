@@ -75,7 +75,7 @@ GO_VERSION="${GO_VERSION:-1.26.5}"
 BOOTSTRAP_GO_VERSION="${BOOTSTRAP_GO_VERSION:-1.26.5}"
 GO_PATCH_DIR="${GO_PATCH_DIR:-buildScript/lib/core/go-runtime-patches}"
 DOCKERFILE="${DOCKERFILE:-buildScript/lib/core/Dockerfile}"
-IMAGE_NAME="${PATCHED_GO_ANDROID_IMAGE:-neko-android-aar-go:${GO_VERSION}-runtime-patches-v2}"
+IMAGE_NAME="${PATCHED_GO_ANDROID_IMAGE:-neko-android-aar-go:${GO_VERSION}-runtime-patches-v1}"
 
 ANDROID_HOME_HOST="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
 ANDROID_NDK_HOME_HOST="${ANDROID_NDK_HOME:-${ANDROID_NDK_ROOT:-${NDK_HOME:-}}}"

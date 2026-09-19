@@ -19,9 +19,7 @@ import io.nekohasekai.sagernet.fmt.hysteria.buildSingBoxOutboundHysteriaBean
 import io.nekohasekai.sagernet.fmt.internal.ChainBean
 import io.nekohasekai.sagernet.fmt.internal.ProxySetBean
 import io.nekohasekai.sagernet.fmt.internal.buildSingBoxOutboundProxySetBean
-import io.nekohasekai.sagernet.fmt.internal.decodeEmbeddedProfiles
 import io.nekohasekai.sagernet.fmt.internal.filterInsecureProfiles
-import io.nekohasekai.sagernet.fmt.internal.hasEmbeddedProfiles
 import io.nekohasekai.sagernet.fmt.juicity.JuicityBean
 import io.nekohasekai.sagernet.fmt.juicity.buildSingBoxOutboundJuicityBean
 import io.nekohasekai.sagernet.fmt.masque.MasqueBean
@@ -56,7 +54,6 @@ import io.nekohasekai.sagernet.fmt.wireguard.AmneziaWGBean
 import io.nekohasekai.sagernet.fmt.wireguard.WireGuardBean
 import io.nekohasekai.sagernet.fmt.wireguard.buildSingBoxEndpointWireguardBean
 import io.nekohasekai.sagernet.fmt.wireguard.buildSingBoxEndpointAwgBean
-import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ktx.isIpAddress
 import io.nekohasekai.sagernet.ktx.mkPort
 import io.nekohasekai.sagernet.utils.AdblockRepository
@@ -83,7 +80,6 @@ import moe.matsuri.nb4a.utils.Util
 import moe.matsuri.nb4a.utils.listByLineOrComma
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.io.File
-import java.util.IdentityHashMap
 
 const val TAG_TUN = "tun-in"
 const val TAG_MIXED = "mixed-in"
@@ -151,22 +147,6 @@ internal fun Rule_DefaultOptions.applyRouteClashMode(rule: RuleEntity) {
     if (rule.clashMode.isNotBlank()) {
         clash_mode = rule.clashMode
     }
-}
-
-internal fun resolveActiveClashMode(cachedMode: String, rules: List<RuleEntity>): String {
-    if (cachedMode.isBlank() || cachedMode.equals("Rule", ignoreCase = true)) return "Rule"
-    return rules.firstOrNull { it.clashMode.equals(cachedMode, ignoreCase = true) }
-        ?.clashMode
-        ?.takeIf(String::isNotBlank)
-        ?: "Rule"
-}
-
-internal fun RuleEntity.appliesToClashMode(activeMode: String): Boolean {
-    return clashMode.isBlank() || clashMode.equals(activeMode, ignoreCase = true)
-}
-
-internal fun RuleEntity.contributesPackagesToTunFilter(activeMode: String): Boolean {
-    return packages.isNotEmpty() && outbound != -1L && appliesToClashMode(activeMode)
 }
 
 internal fun Rule_DefaultOptions.replaceBlockOutboundWithRejectAction() {
@@ -327,7 +307,7 @@ private fun SingBoxOption.setGeneratedOptionField(
     _hack_config_map[name] = value
 }
 
-internal fun SingBoxOption.optionType(): String? =
+private fun SingBoxOption.optionType(): String? =
     stringTypedOptionField("type") ?: _hack_config_map["type"] as? String ?: asMap()["type"] as? String
 
 private fun SingBoxOption.optionTag(): String? =
@@ -749,22 +729,6 @@ fun buildConfig(
         error("ByeDPI is not allowed as landing proxy")
     }
 
-    var nextEmbeddedProfileId = -1L
-    val embeddedProxySetMembers = IdentityHashMap<ProxyEntity, List<ProxyEntity>>()
-
-    fun ProxyEntity.resolveProxySetCandidates(bean: ProxySetBean): List<ProxyEntity> {
-        if (bean.hasEmbeddedProfiles()) {
-            return embeddedProxySetMembers.getOrPut(this) {
-                bean.decodeEmbeddedProfiles().onEach { it.id = nextEmbeddedProfileId-- }
-            }
-        }
-        return when (bean.type) {
-            ProxySetBean.TYPE_LIST -> SagerDatabase.proxyDao.getEntities(bean.proxies)
-            ProxySetBean.TYPE_GROUP -> SagerDatabase.proxyDao.getByGroup(bean.groupId)
-            else -> throw IllegalStateException("invalid proxy set type ${bean.type}")
-        }
-    }
-
     fun ProxyEntity.resolveChainInternal(): MutableList<ProxyEntity> {
         val bean = requireBean()
         if (bean is ChainBean) {
@@ -781,17 +745,16 @@ fun buildConfig(
             return beanList.asReversed()
         }
         if (bean is ProxySetBean) {
-            val beans = resolveProxySetCandidates(bean)
+            val beans =
+                when (bean.type) {
+                    ProxySetBean.TYPE_LIST -> SagerDatabase.proxyDao.getEntities(bean.proxies)
+                    ProxySetBean.TYPE_GROUP -> SagerDatabase.proxyDao.getByGroup(bean.groupId)
+                    else -> throw IllegalStateException("invalid proxy set type ${bean.type}")
+                }
             val beansMap = beans.associateBy { it.id }
             val beanList = ArrayList<ProxyEntity>()
             val regex = bean.groupFilterNotRegex.takeIf { it.isNotBlank() }?.toRegex()
-            val ids = if (bean.hasEmbeddedProfiles()) {
-                beans.map { it.id }
-            } else if (bean.type == ProxySetBean.TYPE_LIST) {
-                bean.proxies
-            } else {
-                beans.map { it.id }
-            }
+            val ids = if (bean.type == ProxySetBean.TYPE_LIST) bean.proxies else beans.map { it.id }
             val candidates = ids.mapNotNull { beansMap[it] }
                 .let { bean.filterInsecureProfiles(it, DataStore.globalAllowInsecure) }
             for (item in candidates) {
@@ -883,19 +846,6 @@ fun buildConfig(
         subscriptionRouting != null -> subscriptionRouting.rules()
         else -> SagerDatabase.rulesDao.enabledRules()
     }
-    val singBoxCachePath = subscriptionRouting?.let {
-        SubscriptionRoutingRepository.singBoxCacheFile(proxy.groupId).absolutePath
-    } ?: Param.LIBCORE_CACHE_FILE_PATH
-    val activeClashMode =
-        if (!forTest && !forExport) {
-            val cachedMode =
-                runCatching { Libcore.loadClashModeFromCache(singBoxCachePath) }
-                    .onFailure(Logs::w)
-                    .getOrDefault("")
-            resolveActiveClashMode(cachedMode, extraRules)
-        } else {
-            "Rule"
-        }
     val customDnsServers =
         if (forTest || subscriptionRouting != null) listOf() else CustomDnsServerStore.enabledServers()
     val customDnsServerTags = customDnsServers.map { it.tag }.toSet()
@@ -975,7 +925,9 @@ fun buildConfig(
                         cache_file =
                             CacheFile().apply {
                                 enabled = true
-                                path = singBoxCachePath
+                                path = subscriptionRouting?.let {
+                                    SubscriptionRoutingRepository.singBoxCacheFile(proxy.groupId).absolutePath
+                                } ?: Param.LIBCORE_CACHE_FILE_PATH
                                 // if (DataStore.enableClashAPI) {
                                 store_fakeip = true
                                 // }
@@ -1538,8 +1490,8 @@ fun buildConfig(
                             }
 
                         currentOutbound.applyGroupForceUTLS(bean, proxyEntity, applyGroupForceUTLS)
-                        currentOutbound.applyConfiguredDialOptions(
-                            bean,
+                        currentOutbound.applySharedDialOptions(bean)
+                        currentOutbound.applyGlobalDialOverrides(
                             DataStore.globalTcpFastOpen,
                             DataStore.globalTcpMultiPath,
                             DataStore.globalUdpFragment,
@@ -1993,9 +1945,9 @@ fun buildConfig(
                         }
                     }
 
-                    // List of packages from active per-rule routes where outbound is not Bypass.
+                    // List of all per-rule packages where outbound is not Bypass.
                     // This excludes those packages from TUN filter rules and enables user-defined rules for them.
-                    if (rule.contributesPackagesToTunFilter(activeClashMode)) {
+                    if (rule.packages.isNotEmpty() && rule.outbound != -1L) {
                         nonBypassPackages.addAll(rule.packages)
                     }
                 }
@@ -2531,7 +2483,9 @@ fun buildConfig(
                 subscriptionRouting?.let {
                     SubscriptionRoutingRepository.routingRulesCacheFile(proxy.groupId).absolutePath
                 },
-                singBoxCachePath,
+                subscriptionRouting?.let {
+                    SubscriptionRoutingRepository.singBoxCacheFile(proxy.groupId).absolutePath
+                } ?: Param.LIBCORE_CACHE_FILE_PATH,
             )
         }
 }

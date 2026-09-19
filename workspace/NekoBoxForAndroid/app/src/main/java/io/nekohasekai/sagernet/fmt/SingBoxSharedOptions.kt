@@ -1,6 +1,5 @@
 package io.nekohasekai.sagernet.fmt
 
-import io.nekohasekai.sagernet.fmt.masterdns.MasterDnsVPNBean
 import moe.matsuri.nb4a.SingBoxOptions.OutboundTLSOptions
 import moe.matsuri.nb4a.SingBoxOptions.OutboundECHOptions
 import moe.matsuri.nb4a.SingBoxOptions.SingBoxOption
@@ -60,18 +59,6 @@ fun SingBoxOption.applyGlobalDialOverrides(
         "true" -> _hack_config_map["udp_fragment"] = true
         "false" -> _hack_config_map["udp_fragment"] = false
     }
-}
-
-fun SingBoxOption.applyConfiguredDialOptions(
-    bean: AbstractBean,
-    tcpFastOpen: Boolean,
-    tcpMultiPath: Boolean,
-    udpFragment: String,
-) {
-    if (bean is MasterDnsVPNBean || optionType() == "masterdnsvpn") return
-
-    applySharedDialOptions(bean)
-    applyGlobalDialOverrides(tcpFastOpen, tcpMultiPath, udpFragment)
 }
 
 fun OutboundTLSOptions.applySharedTLSOptions(bean: AbstractBean) {

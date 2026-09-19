@@ -127,7 +127,7 @@
                             android:maxLines="1"
                             android:textColor="?attr/colorOnSurface"
                             android:textSize="14sp"
-                            tools:text="🇳🇱 116.116.116.116 NL, North Holland" />
+                            tools:text="🇳🇱 81.29.156.116 NL, North Holland" />
 
                         <androidx.appcompat.widget.AppCompatTextView
                             android:id="@+id/compact_status"

@@ -3837,11 +3837,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                 } else {
                     shareLayout.isGone = selectOrChain
                     editButton.isGone = select || batchSelection
-                    urlTestButton.isGone = !ProfileCardActionPolicy.shouldShowUrlTest(
-                        selectMode = select,
-                        notificationSwitchPopup = activity is SwitchActivity,
-                        batchSelection = batchSelection,
-                    )
+                    urlTestButton.isGone = select || batchSelection
                     removeButton.isGone = select || batchSelection
                     doubleColumnMenuButton.isGone = true
                 }

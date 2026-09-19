@@ -167,10 +167,6 @@ class BaseService {
             if (s != State.Connected) binder.resetConnectionTestState()
             binder.stateChanged(s, msg)
         }
-
-        fun restartService() {
-            service.stopRunner(restart = true)
-        }
     }
 
     class Binder(private var data: Data? = null) : ISagerNetService.Stub(), CoroutineScope,
@@ -399,14 +395,8 @@ class BaseService {
         }
 
         override fun setClashMode(mode: String) {
-            val data = data ?: return
-            val box = data.proxy?.box ?: return
-            val oldMode = Libcore.currentClashMode(box)
+            val box = data?.proxy?.box ?: return
             Libcore.setClashMode(box, mode)
-            val newMode = Libcore.currentClashMode(box)
-            if (!oldMode.equals(newMode, ignoreCase = true)) {
-                data.restartService()
-            }
         }
 
         override fun setLogLevel(level: String, enabled: Boolean) {
@@ -1114,16 +1104,12 @@ class BaseService {
                 upstreamInterfaceName = currentName
                 val decision = networkChangeRecoveryPolicy.onNetworkChanged(
                     interfaceName = currentName,
-                    networkHandle = network?.networkHandle,
                     isVpnNetwork = isVpnNetwork(network),
                     reconnectEnabled = DataStore.networkChangeReconnect,
                     resetEnabled = DataStore.networkChangeResetConnections,
                 )
                 if (decision.reconnect || decision.reset) {
-                    Logs.d(
-                        "Network changed: ${decision.oldInterfaceName}/${decision.oldNetworkHandle} -> " +
-                            "${decision.newInterfaceName}/${decision.newNetworkHandle}"
-                    )
+                    Logs.d("Network changed: ${decision.oldInterfaceName} -> ${decision.newInterfaceName}")
                     data.networkRecoveryJob?.cancel()
                     data.networkRecoveryJob = runOnDefaultDispatcher {
                         delay(NETWORK_RECOVERY_DEBOUNCE_MS)
@@ -1137,8 +1123,7 @@ class BaseService {
                 if (decision.ignoredReconnectForVpn) {
                     Logs.d(
                         "Ignore VPN network change for reconnect: " +
-                            "${decision.oldInterfaceName}/${decision.oldNetworkHandle} -> " +
-                            "${decision.newInterfaceName}/${decision.newNetworkHandle}"
+                            "${decision.oldInterfaceName} -> ${decision.newInterfaceName}"
                     )
                 }
             }

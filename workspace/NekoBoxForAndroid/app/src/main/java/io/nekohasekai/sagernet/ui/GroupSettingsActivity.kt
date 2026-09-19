@@ -685,7 +685,6 @@ class GroupSettingsActivity(
             }
             persistManualOrderFromPreviousMode(entity)
             entity.serialize()
-            entity.subscription?.providerAutoUpdateDefaultsApplied = true
             val subscription = entity.subscription
             if (entity.type == GroupType.SUBSCRIPTION && subscription?.routingEnabled == true) {
                 val routingResult = downloadRoutingForSave(entity, entity.id)
@@ -777,7 +776,7 @@ class GroupSettingsActivity(
     }
 
     override fun onSupportNavigateUp(): Boolean {
-        onBackPressed()
+        if (!super.onSupportNavigateUp()) finish()
         return true
     }
 

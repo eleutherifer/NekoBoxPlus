@@ -230,7 +230,7 @@ func TestV2RayXHTTPOptionsXmuxDefaults(t *testing.T) {
 	if options.Xmux.MaxConcurrency != (Xbadoption.Range{}) {
 		t.Fatalf("xmux max concurrency = %+v", options.Xmux.MaxConcurrency)
 	}
-	if options.Xmux.MaxConnections != (Xbadoption.Range{From: 3, To: 3}) {
+	if options.Xmux.MaxConnections != (Xbadoption.Range{From: 6, To: 6}) {
 		t.Fatalf("xmux max connections = %+v", options.Xmux.MaxConnections)
 	}
 	if options.Xmux.HMaxRequestTimes != (Xbadoption.Range{From: 600, To: 900}) {
@@ -246,7 +246,7 @@ func TestV2RayXHTTPXmuxZeroValueDefaults(t *testing.T) {
 	if options.GetNormalizedMaxConcurrency() != (Xbadoption.Range{}) {
 		t.Fatalf("xmux max concurrency = %+v", options.GetNormalizedMaxConcurrency())
 	}
-	if options.GetNormalizedMaxConnections() != (Xbadoption.Range{From: 3, To: 3}) {
+	if options.GetNormalizedMaxConnections() != (Xbadoption.Range{From: 6, To: 6}) {
 		t.Fatalf("xmux max connections = %+v", options.GetNormalizedMaxConnections())
 	}
 	if options.GetNormalizedHMaxRequestTimes() != (Xbadoption.Range{From: 600, To: 900}) {

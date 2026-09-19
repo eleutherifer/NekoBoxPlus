@@ -3,7 +3,6 @@ package io.nekohasekai.sagernet.group
 import android.annotation.SuppressLint
 import androidx.core.net.toUri
 import io.nekohasekai.sagernet.GroupOrder
-import io.nekohasekai.sagernet.GroupType
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.SpoofApp
 import io.nekohasekai.sagernet.SubscriptionFilterMode
@@ -28,8 +27,6 @@ import io.nekohasekai.sagernet.routing.SubscriptionRoutingExtractor
 import io.nekohasekai.sagernet.routing.SubscriptionRoutingRepository
 import io.nekohasekai.sagernet.utils.parseSubscriptionUserinfo
 import libcore.Libcore
-import libcore.HTTPRequest
-import libcore.HTTPResponse
 import moe.matsuri.nb4a.proxy.config.ConfigBean
 import moe.matsuri.nb4a.utils.Util
 import io.nekohasekai.sagernet.utils.ProfileCountryResolver
@@ -37,15 +34,6 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.json.JSONTokener
 import java.util.Locale
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.coroutineContext
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -77,31 +65,6 @@ internal fun profileUpdateIntervalMinutes(headerValue: String, isFirstUpdate: Bo
     val hours = headerValue.trim().toLongOrNull() ?: return null
     if (hours <= 0L || hours > Int.MAX_VALUE / 60L) return null
     return (hours * 60L).toInt()
-}
-
-internal fun mergeCurrentSubscriptionSettings(
-    current: SubscriptionBean,
-    updated: SubscriptionBean,
-) {
-    updated.link = current.link
-    updated.forceResolve = current.forceResolve
-    updated.deduplication = current.deduplication
-    updated.updateWhenConnectedOnly = current.updateWhenConnectedOnly
-    updated.customUserAgent = current.customUserAgent
-    updated.filterMode = current.filterMode
-    updated.filterRegex = current.filterRegex
-    updated.hwidEnabled = current.hwidEnabled
-    updated.spoofApp = current.spoofApp
-    updated.serverDnsResolver = current.serverDnsResolver
-    updated.bannerLayout = current.bannerLayout
-    updated.routingEnabled = current.routingEnabled
-    updated.routingUpdateInterval = current.routingUpdateInterval
-
-    if (current.providerAutoUpdateDefaultsApplied == true) {
-        updated.autoUpdate = current.autoUpdate
-        updated.autoUpdateDelay = current.autoUpdateDelay
-    }
-    updated.providerAutoUpdateDefaultsApplied = true
 }
 
 internal fun preserveMuxSettings(existing: AbstractBean, updated: AbstractBean) {
@@ -203,20 +166,6 @@ internal fun parseXraySubscriptionBodyHeaders(text: String): XraySubscriptionBod
 internal fun responseOrBodyHeader(responseHeader: String, bodyHeader: String?): String =
     responseHeader.ifBlank { bodyHeader.orEmpty() }
 
-private suspend fun HTTPRequest.executeCancellable(): HTTPResponse =
-    suspendCancellableCoroutine { continuation ->
-        continuation.invokeOnCancellation { cancel() }
-        CoroutineScope(continuation.context).launch(Dispatchers.IO) {
-            runCatching { execute() }
-                .onSuccess { response ->
-                    if (continuation.isActive) continuation.resume(response)
-                }
-                .onFailure { error ->
-                    if (continuation.isActive) continuation.resumeWithException(error)
-                }
-        }
-    }
-
 @Suppress("EXPERIMENTAL_API_USAGE")
 object RawUpdater : GroupUpdater() {
     private fun TailscaleBean.applyTailscaleOptions(options: Map<*, *>) {
@@ -273,7 +222,6 @@ object RawUpdater : GroupUpdater() {
         byUser: Boolean,
     ) {
         val link = subscription.link
-        val originalName = proxyGroup.name
         var proxies: List<AbstractBean>
         var autoUpdateEnabledFromHeader = false
         if (link.startsWith("content://")) {
@@ -322,7 +270,7 @@ object RawUpdater : GroupUpdater() {
                             for ((name, value) in fingerprint.headers) {
                                 setHeader(name, value)
                             }
-                        }.executeCancellable()
+                        }.execute()
 
                 if (Util.getStringBox(response.getHeader("x-hwid-not-supported")).lowercase() == "true") {
                     error(app.getString(R.string.hwid_not_supported))
@@ -395,13 +343,12 @@ object RawUpdater : GroupUpdater() {
                     )
                 profileUpdateIntervalMinutes(
                     updateIntervalHeader,
-                    isFirstUpdate = subscription.providerAutoUpdateDefaultsApplied != true,
+                    isFirstUpdate = subscription.lastUpdated == 0,
                 )?.let { intervalMinutes ->
                     subscription.autoUpdate = true
                     subscription.autoUpdateDelay = intervalMinutes
                     autoUpdateEnabledFromHeader = true
                 }
-                subscription.providerAutoUpdateDefaultsApplied = true
 
                 // 修改默认名字
                 if (proxyGroup.name?.startsWith("Subscription #") == true) {
@@ -424,41 +371,6 @@ object RawUpdater : GroupUpdater() {
             } finally {
                 client.close()
             }
-        }
-        subscription.providerAutoUpdateDefaultsApplied = true
-
-        coroutineContext.ensureActive()
-        val currentGroup = SagerDatabase.groupDao.getById(proxyGroup.id)
-            ?: throw CancellationException("Subscription group was deleted")
-        val currentSubscription = currentGroup.subscription
-            ?: throw CancellationException("Subscription group no longer exists")
-        if (currentGroup.type != GroupType.SUBSCRIPTION || currentSubscription.link != link) {
-            throw CancellationException("Subscription changed during update")
-        }
-        if (!byUser && currentSubscription.autoUpdate != true) {
-            throw CancellationException("Automatic subscription update was disabled")
-        }
-        mergeCurrentSubscriptionSettings(currentSubscription, subscription)
-        proxyGroup.apply {
-            userOrder = currentGroup.userOrder
-            ungrouped = currentGroup.ungrouped
-            name = if (currentGroup.name == originalName) name else currentGroup.name
-            type = currentGroup.type
-            order = currentGroup.order
-            isSelector = currentGroup.isSelector
-            frontProxy = currentGroup.frontProxy
-            landingProxy = currentGroup.landingProxy
-            forceUTLS = currentGroup.forceUTLS
-            enableMux = currentGroup.enableMux
-            muxType = currentGroup.muxType
-            muxMode = currentGroup.muxMode
-            muxConcurrency = currentGroup.muxConcurrency
-            muxMaxConnections = currentGroup.muxMaxConnections
-            muxMinStreams = currentGroup.muxMinStreams
-            muxPadding = currentGroup.muxPadding
-            muxBrutal = currentGroup.muxBrutal
-            muxBrutalUpMbps = currentGroup.muxBrutalUpMbps
-            muxBrutalDownMbps = currentGroup.muxBrutalDownMbps
         }
 
         val proxiesMap = LinkedHashMap<String, AbstractBean>()

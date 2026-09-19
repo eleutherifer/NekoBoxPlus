@@ -14,11 +14,10 @@ import (
 const netFlagUp = 1
 
 type platformDefaultInterface struct {
-	Name          string `json:"name"`
-	Index         int    `json:"index"`
-	NetworkHandle int64  `json:"network_handle"`
-	Expensive     bool   `json:"expensive"`
-	Constrained   bool   `json:"constrained"`
+	Name        string `json:"name"`
+	Index       int    `json:"index"`
+	Expensive   bool   `json:"expensive"`
+	Constrained bool   `json:"constrained"`
 }
 
 type platformNetworkInterface struct {
@@ -37,7 +36,6 @@ type interfaceMonitor struct {
 	access           sync.Mutex
 	callbacks        list.List[tun.DefaultInterfaceUpdateCallback]
 	defaultInterface *control.Interface
-	defaultState     platformDefaultInterface
 	myInterfaces     []string
 }
 
@@ -61,9 +59,8 @@ func (m *interfaceMonitor) Start() error {
 	currentPlatformNetworkState.access.Lock()
 	currentPlatformNetworkState.monitors[m] = struct{}{}
 	current := buildDefaultControlInterface(currentPlatformNetworkState.defaultInterface)
-	state := currentPlatformNetworkState.defaultInterface
 	currentPlatformNetworkState.access.Unlock()
-	m.setDefaultInterface(current, state, true)
+	m.setDefaultInterface(current, true)
 	return nil
 }
 
@@ -112,17 +109,16 @@ func (m *interfaceMonitor) MyInterfaces() []string {
 	return m.myInterfaces
 }
 
-func (m *interfaceMonitor) setDefaultInterface(current *control.Interface, state platformDefaultInterface, notify bool) {
+func (m *interfaceMonitor) setDefaultInterface(current *control.Interface, notify bool) {
 	m.access.Lock()
-	oldState := m.defaultState
+	old := m.defaultInterface
 	m.defaultInterface = current
-	m.defaultState = state
 	callbacks := m.callbacks.Array()
 	m.access.Unlock()
 	if !notify {
 		return
 	}
-	if oldState == state {
+	if sameControlInterface(old, current) {
 		return
 	}
 	for _, callback := range callbacks {
@@ -172,7 +168,7 @@ func UpdatePlatformNetworkState(defaultInterfaceJSON string, interfacesJSON stri
 		_ = platformNetworkManager.UpdateInterfaces()
 	}
 	for _, monitor := range monitors {
-		monitor.setDefaultInterface(current, state, true)
+		monitor.setDefaultInterface(current, true)
 	}
 }
 

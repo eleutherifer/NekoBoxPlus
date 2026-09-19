@@ -1,8 +1,5 @@
 package io.nekohasekai.sagernet.group
 
-import io.nekohasekai.sagernet.database.SubscriptionBean
-import io.nekohasekai.sagernet.fmt.KryoConverters
-import io.nekohasekai.sagernet.ktx.applyDefaultValues
 import io.nekohasekai.sagernet.utils.parseSubscriptionUserinfo
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -53,58 +50,6 @@ class RawUpdaterTest {
     @Test
     fun `ignores update interval after first update`() {
         assertNull(profileUpdateIntervalMinutes("12", isFirstUpdate = false))
-    }
-
-    @Test
-    fun `merge preserves user auto update settings after provider defaults were consumed`() {
-        val current = SubscriptionBean().applyDefaultValues().apply {
-            link = "https://new.example/sub"
-            autoUpdate = false
-            autoUpdateDelay = 180
-            providerAutoUpdateDefaultsApplied = true
-        }
-        val updated = SubscriptionBean().applyDefaultValues().apply {
-            link = "https://old.example/sub"
-            autoUpdate = true
-            autoUpdateDelay = 60
-        }
-
-        mergeCurrentSubscriptionSettings(current, updated)
-
-        assertEquals("https://new.example/sub", updated.link)
-        assertEquals(false, updated.autoUpdate)
-        assertEquals(180, updated.autoUpdateDelay)
-        assertEquals(true, updated.providerAutoUpdateDefaultsApplied)
-    }
-
-    @Test
-    fun `merge keeps first provider defaults when they were not consumed`() {
-        val current = SubscriptionBean().applyDefaultValues().apply {
-            autoUpdate = false
-            autoUpdateDelay = 1440
-            providerAutoUpdateDefaultsApplied = false
-        }
-        val updated = SubscriptionBean().applyDefaultValues().apply {
-            autoUpdate = true
-            autoUpdateDelay = 360
-        }
-
-        mergeCurrentSubscriptionSettings(current, updated)
-
-        assertEquals(true, updated.autoUpdate)
-        assertEquals(360, updated.autoUpdateDelay)
-        assertEquals(true, updated.providerAutoUpdateDefaultsApplied)
-    }
-
-    @Test
-    fun `subscription serialization preserves consumed provider defaults`() {
-        val subscription = SubscriptionBean().applyDefaultValues().apply {
-            providerAutoUpdateDefaultsApplied = true
-        }
-
-        val restored = KryoConverters.subscriptionDeserialize(KryoConverters.serialize(subscription))
-
-        assertEquals(true, restored.providerAutoUpdateDefaultsApplied)
     }
 
     @Test
