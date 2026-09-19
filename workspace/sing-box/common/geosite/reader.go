@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/binary"
 	"io"
-	"math"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -63,9 +62,10 @@ func (r *Reader) readMetadata() error {
 	if err != nil {
 		return err
 	}
+	keys := make([]string, entryLength)
 	domainIndex := make(map[string]int)
 	domainLength := make(map[string]int)
-	for range entryLength {
+	for i := 0; i < int(entryLength); i++ {
 		var (
 			code       string
 			codeIndex  uint64
@@ -75,6 +75,7 @@ func (r *Reader) readMetadata() error {
 		if err != nil {
 			return err
 		}
+		keys[i] = code
 		codeIndex, err = binary.ReadUvarint(reader)
 		if err != nil {
 			return err
@@ -82,9 +83,6 @@ func (r *Reader) readMetadata() error {
 		codeLength, err = binary.ReadUvarint(reader)
 		if err != nil {
 			return err
-		}
-		if codeIndex > math.MaxInt32 || codeLength > math.MaxInt32 {
-			return E.New("invalid metadata entry: ", code)
 		}
 		domainIndex[code] = int(codeIndex)
 		domainLength[code] = int(codeLength)
@@ -109,22 +107,17 @@ func (r *Reader) Read(code string) ([]Item, error) {
 		return nil, err
 	}
 	r.bufferedReader.Reset(r.reader)
-	length := r.domainLength[code]
-	var itemList []Item
-	for range length {
-		var (
-			typeByte byte
-			value    string
-		)
-		typeByte, err = r.bufferedReader.ReadByte()
+	itemList := make([]Item, r.domainLength[code])
+	for i := range itemList {
+		typeByte, err := r.bufferedReader.ReadByte()
 		if err != nil {
 			return nil, err
 		}
-		value, err = readString(r.bufferedReader)
+		itemList[i].Type = ItemType(typeByte)
+		itemList[i].Value, err = readString(r.bufferedReader)
 		if err != nil {
 			return nil, err
 		}
-		itemList = append(itemList, Item{Type: ItemType(typeByte), Value: value})
 	}
 	return itemList, nil
 }
@@ -151,14 +144,12 @@ func readString(reader io.ByteReader) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var result []byte
-	for range length {
-		var value byte
-		value, err = reader.ReadByte()
+	bytes := make([]byte, length)
+	for i := range bytes {
+		bytes[i], err = reader.ReadByte()
 		if err != nil {
 			return "", err
 		}
-		result = append(result, value)
 	}
-	return string(result), nil
+	return string(bytes), nil
 }

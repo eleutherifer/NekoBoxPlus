@@ -34,11 +34,10 @@ import (
 var _ adapter.NetworkManager = (*NetworkManager)(nil)
 
 type NetworkManager struct {
-	ctx                    context.Context
-	logger                 logger.ContextLogger
-	router                 adapter.Router
-	interfaceFinder        *control.DefaultInterfaceFinder
-	networkInterfaces      common.TypedValue[[]adapter.NetworkInterface]
+	logger            logger.ContextLogger
+	interfaceFinder   *control.DefaultInterfaceFinder
+	networkInterfaces common.TypedValue[[]adapter.NetworkInterface]
+
 	autoDetectInterface    bool
 	defaultOptions         adapter.NetworkOptions
 	autoRedirectOutputMark uint32
@@ -71,7 +70,6 @@ func NewNetworkManager(ctx context.Context, logger logger.ContextLogger, options
 		return nil, E.New("`default_mark` is only supported on linux")
 	}
 	nm := &NetworkManager{
-		ctx:                 ctx,
 		logger:              logger,
 		interfaceFinder:     control.NewDefaultInterfaceFinder(),
 		autoDetectInterface: options.AutoDetectInterface,
@@ -138,7 +136,6 @@ func (r *NetworkManager) Start(stage adapter.StartStage) error {
 	monitor := taskmonitor.New(r.logger, C.StartTimeout)
 	switch stage {
 	case adapter.StartStateInitialize:
-		r.router = service.FromContext[adapter.Router](r.ctx)
 		if r.networkMonitor != nil {
 			monitor.Start("initialize network monitor")
 			err := r.networkMonitor.Start()
@@ -484,8 +481,6 @@ func (r *NetworkManager) ResetNetwork() {
 			listener.InterfaceUpdated()
 		}
 	}
-
-	r.router.ResetNetwork()
 }
 
 func (r *NetworkManager) notifyInterfaceUpdate(defaultInterface *control.Interface, flags int) {

@@ -128,7 +128,13 @@ func (t *Transport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg,
 }
 
 func (t *Transport) Exchange0(ctx context.Context, message *mDNS.Msg, servers []M.Socksaddr) (*mDNS.Msg, error) {
-	return t.exchangeSearch(ctx, servers, message, dns.FqdnToDomain(message.Question[0].Name))
+	question := message.Question[0]
+	domain := dns.FqdnToDomain(question.Name)
+	if len(servers) == 1 || !(message.Question[0].Qtype == mDNS.TypeA || message.Question[0].Qtype == mDNS.TypeAAAA) {
+		return t.exchangeSingleRequest(ctx, servers, message, domain)
+	} else {
+		return t.exchangeParallel(ctx, servers, message, domain)
+	}
 }
 
 func (t *Transport) Fetch() []M.Socksaddr {

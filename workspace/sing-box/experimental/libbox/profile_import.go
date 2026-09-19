@@ -257,16 +257,14 @@ func readString(reader io.ByteReader) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var result []byte
-	for range length {
-		var value byte
-		value, err = reader.ReadByte()
+	buf := make([]byte, length)
+	for i := range buf {
+		buf[i], err = reader.ReadByte()
 		if err != nil {
 			return "", err
 		}
-		result = append(result, value)
 	}
-	return string(result), nil
+	return string(buf), nil
 }
 
 func writeString(buffer *bytes.Buffer, value string) {

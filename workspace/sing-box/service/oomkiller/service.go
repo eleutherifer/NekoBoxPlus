@@ -58,7 +58,7 @@ var (
 type Service struct {
 	boxService.Adapter
 	logger        log.ContextLogger
-	network       adapter.NetworkManager
+	router        adapter.Router
 	memoryLimit   uint64
 	hasTimerMode  bool
 	useAvailable  bool
@@ -70,7 +70,7 @@ func NewService(ctx context.Context, logger log.ContextLogger, tag string, optio
 	s := &Service{
 		Adapter: boxService.NewAdapter(boxConstant.TypeOOMKiller, tag),
 		logger:  logger,
-		network: service.FromContext[adapter.NetworkManager](ctx),
+		router:  service.FromContext[adapter.Router](ctx),
 	}
 
 	if options.MemoryLimit != nil {
@@ -95,7 +95,7 @@ func (s *Service) Start(stage adapter.StartStage) error {
 	}
 
 	if s.hasTimerMode {
-		s.adaptiveTimer = newAdaptiveTimer(s.logger, s.network, s.timerConfig)
+		s.adaptiveTimer = newAdaptiveTimer(s.logger, s.router, s.timerConfig)
 		s.adaptiveTimer.start(false)
 		if s.memoryLimit > 0 {
 			s.logger.Info("started memory monitor with limit: ", s.memoryLimit/(1024*1024), " MiB")
@@ -178,7 +178,7 @@ func goMemoryPressureCallback(status C.ulong) {
 		} else {
 			if isCritical {
 				s.logger.Error("memory pressure: ", level, ", usage: ", usage/(1024*1024), " MiB, resetting network")
-				s.network.ResetNetwork()
+				s.router.ResetNetwork()
 				freeOSMemory = true
 			} else if isWarning {
 				s.logger.Warn("memory pressure: ", level, ", usage: ", usage/(1024*1024), " MiB")

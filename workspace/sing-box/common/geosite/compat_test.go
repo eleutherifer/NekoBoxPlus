@@ -211,11 +211,7 @@ func TestGeositeWriteReadCompat(t *testing.T) {
 			for code, expectedItems := range tc.input {
 				items, err := reader.Read(code)
 				require.NoError(t, err)
-				if len(expectedItems) == 0 {
-					require.Empty(t, items, "items mismatch for code: %s", code)
-				} else {
-					require.Equal(t, expectedItems, items, "items mismatch for code: %s", code)
-				}
+				require.Equal(t, expectedItems, items, "items mismatch for code: %s", code)
 			}
 		})
 	}

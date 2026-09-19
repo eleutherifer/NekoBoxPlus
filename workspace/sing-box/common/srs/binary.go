@@ -77,14 +77,13 @@ func Read(reader io.Reader, recover bool) (ruleSetCompat option.PlainRuleSetComp
 		return
 	}
 	ruleSetCompat.Version = version
+	ruleSetCompat.Options.Rules = make([]option.HeadlessRule, length)
 	for i := range length {
-		var rule option.HeadlessRule
-		rule, err = readRule(bReader, recover, 0)
+		ruleSetCompat.Options.Rules[i], err = readRule(bReader, recover)
 		if err != nil {
 			err = E.Cause(err, "read rule[", i, "]")
 			return
 		}
-		ruleSetCompat.Options.Rules = append(ruleSetCompat.Options.Rules, rule)
 	}
 	return
 }
@@ -120,13 +119,7 @@ func Write(writer io.Writer, ruleSet option.PlainRuleSet, generateVersion uint8)
 	return compressWriter.Close()
 }
 
-const maxLogicalRuleDepth = 100
-
-func readRule(reader varbin.Reader, recover bool, depth int) (rule option.HeadlessRule, err error) {
-	if depth > maxLogicalRuleDepth {
-		err = E.New("logical rule nested too deep")
-		return
-	}
+func readRule(reader varbin.Reader, recover bool) (rule option.HeadlessRule, err error) {
 	var ruleType uint8
 	err = binary.Read(reader, binary.BigEndian, &ruleType)
 	if err != nil {
@@ -138,7 +131,7 @@ func readRule(reader varbin.Reader, recover bool, depth int) (rule option.Headle
 		rule.DefaultOptions, err = readDefaultRule(reader, recover)
 	case 1:
 		rule.Type = C.RuleTypeLogical
-		rule.LogicalOptions, err = readLogicalRule(reader, recover, depth)
+		rule.LogicalOptions, err = readLogicalRule(reader, recover)
 	default:
 		err = E.New("unknown rule type: ", ruleType)
 	}
@@ -167,7 +160,7 @@ func readDefaultRule(reader varbin.Reader, recover bool) (rule option.DefaultHea
 		switch itemType {
 		case ruleItemQueryType:
 			var rawQueryType []uint16
-			rawQueryType, err = varbin.ReadSlice[uint16](reader, binary.BigEndian)
+			rawQueryType, err = readRuleItemUint16(reader)
 			if err != nil {
 				return
 			}
@@ -207,11 +200,11 @@ func readDefaultRule(reader varbin.Reader, recover bool) (rule option.DefaultHea
 				rule.IPCIDR = common.Map(rule.IPSet.Prefixes(), netip.Prefix.String)
 			}
 		case ruleItemSourcePort:
-			rule.SourcePort, err = varbin.ReadSlice[uint16](reader, binary.BigEndian)
+			rule.SourcePort, err = readRuleItemUint16(reader)
 		case ruleItemSourcePortRange:
 			rule.SourcePortRange, err = readRuleItemString(reader)
 		case ruleItemPort:
-			rule.Port, err = varbin.ReadSlice[uint16](reader, binary.BigEndian)
+			rule.Port, err = readRuleItemUint16(reader)
 		case ruleItemPortRange:
 			rule.PortRange, err = readRuleItemString(reader)
 		case ruleItemProcessName:
@@ -237,7 +230,7 @@ func readDefaultRule(reader varbin.Reader, recover bool) (rule option.DefaultHea
 				rule.AdGuardDomain = matcher.Dump()
 			}
 		case ruleItemNetworkType:
-			rule.NetworkType, err = varbin.ReadSlice[option.InterfaceType](reader, binary.BigEndian)
+			rule.NetworkType, err = readRuleItemUint8[option.InterfaceType](reader)
 		case ruleItemNetworkIsExpensive:
 			rule.NetworkIsExpensive = true
 		case ruleItemNetworkIsConstrained:
@@ -249,7 +242,7 @@ func readDefaultRule(reader varbin.Reader, recover bool) (rule option.DefaultHea
 			if err != nil {
 				return
 			}
-			for range size {
+			for i := uint64(0); i < size; i++ {
 				var key uint8
 				err = binary.Read(reader, binary.BigEndian, &key)
 				if err != nil {
@@ -517,14 +510,18 @@ func readRuleItemString(reader varbin.Reader) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	var result []string
-	for range length {
-		var value []byte
-		value, err = varbin.ReadSlice[byte](reader, binary.BigEndian)
+	result := make([]string, length)
+	for i := range result {
+		strLen, err := binary.ReadUvarint(reader)
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, string(value))
+		buf := make([]byte, strLen)
+		_, err = io.ReadFull(reader, buf)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = string(buf)
 	}
 	return result, nil
 }
@@ -551,6 +548,19 @@ func writeRuleItemString(writer varbin.Writer, itemType uint8, value []string) e
 	return nil
 }
 
+func readRuleItemUint8[E ~uint8](reader varbin.Reader) ([]E, error) {
+	length, err := binary.ReadUvarint(reader)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]E, length)
+	_, err = io.ReadFull(reader, *(*[]byte)(unsafe.Pointer(&result)))
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
 func writeRuleItemUint8[E ~uint8](writer varbin.Writer, itemType uint8, value []E) error {
 	err := writer.WriteByte(itemType)
 	if err != nil {
@@ -562,6 +572,19 @@ func writeRuleItemUint8[E ~uint8](writer varbin.Writer, itemType uint8, value []
 	}
 	_, err = writer.Write(*(*[]byte)(unsafe.Pointer(&value)))
 	return err
+}
+
+func readRuleItemUint16(reader varbin.Reader) ([]uint16, error) {
+	length, err := binary.ReadUvarint(reader)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]uint16, length)
+	err = binary.Read(reader, binary.BigEndian, result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 func writeRuleItemUint16(writer varbin.Writer, itemType uint8, value []uint16) error {
@@ -602,7 +625,7 @@ func writeRuleItemCIDR(writer varbin.Writer, itemType uint8, value []string) err
 	return writeIPSet(writer, ipSet)
 }
 
-func readLogicalRule(reader varbin.Reader, recovery bool, depth int) (logicalRule option.LogicalHeadlessRule, err error) {
+func readLogicalRule(reader varbin.Reader, recovery bool) (logicalRule option.LogicalHeadlessRule, err error) {
 	mode, err := reader.ReadByte()
 	if err != nil {
 		return
@@ -620,14 +643,13 @@ func readLogicalRule(reader varbin.Reader, recovery bool, depth int) (logicalRul
 	if err != nil {
 		return
 	}
+	logicalRule.Rules = make([]option.HeadlessRule, length)
 	for i := range length {
-		var rule option.HeadlessRule
-		rule, err = readRule(reader, recovery, depth+1)
+		logicalRule.Rules[i], err = readRule(reader, recovery)
 		if err != nil {
 			err = E.Cause(err, "read logical rule [", i, "]")
 			return
 		}
-		logicalRule.Rules = append(logicalRule.Rules, rule)
 	}
 	err = binary.Read(reader, binary.BigEndian, &logicalRule.Invert)
 	if err != nil {

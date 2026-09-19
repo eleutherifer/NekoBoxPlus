@@ -36,36 +36,32 @@ func readIPSet(reader varbin.Reader) (*netipx.IPSet, error) {
 	if err != nil {
 		return nil, err
 	}
-	mySet := &myIPSet{}
-	for range length {
-		var from, to netip.Addr
-		from, err = readIPSetAddr(reader)
+	mySet := &myIPSet{
+		rr: make([]myIPRange, length),
+	}
+	for i := range mySet.rr {
+		fromLen, err := binary.ReadUvarint(reader)
 		if err != nil {
 			return nil, err
 		}
-		to, err = readIPSetAddr(reader)
+		fromBytes := make([]byte, fromLen)
+		_, err = io.ReadFull(reader, fromBytes)
 		if err != nil {
 			return nil, err
 		}
-		mySet.rr = append(mySet.rr, myIPRange{from: from, to: to})
+		toLen, err := binary.ReadUvarint(reader)
+		if err != nil {
+			return nil, err
+		}
+		toBytes := make([]byte, toLen)
+		_, err = io.ReadFull(reader, toBytes)
+		if err != nil {
+			return nil, err
+		}
+		mySet.rr[i].from = M.AddrFromIP(fromBytes)
+		mySet.rr[i].to = M.AddrFromIP(toBytes)
 	}
 	return (*netipx.IPSet)(unsafe.Pointer(mySet)), nil
-}
-
-func readIPSetAddr(reader varbin.Reader) (netip.Addr, error) {
-	addrLen, err := binary.ReadUvarint(reader)
-	if err != nil {
-		return netip.Addr{}, err
-	}
-	if addrLen != 4 && addrLen != 16 {
-		return netip.Addr{}, os.ErrInvalid
-	}
-	var addrBytes [16]byte
-	_, err = io.ReadFull(reader, addrBytes[:addrLen])
-	if err != nil {
-		return netip.Addr{}, err
-	}
-	return M.AddrFromIP(addrBytes[:addrLen]), nil
 }
 
 func writeIPSet(writer varbin.Writer, set *netipx.IPSet) error {

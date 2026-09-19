@@ -14,10 +14,10 @@ require (
 	github.com/oschwald/maxminddb-golang v1.13.1
 	github.com/sagernet/bbolt v0.0.0-20231014093535-ea5cb2fe9f0a
 	github.com/sagernet/quic-go v0.59.0-sing-box-mod.5
-	github.com/sagernet/sing v0.8.13
+	github.com/sagernet/sing v0.8.12
 	github.com/sagernet/sing-box v1.0.0 // replaced
 	github.com/sagernet/sing-snell v0.0.0-20260710094516-a4e97ee24beb // indirect
-	github.com/sagernet/sing-tun v0.8.12-0.20260810140523-7c73233bd0fb
+	github.com/sagernet/sing-tun v0.8.12-0.20260727151122-3a09076491df
 	github.com/ulikunitz/xz v0.5.15
 	github.com/xchacha20-poly1305/libping v0.10.1
 	golang.org/x/sys v0.47.0

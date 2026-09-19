@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/sagernet/sing-box/cmd/internal/build_shared"
-	"github.com/sagernet/sing-box/common/badversion"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing/common"
 
@@ -77,18 +76,9 @@ func findAndReplace(objectsMap map[string]any, projectContent string, bundleIDLi
 			continue
 		}
 		updated = true
-		projectContent = projectContent[:versionStart] + formatProjectVersion(newVersion) + projectContent[versionEnd:]
+		projectContent = projectContent[:versionStart] + "\"" + newVersion + "\"" + projectContent[versionEnd:]
 	}
 	return projectContent, updated
-}
-
-// Xcode serializes a version without quotes unless it contains a pre-release
-// part; always quoting makes Xcode rewrite the value on the next save.
-func formatProjectVersion(version string) string {
-	if badversion.Parse(version).PreReleaseIdentifier == "" {
-		return version
-	}
-	return "\"" + version + "\""
 }
 
 func findAndReplaceProjectVersion(objectsMap map[string]any, projectContent string, directoryList []string, newVersion string) (string, bool) {

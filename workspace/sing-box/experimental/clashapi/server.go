@@ -42,7 +42,6 @@ var _ adapter.ClashServer = (*Server)(nil)
 
 type Server struct {
 	ctx            context.Context
-	network        adapter.NetworkManager
 	router         adapter.Router
 	dnsRouter      adapter.DNSRouter
 	outbound       adapter.OutboundManager
@@ -68,7 +67,6 @@ func NewServer(ctx context.Context, logFactory log.ObservableFactory, options op
 	chiRouter := chi.NewRouter()
 	s := &Server{
 		ctx:       ctx,
-		network:   service.FromContext[adapter.NetworkManager](ctx),
 		router:    service.FromContext[adapter.Router](ctx),
 		dnsRouter: service.FromContext[adapter.DNSRouter](ctx),
 		outbound:  service.FromContext[adapter.OutboundManager](ctx),
@@ -123,7 +121,7 @@ func NewServer(ctx context.Context, logFactory log.ObservableFactory, options op
 		r.Mount("/configs", configRouter(s, logFactory))
 		r.Mount("/proxies", proxyRouter(s, s.router))
 		r.Mount("/rules", ruleRouter(s.router))
-		r.Mount("/connections", connectionRouter(s.ctx, s.network, trafficManager))
+		r.Mount("/connections", connectionRouter(s.ctx, s.router, trafficManager))
 		r.Mount("/providers/proxies", proxyProviderRouter())
 		r.Mount("/providers/rules", ruleProviderRouter())
 		r.Mount("/script", scriptRouter())
