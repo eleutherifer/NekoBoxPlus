@@ -2,7 +2,6 @@ package snell
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"os"
 	"testing"
@@ -45,53 +44,6 @@ func TestValidateSnellOutboundVersionOptions(t *testing.T) {
 		require.NoError(t, validateSnellOutboundVersionOptions(version, true))
 	}
 	require.NoError(t, validateSnellOutboundVersionOptions(3, false))
-}
-
-func TestSnellOutboundRequiresVersion(t *testing.T) {
-	created, err := NewOutbound(
-		t.Context(),
-		nil,
-		log.NewNOPFactory().NewLogger("snell"),
-		"snell-out",
-		option.SnellOutboundOptions{
-			AbstractSnellOutboundOptions: option.AbstractSnellOutboundOptions{
-				ServerOptions: option.ServerOptions{Server: "127.0.0.1", ServerPort: 1080},
-				PSK:           "password",
-			},
-		},
-	)
-	require.Nil(t, created)
-	require.EqualError(t, err, "snell: missing version")
-}
-
-func TestV6QUICProxyModeConfiguration(t *testing.T) {
-	for _, enabled := range []bool{false, true} {
-		t.Run(fmt.Sprint("enabled-", enabled), func(t *testing.T) {
-			created, err := NewOutbound(
-				t.Context(),
-				nil,
-				log.NewNOPFactory().NewLogger("snell"),
-				"snell-out",
-				option.SnellOutboundOptions{
-					Version: 6,
-					AbstractSnellOutboundOptions: option.AbstractSnellOutboundOptions{
-						ServerOptions: option.ServerOptions{Server: "127.0.0.1", ServerPort: 1080},
-						PSK:           "password1234",
-					},
-					V6Options: option.SnellV6OutboundOptions{QUICProxyMode: enabled},
-				},
-			)
-			require.NoError(t, err)
-			outbound := created.(*Outbound)
-			require.Equal(t, enabled, outbound.quicProxyMode)
-			if enabled {
-				require.NotNil(t, outbound.quicDestCache)
-			} else {
-				require.Nil(t, outbound.quicDestCache)
-			}
-			require.NoError(t, outbound.Close())
-		})
-	}
 }
 
 func TestValidateSnellOutboundObfs(t *testing.T) {

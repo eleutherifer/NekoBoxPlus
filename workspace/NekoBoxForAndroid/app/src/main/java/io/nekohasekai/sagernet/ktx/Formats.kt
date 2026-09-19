@@ -16,13 +16,12 @@ import io.nekohasekai.sagernet.fmt.hysteria.parseHysteria1
 import io.nekohasekai.sagernet.fmt.hysteria.parseHysteria2
 import io.nekohasekai.sagernet.fmt.mieru.parseMieru
 import io.nekohasekai.sagernet.fmt.naive.parseNaive
-import io.nekohasekai.sagernet.fmt.openvpn.parseOpenVPNConfig
 import io.nekohasekai.sagernet.fmt.parseUniversal
 import io.nekohasekai.sagernet.fmt.shadowsocks.parseShadowsocks
 import io.nekohasekai.sagernet.fmt.shadowsocksr.parseShadowsocksR
 import io.nekohasekai.sagernet.fmt.snell.parseSnell
-import io.nekohasekai.sagernet.fmt.ssh.parseSSH
 import io.nekohasekai.sagernet.fmt.socks.parseSOCKS
+import io.nekohasekai.sagernet.fmt.ssh.parseSSH
 import io.nekohasekai.sagernet.fmt.trojan.parseTrojan
 import io.nekohasekai.sagernet.fmt.trusttunnel.parseTrustTunnel
 import io.nekohasekai.sagernet.fmt.tuic.parseTuic
@@ -33,15 +32,11 @@ import moe.matsuri.nb4a.proxy.anytls.parseAnytls
 import moe.matsuri.nb4a.proxy.anytls.parseStormDns
 import moe.matsuri.nb4a.utils.JavaUtil.gson
 import moe.matsuri.nb4a.utils.Util
-import io.nekohasekai.sagernet.database.DataStore
-import io.nekohasekai.sagernet.group.GroupUpdater
-import libcore.Libcore
 import okhttp3.HttpUrl
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
-import java.net.URLDecoder
 import java.util.zip.InflaterOutputStream
 
 // JSON & Base64
@@ -127,27 +122,6 @@ class SubscriptionFoundException(val link: String) : RuntimeException()
 class AmneziaApiKeyUnsupportedException : RuntimeException("Amnezia API VPN keys are not supported")
 
 suspend fun parseProxies(text: String): List<AbstractBean> {
-    if (text.startsWith("openvpn://import-profile/", ignoreCase = true)) {
-        val nested = text.substringAfter("openvpn://import-profile/")
-        val decoded = if (nested.startsWith("https://", ignoreCase = true)) nested
-            else URLDecoder.decode(nested.replace("+", "%2B"), Charsets.UTF_8.name())
-        require(decoded.startsWith("https://", ignoreCase = true)) { "OpenVPN import profile URL must use HTTPS" }
-        val client = Libcore.newHttpClient().apply {
-            setTimeoutMillis(GroupUpdater.SUBSCRIPTION_UPDATE_TIMEOUT_MILLIS)
-            tryH3Direct()
-        }
-        try {
-            val response = client.newRequest().apply {
-                setURL(decoded)
-                setUserAgent(USER_AGENT)
-            }.execute()
-            val content = Util.getStringBox(response.contentString)
-            require(content.toByteArray().size <= 4 * 1024 * 1024) { "OpenVPN profile is too large" }
-            return listOf(parseOpenVPNConfig(content))
-        } finally {
-            client.close()
-        }
-    }
     val linksByLine = text.split('\n').map { it.trim() }
     fun String.looksLikeLink(): Boolean {
         val schemeEnd = indexOf("://")

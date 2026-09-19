@@ -31,20 +31,6 @@ public class HysteriaBean extends AbstractBean {
     public Integer connectionReceiveWindow;
     public Boolean disableMtuDiscovery;
     public Integer hopInterval;
-    public String hopIntervalMax;
-    public String bbrProfile;
-    public Boolean brutalDebug;
-    public String obfsType;
-    public Integer geckoMinPacketSize;
-    public Integer geckoMaxPacketSize;
-    public String realmServerUrl;
-    public String realmToken;
-    public String realmId;
-    public String realmStunServers;
-    public Integer realmIpVersion;
-    public Boolean realmPortMapping;
-    public String realmPortMappingTimeout;
-    public String realmPortMappingLifetime;
 
     // HY1
 
@@ -92,25 +78,11 @@ public class HysteriaBean extends AbstractBean {
         if (disableMtuDiscovery == null) disableMtuDiscovery = false;
         if (hopInterval == null) hopInterval = 10;
         if (serverPorts == null) serverPorts = "443";
-        if (hopIntervalMax == null) hopIntervalMax = "";
-        if (bbrProfile == null) bbrProfile = "";
-        if (brutalDebug == null) brutalDebug = false;
-        if (obfsType == null) obfsType = "salamander";
-        if (geckoMinPacketSize == null) geckoMinPacketSize = 0;
-        if (geckoMaxPacketSize == null) geckoMaxPacketSize = 0;
-        if (realmServerUrl == null) realmServerUrl = "";
-        if (realmToken == null) realmToken = "";
-        if (realmId == null) realmId = "";
-        if (realmStunServers == null) realmStunServers = "";
-        if (realmIpVersion == null) realmIpVersion = 0;
-        if (realmPortMapping == null) realmPortMapping = false;
-        if (realmPortMappingTimeout == null) realmPortMappingTimeout = "";
-        if (realmPortMappingLifetime == null) realmPortMappingLifetime = "";
     }
 
     @Override
     public void serialize(ByteBufferOutput output) {
-        output.writeInt(8);
+        output.writeInt(7);
         super.serialize(output);
 
         output.writeInt(protocolVersion);
@@ -132,20 +104,6 @@ public class HysteriaBean extends AbstractBean {
         output.writeBoolean(disableMtuDiscovery);
         output.writeInt(hopInterval);
         output.writeString(serverPorts);
-        output.writeString(hopIntervalMax);
-        output.writeString(bbrProfile);
-        output.writeBoolean(brutalDebug);
-        output.writeString(obfsType);
-        output.writeInt(geckoMinPacketSize);
-        output.writeInt(geckoMaxPacketSize);
-        output.writeString(realmServerUrl);
-        output.writeString(realmToken);
-        output.writeString(realmId);
-        output.writeString(realmStunServers);
-        output.writeInt(realmIpVersion);
-        output.writeBoolean(realmPortMapping);
-        output.writeString(realmPortMappingTimeout);
-        output.writeString(realmPortMappingLifetime);
     }
 
     @Override
@@ -189,22 +147,6 @@ public class HysteriaBean extends AbstractBean {
             } else {
                 serverPorts = serverPort.toString();
             }
-        }
-        if (version >= 8) {
-            hopIntervalMax = input.readString();
-            bbrProfile = input.readString();
-            brutalDebug = input.readBoolean();
-            obfsType = input.readString();
-            geckoMinPacketSize = input.readInt();
-            geckoMaxPacketSize = input.readInt();
-            realmServerUrl = input.readString();
-            realmToken = input.readString();
-            realmId = input.readString();
-            realmStunServers = input.readString();
-            realmIpVersion = input.readInt();
-            realmPortMapping = input.readBoolean();
-            realmPortMappingTimeout = input.readString();
-            realmPortMappingLifetime = input.readString();
         }
     }
 

@@ -3,7 +3,6 @@ package interrupt
 import (
 	"net"
 
-	"github.com/sagernet/sing/common/bufio"
 	"github.com/sagernet/sing/common/x/list"
 )
 
@@ -72,5 +71,5 @@ func (c *PacketConn) WriterReplaceable() bool {
 }
 
 func (c *PacketConn) Upstream() any {
-	return bufio.NewPacketConn(c.PacketConn)
+	return c.PacketConn
 }

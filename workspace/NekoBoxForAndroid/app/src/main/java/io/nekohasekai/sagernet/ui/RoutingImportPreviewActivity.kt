@@ -1,17 +1,26 @@
 package io.nekohasekai.sagernet.ui
 
+import android.graphics.Typeface
 import android.os.Bundle
-import androidx.activity.compose.setContent
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
+import android.text.style.StyleSpan
+import android.view.View
+import android.widget.TextView
 import androidx.annotation.ArrayRes
 import androidx.annotation.StringRes
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.core.view.ViewCompat
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.color.MaterialColors
+import com.google.android.material.checkbox.MaterialCheckBox
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.SagerNet
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.RuleType
+import io.nekohasekai.sagernet.databinding.LayoutRoutingImportPreviewBinding
+import io.nekohasekai.sagernet.databinding.LayoutProgressBinding
 import io.nekohasekai.sagernet.ktx.readableMessage
 import io.nekohasekai.sagernet.routing.RoutingImportCandidate
 import io.nekohasekai.sagernet.routing.RoutingImportManager
@@ -24,12 +33,8 @@ import io.nekohasekai.sagernet.routing.RoutingRuleKind
 import io.nekohasekai.sagernet.routing.RoutingSettingKind
 import io.nekohasekai.sagernet.routing.StableRoutingOutbound
 import io.nekohasekai.sagernet.routing.StableRoutingRule
-import io.nekohasekai.sagernet.ui.compose.NekoComposeTheme
-import io.nekohasekai.sagernet.ui.compose.RoutingImportPreviewData
-import io.nekohasekai.sagernet.ui.compose.RoutingImportPreviewScreen
-import io.nekohasekai.sagernet.ui.compose.RoutingImportPreviewSetting
-import io.nekohasekai.sagernet.ui.compose.RoutingImportPreviewRule
 import io.nekohasekai.sagernet.utils.PackageCache
+import io.nekohasekai.sagernet.widget.ListListener
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -39,53 +44,40 @@ class RoutingImportPreviewActivity : ThemedActivity() {
         const val EXTRA_PAYLOAD_TOKEN = "routing_payload_token"
     }
 
+    private lateinit var binding: LayoutRoutingImportPreviewBinding
     private lateinit var token: String
     private lateinit var candidate: RoutingImportCandidate
-    private var previewData by mutableStateOf<RoutingImportPreviewData?>(null)
-    private var selectedSettings by mutableStateOf<Set<RoutingSettingKind>>(emptySet())
-    private var selectedRules by mutableStateOf<Set<Int>>(emptySet())
-    private var importing by mutableStateOf(false)
-    private var downloadingAssets by mutableStateOf(false)
-    private var showOverwriteConfirmation by mutableStateOf(false)
-    private var fatalErrorMessage by mutableStateOf<String?>(null)
-    private var importErrorMessage by mutableStateOf<String?>(null)
-    private var showReconnectConfirmation by mutableStateOf(false)
+    private val settingChecks = linkedMapOf<RoutingSettingKind, MaterialCheckBox>()
+    private val ruleChecks = linkedMapOf<Int, MaterialCheckBox>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        token = intent.getStringExtra(EXTRA_PAYLOAD_TOKEN).orEmpty()
-        setContent {
-            NekoComposeTheme {
-                RoutingImportPreviewScreen(
-                    data = previewData,
-                    selectedSettings = selectedSettings,
-                    selectedRules = selectedRules,
-                    importing = importing,
-                    downloadingAssets = downloadingAssets,
-                    showOverwriteConfirmation = showOverwriteConfirmation,
-                    fatalErrorMessage = fatalErrorMessage,
-                    importErrorMessage = importErrorMessage,
-                    showReconnectConfirmation = showReconnectConfirmation,
-                    onClose = ::finish,
-                    onSettingChecked = ::setSettingChecked,
-                    onRuleChecked = ::setRuleChecked,
-                    onImport = { showOverwriteConfirmation = true },
-                    onDismissConfirmation = { showOverwriteConfirmation = false },
-                    onConfirmImport = {
-                        showOverwriteConfirmation = false
-                        performImport()
-                    },
-                    onDismissFatalError = ::finish,
-                    onDismissImportError = { importErrorMessage = null },
-                    onReconnect = { reconnect ->
-                        showReconnectConfirmation = false
-                        if (reconnect) SagerNet.reloadService()
-                        finish()
-                    },
-                )
-            }
+        binding = LayoutRoutingImportPreviewBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        setSupportActionBar(findViewById(R.id.toolbar))
+        supportActionBar?.apply {
+            setTitle(R.string.routing_import_preview)
+            setDisplayHomeAsUpEnabled(true)
         }
-        loadCandidate()
+        ViewCompat.setOnApplyWindowInsetsListener(binding.previewActions, ListListener)
+
+        token = intent.getStringExtra(EXTRA_PAYLOAD_TOKEN).orEmpty()
+        candidate = RoutingPreviewPayloadStore.get(this, token) ?: run {
+            MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.error_title)
+                .setMessage(R.string.routing_import_payload_missing)
+                .setPositiveButton(android.R.string.ok) { _, _ -> finish() }
+                .show()
+            return
+        }
+        renderCandidate()
+        binding.cancel.setOnClickListener { finish() }
+        binding.importRouting.setOnClickListener { confirmImport() }
+    }
+
+    override fun onSupportNavigateUp(): Boolean {
+        finish()
+        return true
     }
 
     override fun onDestroy() {
@@ -93,34 +85,54 @@ class RoutingImportPreviewActivity : ThemedActivity() {
         super.onDestroy()
     }
 
-    private fun loadCandidate() {
-        lifecycleScope.launch {
-            val loadedCandidate = withContext(Dispatchers.IO) {
-                RoutingPreviewPayloadStore.get(this@RoutingImportPreviewActivity, token)
-            }
-            if (loadedCandidate == null) {
-                fatalErrorMessage = getString(R.string.routing_import_payload_missing)
-                return@launch
-            }
-            candidate = loadedCandidate
-            previewData = withContext(Dispatchers.Default) { candidate.previewData() }
-            selectedSettings = candidate.settings.mapTo(linkedSetOf()) { it.kind }
-            selectedRules = candidate.rules.indices.toSet()
+    private fun renderCandidate() {
+        if (candidate.isNekoBoxPlus && candidate.rules.any { it.fullRule?.packages?.isNotEmpty() == true }) {
+            PackageCache.awaitLoadSync()
+        }
+        addHeading(candidate.name.ifBlank { getString(R.string.routing_import_unnamed) })
+        addCaption(getString(R.string.routing_import_source, candidate.format.label()))
+        if (candidate.settings.isNotEmpty()) addSection(R.string.routing_import_settings)
+        candidate.settings.forEach { setting ->
+            addCheck(setting.title(), setting.summary(), candidate.isNekoBoxPlus)
+                .also { settingChecks[setting.kind] = it }
+        }
+        candidate.warnings.forEach { warning ->
+            addWarning(getString(when (warning) {
+                RoutingImportWarning.UNSUPPORTED_XRAY_VALUES -> R.string.routing_import_warning_xray_values
+            }))
+        }
+        if (candidate.rules.isNotEmpty()) addSection(R.string.routing_import_rules)
+        candidate.rules.forEachIndexed { index, rule ->
+            addCheck(rule.title(candidate.format), rule.summary(), candidate.isNekoBoxPlus)
+                .also { ruleChecks[index] = it }
         }
     }
 
-    private fun setSettingChecked(kind: RoutingSettingKind, checked: Boolean) {
-        selectedSettings = if (checked) selectedSettings + kind else selectedSettings - kind
-    }
-
-    private fun setRuleChecked(index: Int, checked: Boolean) {
-        selectedRules = if (checked) selectedRules + index else selectedRules - index
+    private fun confirmImport() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.confirm)
+            .setMessage(R.string.routing_import_overwrite_warning)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.action_import_routing) { _, _ -> performImport() }
+            .show()
     }
 
     private fun performImport() {
+        val selectedSettings = settingChecks.filterValues { it.isChecked }.keys
+        val selectedRules = ruleChecks.filterValues { it.isChecked }.keys
         val changedAssets = RoutingImportManager.pendingAssetChanges(candidate, selectedSettings)
-        importing = true
-        downloadingAssets = changedAssets.isNotEmpty()
+        val progressDialog = if (changedAssets.isNotEmpty()) {
+            val progress = LayoutProgressBinding.inflate(layoutInflater)
+            progress.content.setText(R.string.routing_import_downloading_resources)
+            MaterialAlertDialogBuilder(this)
+                .setView(progress.root)
+                .setCancelable(false)
+                .show()
+        } else {
+            null
+        }
+        binding.importRouting.isEnabled = false
+        binding.cancel.isEnabled = false
         lifecycleScope.launch {
             val result = runCatching {
                 withContext(Dispatchers.IO) {
@@ -134,46 +146,82 @@ class RoutingImportPreviewActivity : ThemedActivity() {
                     RoutingImportManager.refreshAssets(this@RoutingImportPreviewActivity, applied.changedAssetUrls)
                 }
             }
-            downloadingAssets = false
+            progressDialog?.dismiss()
             result.onSuccess {
                 RoutingPreviewPayloadStore.remove(this@RoutingImportPreviewActivity, token)
-                if (DataStore.serviceState.started) {
-                    showReconnectConfirmation = true
-                } else {
-                    finish()
-                }
+                if (DataStore.serviceState.started) showReconnectPrompt() else finish()
             }.onFailure {
-                importing = false
-                importErrorMessage = it.readableMessage
+                binding.importRouting.isEnabled = true
+                binding.cancel.isEnabled = true
+                MaterialAlertDialogBuilder(this@RoutingImportPreviewActivity)
+                    .setTitle(R.string.routing_import_applied_download_failed)
+                    .setMessage(it.readableMessage)
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show()
             }
         }
     }
 
-    private fun RoutingImportCandidate.previewData(): RoutingImportPreviewData {
-        if (isNekoBoxPlus && rules.any { it.fullRule?.packages?.isNotEmpty() == true }) {
-            PackageCache.awaitLoadSync()
+    private fun showReconnectPrompt() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.routing_import_complete)
+            .setMessage(R.string.routing_import_reconnect)
+            .setNegativeButton(R.string.no) { _, _ -> finish() }
+            .setPositiveButton(R.string.yes) { _, _ ->
+                SagerNet.reloadService()
+                finish()
+            }
+            .setOnCancelListener { finish() }
+            .show()
+    }
+
+    private fun addHeading(text: String) = addText(text, 22f, View.TEXT_ALIGNMENT_VIEW_START)
+    private fun addCaption(text: String) = addText(text, 14f, View.TEXT_ALIGNMENT_VIEW_START)
+    private fun addSection(title: Int) = addText(getString(title), 18f, View.TEXT_ALIGNMENT_VIEW_START).apply {
+        setPadding(0, resources.getDimensionPixelSize(R.dimen.mtrl_card_spacing), 0, 0)
+    }
+
+    private fun addText(text: String, size: Float, alignment: Int): TextView = TextView(this).apply {
+        this.text = text
+        textSize = size
+        textAlignment = alignment
+        binding.previewContent.addView(this)
+    }
+
+    private fun addWarning(text: String) = addText(text, 14f, View.TEXT_ALIGNMENT_VIEW_START).apply {
+        setTextColor(MaterialColors.getColor(this, R.attr.colorError))
+    }
+
+    private fun addCheck(
+        title: String,
+        summary: String,
+        mutedSummary: Boolean,
+    ): MaterialCheckBox = MaterialCheckBox(this).apply {
+        text = SpannableStringBuilder(title).apply {
+            setSpan(StyleSpan(Typeface.BOLD), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            if (summary.isNotBlank()) {
+                append('\n')
+                val summaryStart = length
+                append(summary)
+                if (mutedSummary) {
+                    setSpan(
+                        ForegroundColorSpan(
+                            MaterialColors.getColor(
+                                this@RoutingImportPreviewActivity,
+                                com.google.android.material.R.attr.colorOnSurfaceVariant,
+                                0,
+                            ),
+                        ),
+                        summaryStart,
+                        length,
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+                    )
+                }
+            }
         }
-        return RoutingImportPreviewData(
-            name = name.ifBlank { getString(R.string.routing_import_unnamed) },
-            source = getString(R.string.routing_import_source, format.label()),
-            settings = settings.map {
-                RoutingImportPreviewSetting(it.kind, it.title(), it.summary(), isNekoBoxPlus)
-            },
-            warnings = warnings.map { warning ->
-                getString(when (warning) {
-                    RoutingImportWarning.UNSUPPORTED_XRAY_VALUES ->
-                        R.string.routing_import_warning_xray_values
-                })
-            },
-            rules = rules.mapIndexed { index, rule ->
-                RoutingImportPreviewRule(
-                    index,
-                    rule.title(format),
-                    rule.summary(),
-                    isNekoBoxPlus,
-                )
-            },
-        )
+        isChecked = true
+        setPadding(0, 8, 0, 8)
+        binding.previewContent.addView(this)
     }
 
     private fun RoutingImportSetting.title(): String = getString(when (kind) {
@@ -271,6 +319,10 @@ class RoutingImportPreviewActivity : ThemedActivity() {
                 R.array.dns_rule_server_value,
                 resolvedDnsServer ?: dnsServer.displayValue(),
             ),
+        )
+        addValue(
+            R.string.domain_strategy,
+            arrayEntry(R.array.dns_network_entry, R.array.dns_network_select, dnsStrategy),
         )
         addValue(R.string.dns_disable_cache, yesNo(dnsDisableCache))
         addValue(R.string.dns_rewrite_ttl, dnsRewriteTtl.toString(), "0")

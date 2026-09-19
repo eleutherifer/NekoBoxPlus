@@ -102,7 +102,7 @@ Host-side `go test` for `libcore` is expected to fail at link time with Cronet/a
 
 Use the same image shape as `../sing-box/Makefile.plus`'s `test-adblock-cronet` target. A local copy exists at `libcore/Dockerfile.plus` for discoverability:
 ```
-docker build -f libcore/Dockerfile.plus -t nb4a-libcore-plus:go1.26.6 .
+docker build -f libcore/Dockerfile.plus -t nb4a-libcore-plus:go1.26.5 .
 ```
 
 Then run libcore tests from the workspace root mount, preparing the adblock bridge/resources in `../sing-box` before testing `libcore`:
@@ -115,7 +115,7 @@ docker run --rm --platform linux/amd64 \
   -v "$HOME/.cache/sing-box-adblock/cargo-git":/opt/cargo/git \
   -v "$HOME/.cache/sing-box-adblock/adblock-bridge-target":/workspace/sing-box/common/adblock/bridge/target \
   -w /workspace/NekoBoxForAndroid/libcore \
-  nb4a-libcore-plus:go1.26.6 \
+  nb4a-libcore-plus:go1.26.5 \
   bash -c 'set -eo pipefail
     export PATH=/opt/cargo/bin:/usr/local/go/bin:/go/bin:$PATH
     git config --global --add safe.directory /workspace/sing-box

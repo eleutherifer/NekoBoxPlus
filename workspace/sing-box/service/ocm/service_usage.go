@@ -1,9 +1,8 @@
 package ocm
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
+	"github.com/goccy/go-json"
 	"math"
 	"os"
 	"regexp"
@@ -13,7 +12,6 @@ import (
 
 	"github.com/sagernet/sing-box/log"
 	E "github.com/sagernet/sing/common/exceptions"
-	"github.com/sagernet/sing/service/filemanager"
 )
 
 type UsageStats struct {
@@ -58,7 +56,6 @@ type AggregatedUsage struct {
 	LastUpdated  time.Time         `json:"last_updated"`
 	Combinations []CostCombination `json:"combinations"`
 	mutex        sync.Mutex
-	ctx          context.Context
 	filePath     string
 	logger       log.ContextLogger
 	lastSaveTime time.Time
@@ -1075,7 +1072,7 @@ func (u *AggregatedUsage) Load() error {
 	u.LastUpdated = time.Time{}
 	u.Combinations = nil
 
-	data, err := filemanager.ReadFile(u.ctx, u.filePath)
+	data, err := os.ReadFile(u.filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -1109,12 +1106,12 @@ func (u *AggregatedUsage) Save() error {
 	}
 
 	tmpFile := u.filePath + ".tmp"
-	err = filemanager.WriteFile(u.ctx, tmpFile, data, 0o644)
+	err = os.WriteFile(tmpFile, data, 0o644)
 	if err != nil {
 		return err
 	}
-	defer filemanager.Remove(u.ctx, tmpFile)
-	err = filemanager.Rename(u.ctx, tmpFile, u.filePath)
+	defer os.Remove(tmpFile)
+	err = os.Rename(tmpFile, u.filePath)
 	if err == nil {
 		u.saveMutex.Lock()
 		u.lastSaveTime = time.Now()

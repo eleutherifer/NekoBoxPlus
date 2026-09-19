@@ -9,5 +9,4 @@ tasks.register<Delete>("clean") {
 
 plugins {
     id("com.google.devtools.ksp") version "2.3.9" apply false
-    id("org.jetbrains.kotlin.plugin.compose") version "2.3.20" apply false
 }

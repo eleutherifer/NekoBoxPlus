@@ -33,21 +33,14 @@ type Client struct {
 	host       []string
 	method     string
 	headers    http.Header
-
-	connTracker *ConnTracker
 }
 
 func NewClient(ctx context.Context, dialer N.Dialer, serverAddr M.Socksaddr, options option.V2RayHTTPOptions, tlsConfig tls.Config) (adapter.V2RayClientTransport, error) {
 	var transport http.RoundTripper
-	connTracker := NewConnTracker()
 	if tlsConfig == nil {
 		transport = &http.Transport{
 			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-				conn, err := dialer.DialContext(ctx, network, M.ParseSocksaddr(addr))
-				if err != nil {
-					return nil, err
-				}
-				return connTracker.Track(conn), nil
+				return dialer.DialContext(ctx, network, M.ParseSocksaddr(addr))
 			},
 		}
 	} else {
@@ -59,11 +52,7 @@ func NewClient(ctx context.Context, dialer N.Dialer, serverAddr M.Socksaddr, opt
 			ReadIdleTimeout: time.Duration(options.IdleTimeout),
 			PingTimeout:     time.Duration(options.PingTimeout),
 			DialTLSContext: func(ctx context.Context, network, addr string, cfg *tls.STDConfig) (net.Conn, error) {
-				conn, err := tlsDialer.DialTLSContext(ctx, M.ParseSocksaddr(addr))
-				if err != nil {
-					return nil, err
-				}
-				return connTracker.Track(conn), nil
+				return tlsDialer.DialTLSContext(ctx, M.ParseSocksaddr(addr))
 			},
 		}
 	}
@@ -95,8 +84,6 @@ func NewClient(ctx context.Context, dialer N.Dialer, serverAddr M.Socksaddr, opt
 		headers:    options.Headers.Build(),
 		transport:  transport,
 		http2:      tlsConfig != nil,
-
-		connTracker: connTracker,
 	}, nil
 }
 
@@ -166,6 +153,6 @@ func (c *Client) dialHTTP2(ctx context.Context) (net.Conn, error) {
 }
 
 func (c *Client) Close() error {
-	c.transport = ResetTransport(c.transport, c.connTracker)
+	c.transport = ResetTransport(c.transport)
 	return nil
 }

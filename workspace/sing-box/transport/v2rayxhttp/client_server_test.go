@@ -41,10 +41,9 @@ type stubDialerClient struct {
 type stubXmuxConn struct{}
 
 type fakeTLSConfig struct {
-	serverName       string
-	nextProtos       []string
-	handshakeTimeout time.Duration
-	stdConfigErr     error
+	serverName   string
+	nextProtos   []string
+	stdConfigErr error
 }
 
 func (f *fakeTLSConfig) ServerName() string {
@@ -63,14 +62,6 @@ func (f *fakeTLSConfig) SetNextProtos(nextProto []string) {
 	f.nextProtos = nextProto
 }
 
-func (f *fakeTLSConfig) HandshakeTimeout() time.Duration {
-	return f.handshakeTimeout
-}
-
-func (f *fakeTLSConfig) SetHandshakeTimeout(timeout time.Duration) {
-	f.handshakeTimeout = timeout
-}
-
 func (f *fakeTLSConfig) STDConfig() (*boxTLS.STDConfig, error) {
 	return nil, f.stdConfigErr
 }
@@ -81,10 +72,9 @@ func (f *fakeTLSConfig) Client(net.Conn) (boxTLS.Conn, error) {
 
 func (f *fakeTLSConfig) Clone() boxTLS.Config {
 	return &fakeTLSConfig{
-		serverName:       f.serverName,
-		nextProtos:       slices.Clone(f.nextProtos),
-		handshakeTimeout: f.handshakeTimeout,
-		stdConfigErr:     f.stdConfigErr,
+		serverName:   f.serverName,
+		nextProtos:   slices.Clone(f.nextProtos),
+		stdConfigErr: f.stdConfigErr,
 	}
 }
 
@@ -489,7 +479,7 @@ func testClientProfile(name string, options *option.V2RayXHTTPOptions, dialerCli
 
 func TestClientDialContextFallsBackToLegacyProfile(t *testing.T) {
 	var output bytes.Buffer
-	factory := newBufferLogger(t, &output)
+	factory := newBufferLogger(t.Context(), &output)
 	primaryOptions := &option.V2RayXHTTPOptions{
 		V2RayXHTTPBaseOptions: option.V2RayXHTTPBaseOptions{
 			Path:               "/xhttp",
@@ -550,7 +540,7 @@ func TestClientDialContextFallsBackToLegacyProfile(t *testing.T) {
 
 func TestClientDialContextReturnsFailureWhenFallbackProbesFail(t *testing.T) {
 	var output bytes.Buffer
-	factory := newBufferLogger(t, &output)
+	factory := newBufferLogger(t.Context(), &output)
 	primaryErr := errors.New("primary failed")
 	fallbackErr := errors.New("fallback failed")
 	primaryOptions := &option.V2RayXHTTPOptions{
@@ -608,7 +598,7 @@ func TestClientDialContextReturnsFailureWhenFallbackProbesFail(t *testing.T) {
 
 func TestClientDialContextConcurrentFallbackProbesOnce(t *testing.T) {
 	var output synchronizedBuffer
-	factory := newBufferLogger(t, &output)
+	factory := newBufferLogger(t.Context(), &output)
 	primaryOptions := &option.V2RayXHTTPOptions{
 		V2RayXHTTPBaseOptions: option.V2RayXHTTPBaseOptions{
 			Path:               "/xhttp",
@@ -1072,10 +1062,9 @@ func newClientDialLoggingTestClient(logger logger.ContextLogger) *Client {
 	}
 }
 
-func newBufferLogger(t *testing.T, output io.Writer) log.ObservableFactory {
-	t.Helper()
+func newBufferLogger(ctx context.Context, output io.Writer) log.ObservableFactory {
 	factory := log.NewDefaultFactory(
-		t.Context(),
+		ctx,
 		log.Formatter{DisableColors: true, DisableTimestamp: true},
 		output,
 		"",
@@ -1083,10 +1072,6 @@ func newBufferLogger(t *testing.T, output io.Writer) log.ObservableFactory {
 		false,
 	)
 	factory.SetLevel(log.LevelDebug)
-	if err := factory.Start(); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = factory.Close() })
 	return factory
 }
 
@@ -1107,11 +1092,11 @@ func TestPrepareXHTTPTLSConfigPreservesSupportedHTTP3(t *testing.T) {
 	}
 }
 
-func TestPrepareXHTTPTLSConfigFallsBackFromHTTP3ForUnsupportedTLSEngine(t *testing.T) {
-	unsupportedTLSEngine := errors.New("standard TLS config is unsupported")
+func TestPrepareXHTTPTLSConfigFallsBackFromHTTP3ForUTLS(t *testing.T) {
+	unsupportedUTLS := errors.New("unsupported usage for uTLS")
 	original := &fakeTLSConfig{
 		nextProtos:   []string{http3.NextProtoH3, http2.NextProtoTLS, "http/1.1"},
-		stdConfigErr: unsupportedTLSEngine,
+		stdConfigErr: unsupportedUTLS,
 	}
 	prepared, adjustment, err := prepareXHTTPTLSConfig(original)
 	if err != nil {
@@ -1129,10 +1114,10 @@ func TestPrepareXHTTPTLSConfigFallsBackFromHTTP3ForUnsupportedTLSEngine(t *testi
 	}
 }
 
-func TestPrepareXHTTPTLSConfigRejectsHTTP3OnlyUnsupportedTLSEngine(t *testing.T) {
+func TestPrepareXHTTPTLSConfigRejectsHTTP3OnlyUTLS(t *testing.T) {
 	original := &fakeTLSConfig{
 		nextProtos:   []string{http3.NextProtoH3},
-		stdConfigErr: errors.New("standard TLS config is unsupported"),
+		stdConfigErr: errors.New("unsupported usage for uTLS"),
 	}
 	_, _, err := prepareXHTTPTLSConfig(original)
 	if err == nil || !strings.Contains(err.Error(), "no TCP ALPN fallback") {
@@ -1157,7 +1142,7 @@ func TestPrepareXHTTPTLSConfigDoesNotAdvertiseHTTP3OverTCP(t *testing.T) {
 
 func TestClientDialContextUsesConfiguredLogger(t *testing.T) {
 	var output bytes.Buffer
-	factory := newBufferLogger(t, &output)
+	factory := newBufferLogger(t.Context(), &output)
 	client := newClientDialLoggingTestClient(factory.Logger())
 
 	conn, err := client.DialContext(t.Context())
@@ -1175,7 +1160,7 @@ func TestClientDialContextUsesConfiguredLogger(t *testing.T) {
 
 func TestClientDialContextDoesNotUseStdLoggerFallback(t *testing.T) {
 	var output bytes.Buffer
-	factory := newBufferLogger(t, &output)
+	factory := newBufferLogger(t.Context(), &output)
 	oldLogger := log.StdLogger()
 	log.SetStdLogger(factory.Logger())
 	defer log.SetStdLogger(oldLogger)
@@ -1196,7 +1181,6 @@ func TestClientDialContextDoesNotUseStdLoggerFallback(t *testing.T) {
 
 func TestCreateHTTPClientInheritsDefaultHTTP2FrameSizeForPacketUp(t *testing.T) {
 	client := createHTTPClient(
-		t.Context(),
 		M.Socksaddr{Fqdn: "example.com", Port: 443},
 		nil,
 		&option.V2RayXHTTPBaseOptions{Mode: "packet-up"},
@@ -2667,7 +2651,6 @@ func TestCreateHTTPClientTracksRawConnBeforeTLSHandshake(t *testing.T) {
 	}}
 	tlsConfig := &recordingTLSConfig{fakeTLSConfig: fakeTLSConfig{nextProtos: []string{http2.NextProtoTLS}}}
 	client := createHTTPClient(
-		t.Context(),
 		M.Socksaddr{Fqdn: "example.com", Port: 443},
 		dialer,
 		&option.V2RayXHTTPBaseOptions{Mode: "packet-up"},
@@ -2709,7 +2692,6 @@ func TestCreateHTTPClientReleasesRawConnAfterTLSHandshakeFailure(t *testing.T) {
 		handshakeErr:  handshakeErr,
 	}
 	client := createHTTPClient(
-		t.Context(),
 		M.Socksaddr{Fqdn: "example.com", Port: 443},
 		dialer,
 		&option.V2RayXHTTPBaseOptions{Mode: "packet-up"},

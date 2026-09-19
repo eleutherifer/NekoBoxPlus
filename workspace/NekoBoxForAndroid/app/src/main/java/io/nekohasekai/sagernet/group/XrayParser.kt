@@ -300,7 +300,7 @@ internal object XrayParser {
             serverAddress = endpoint.requiredString("address")
             serverPort = endpoint.requiredPort()
             uuid = user.requiredString("id")
-            encryption = user.optString("flow").removeSuffix("-udp443")
+            encryption = user.optString("flow")
             vlessEncryption = user.optString("encryption").ifBlank { "none" }
             applyStreamSettings(this, outbound)
             applyCommonOptions(this, outbound)

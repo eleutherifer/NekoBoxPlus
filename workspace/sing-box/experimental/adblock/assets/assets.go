@@ -24,7 +24,6 @@ type ErrorContext struct {
 	URL                string
 	Timestamp          string
 	Generator          string
-	TLSExclusionURL    string
 }
 
 func init() {

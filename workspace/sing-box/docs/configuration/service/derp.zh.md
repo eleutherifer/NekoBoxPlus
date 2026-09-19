@@ -58,9 +58,9 @@ Derper 配置文件路径。
 
 ```json
 {
-  "url": "",
+  "url": "https://my-headscale.com/verify",
 
-  ... // HTTP 客户端字段
+  ... // 拨号字段
 }
 ```
 

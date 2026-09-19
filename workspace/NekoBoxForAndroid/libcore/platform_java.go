@@ -11,7 +11,6 @@ type NB4AInterface interface {
 	Selector_OnProxySelected(selectorTag string, tag string)
 	MasterDnsVPNResolverProgress(found int32, total int32, ready bool)
 	MasterDnsVPNStartupFailed(noWorkingDNS bool, message string)
-	EndpointAuthenticationRequired(protocol string, detail string)
 }
 
 type BoxPlatformInterface interface {
@@ -25,5 +24,4 @@ type BoxPlatformInterface interface {
 	DefaultInterface() string
 	NetworkInterfaces() string
 	SendNotification(identifier, typeName, title, body, openURL string) error
-	CancelNotification(identifier string, typeID int32) error
 }

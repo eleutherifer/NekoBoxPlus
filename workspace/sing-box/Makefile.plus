@@ -14,8 +14,7 @@ TEST_DOCKER_INTEGRATION_PACKAGES ?= .
 ADBLOCK_RUST_TOOLCHAIN ?= 1.97.0
 ADBLOCK_DOCKER_CACHE_DIR ?= $(HOME)/.cache/sing-box-adblock
 ADBLOCK_CRONET_DOCKERFILE ?= Dockerfile.adblock-cronet
-ADBLOCK_CRONET_GO_IMAGE ?= golang:1.27-bookworm
-ADBLOCK_CRONET_DOCKER_IMAGE ?= sing-box-adblock-cronet:go1.27
+ADBLOCK_CRONET_DOCKER_IMAGE ?= sing-box-adblock-cronet:go1.25
 ADBLOCK_RESOURCES_ASSETS_DIR ?= common/adblock/adblockrust/resources/files
 ADBLOCK_RESOURCES_DIR ?= ../adblock-resources
 ADBLOCK_CARGO_TARGET_DIR ?= $(CURDIR)/$(ADBLOCK_BRIDGE_DIR)/target
@@ -72,7 +71,7 @@ git config --global --add safe.directory /workspace/$(notdir $(CURDIR)); \
 git config --global --add safe.directory /workspace/adblock-rust; \
 git config --global --add safe.directory /workspace/adblock-resources; \
 git config --global --add safe.directory /workspace/uBlock; \
-BASE_LDFLAGS=$$(sed 's/,tlsunsafeekm=1//' release/LDFLAGS); \
+BASE_LDFLAGS=$$(cat release/LDFLAGS); \
 $(MAKE) -f Makefile.plus adblock-rust-build adblock-resources-generate \
 	ADBLOCK_RUST_REPO="$(ADBLOCK_RUST_REPO)" \
 	ADBLOCK_RUST_COMMIT="$(ADBLOCK_RUST_COMMIT)" \
@@ -246,7 +245,6 @@ docker-build-adblock-cronet:
 	DOCKER_BUILDKIT=1 docker build \
 		--platform linux/amd64 \
 		-f "$(ADBLOCK_CRONET_DOCKERFILE)" \
-		--build-arg GO_IMAGE="$(ADBLOCK_CRONET_GO_IMAGE)" \
 		--build-arg ADBLOCK_RUST_TOOLCHAIN="$(ADBLOCK_RUST_TOOLCHAIN)" \
 		-t "$(ADBLOCK_CRONET_DOCKER_IMAGE)" \
 		.
@@ -254,7 +252,7 @@ docker-build-adblock-cronet:
 build-adblock-cronet: docker-build-adblock-cronet
 	$(ADBLOCK_CRONET_DOCKER_RUN) bash -c '\
 	$(ADBLOCK_CRONET_DOCKER_SCRIPT_PREFIX) \
-	VERSION=$$(CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go run ./cmd/internal/read_tag_plus); \
+	VERSION=$$(CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go run ./cmd/internal/read_tag); \
 	go build $(BUILD_MOD) -v -trimpath \
 		-ldflags "-X '\''github.com/sagernet/sing-box/constant.Version=$$VERSION'\'' $$BASE_LDFLAGS -linkmode=external -extldflags \"-fuse-ld=lld -lm -no-pie\" -s -w -buildid=" \
 		-tags "$$TAGS" \
@@ -278,23 +276,14 @@ test-adblock-cronet: docker-build-adblock-cronet
 	go test -count=1 -tags "$$TAGS" -ldflags "$$BASE_LDFLAGS -linkmode=external -extldflags \"-fuse-ld=lld -lm -no-pie\"" ./common/adblock/adblockrust/... ./experimental/adblock/...; \
 	'
 
-test-docker: ADBLOCK_CRONET_DOCKER_EXTRA_ARGS = --privileged --network host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp -v "$(abspath $(CURDIR)/..):$(abspath $(CURDIR)/..)"
+test-docker: ADBLOCK_CRONET_DOCKER_EXTRA_ARGS = --network host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp -v "$(abspath $(CURDIR)/..):$(abspath $(CURDIR)/..)"
 test-docker: docker-build-adblock-cronet
 	$(ADBLOCK_CRONET_DOCKER_RUN) bash -c '\
 	$(ADBLOCK_CRONET_DOCKER_SCRIPT_PREFIX) \
 	export TAGS="$(TEST_DOCKER_TAGS)"; \
 	TEST_LDFLAGS="$$BASE_LDFLAGS -linkmode=external -extldflags \"-fuse-ld=lld -lm -no-pie\""; \
 	go test $(TEST_DOCKER_GO_TEST_ARGS) -tags "$$TAGS" -ldflags "$$TEST_LDFLAGS" $(TEST_DOCKER_ROOT_PACKAGES); \
-	TEST_MODULE_DIR=$$(mktemp -d); \
-	trap "rm -rf \"$$TEST_MODULE_DIR\"" EXIT; \
-	cp -R test/. "$$TEST_MODULE_DIR"; \
-	cd "$$TEST_MODULE_DIR"; \
-	go mod edit \
-		-replace github.com/sagernet/sing-box=/workspace/$(notdir $(CURDIR)) \
-		-replace github.com/sagernet/sing-vmess=/workspace/sing-vmess \
-		-replace github.com/amnezia-vpn/amneziawg-go/v3=/workspace/amneziawg-go \
-		-replace github.com/metacubex/utls=/workspace/utls; \
-	go mod tidy; \
+	cd "$(abspath $(CURDIR))/test"; \
 	go test $(TEST_DOCKER_GO_TEST_ARGS) $(TEST_DOCKER_INTEGRATION_ARGS) -tags "$(TEST_DOCKER_INTEGRATION_TAGS)" -ldflags "$$TEST_LDFLAGS" $(TEST_DOCKER_INTEGRATION_PACKAGES); \
 	'
 

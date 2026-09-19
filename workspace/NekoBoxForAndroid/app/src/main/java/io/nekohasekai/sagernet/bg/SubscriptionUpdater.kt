@@ -11,7 +11,7 @@ import androidx.work.multiprocess.RemoteWorkManager
 import io.nekohasekai.sagernet.BootReceiver
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.database.DataStore
-import io.nekohasekai.sagernet.database.AppData
+import io.nekohasekai.sagernet.database.SagerDatabase
 import io.nekohasekai.sagernet.group.GroupUpdater
 import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ktx.app
@@ -25,7 +25,7 @@ object SubscriptionUpdater {
     private const val WORK_NAME = "SubscriptionUpdater"
 
     suspend fun reconfigureUpdater() {
-        val subscriptions = AppData.groups.subscriptions()
+        val subscriptions = SagerDatabase.groupDao.subscriptions()
             .filter {
                 val subscription = it.subscription!!
                 subscription.autoUpdate ||
@@ -83,7 +83,7 @@ object SubscriptionUpdater {
 
     suspend fun syncBootReceiverEnabled() {
         syncBootReceiverEnabled(
-            AppData.groups.subscriptions()
+            SagerDatabase.groupDao.subscriptions()
                 .any {
                     val subscription = it.subscription!!
                     subscription.autoUpdate ||
@@ -114,7 +114,7 @@ object SubscriptionUpdater {
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
 
         override suspend fun doWork(): Result {
-            val subscriptions = AppData.groups.subscriptions()
+            val subscriptions = SagerDatabase.groupDao.subscriptions()
 
             if (subscriptions.isNotEmpty()) for (profile in subscriptions) {
                 val subscription = profile.subscription!!
@@ -144,7 +144,7 @@ object SubscriptionUpdater {
                 if (routingDue) {
                     runCatching {
                         if (SubscriptionRoutingRepository.refreshAutoRouting(profile)) {
-                            AppData.groups.updateGroup(profile)
+                            SagerDatabase.groupDao.updateGroup(profile)
                         }
                     }.onFailure(Logs::w)
                 }

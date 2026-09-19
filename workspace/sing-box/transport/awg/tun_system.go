@@ -34,9 +34,7 @@ func newSystemTun(ctx context.Context, address []netip.Prefix, allowedIps []neti
 	events := make(chan awgTun.Event)
 
 	dial, err := dialer.NewDefault(ctx, option.DialerOptions{
-		AbstractDialerOptions: option.AbstractDialerOptions{
-			BindInterface: name,
-		},
+		BindInterface: name,
 	})
 	if err != nil {
 		return nil, exceptions.Cause(err, "get in-tunnel dialer")

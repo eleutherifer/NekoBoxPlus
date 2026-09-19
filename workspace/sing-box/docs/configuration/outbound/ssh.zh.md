@@ -1,9 +1,3 @@
-!!! quote "sing-box 1.14.0 中的更改"
-
-    :material-plus: [cipher](#cipher)  
-    :material-plus: [mac](#mac)  
-    :material-plus: [kex_algorithm](#kex_algorithm)
-
 ### 结构
 
 ```json
@@ -23,9 +17,6 @@
   ],
   "host_key_algorithms": [],
   "client_version": "SSH-2.0-OpenSSH_7.4p1",
-  "cipher": [],
-  "mac": [],
-  "kex_algorithm": [],
 
   ... // 拨号字段
 }
@@ -74,24 +65,6 @@ SSH 用户, 默认使用 root。
 #### client_version
 
 客户端版本，默认使用随机值。
-
-#### cipher
-
-!!! question "自 sing-box 1.14.0 起"
-
-允许的加密算法。留空使用默认值。
-
-#### mac
-
-!!! question "自 sing-box 1.14.0 起"
-
-允许的 MAC 算法。留空使用默认值。
-
-#### kex_algorithm
-
-!!! question "自 sing-box 1.14.0 起"
-
-允许的密钥交换算法。留空使用默认值。
 
 ### 拨号字段
 

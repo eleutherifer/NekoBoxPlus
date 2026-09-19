@@ -1,13 +1,24 @@
 package libcore
 
 import (
+	"crypto/x509"
 	"os"
 	"path/filepath"
-	"sync"
+	_ "unsafe" // for go:linkname
 
+	_ "github.com/sagernet/sing-box/common/certificate"
 	C "github.com/sagernet/sing-box/constant"
-	"github.com/sagernet/sing-box/option"
+	"github.com/sagernet/sing-box/log"
 )
+
+//go:linkname systemRoots crypto/x509.systemRoots
+var systemRoots *x509.CertPool
+
+//go:linkname newChromeIncluded github.com/sagernet/sing-box/common/certificate.newChromeIncluded
+func newChromeIncluded() *x509.CertPool
+
+//go:linkname newMozillaIncluded github.com/sagernet/sing-box/common/certificate.newMozillaIncluded
+func newMozillaIncluded() *x509.CertPool
 
 const (
 	CertGoOrigin int32 = iota
@@ -24,47 +35,67 @@ type StringIterator interface {
 	Length() int32
 }
 
-var (
-	certificateOptionsAccess sync.RWMutex
-	certificateOptions       = option.CertificateOptions{Store: C.CertificateStoreMozilla}
-)
-
-// UpdateRootCACerts records the certificate store used by subsequently created boxes.
-// sing-box 1.14 owns certificate pools per box, so this intentionally avoids the old
-// crypto/x509 and sing-box private-symbol linknames.
 func UpdateRootCACerts(certOption int32, certFromJava StringIterator) {
-	options := option.CertificateOptions{}
+	systemRoots = nil
+	sysRoots, _ := x509.SystemCertPool()
+
+	var roots *x509.CertPool
 	switch certOption {
 	case CertGoOrigin:
-		options.Store = C.CertificateStoreSystem
+		roots = sysRoots
 	case CertWithUserTrust:
-		options.Store = C.CertificateStoreNone
+		roots = x509.NewCertPool()
 		if certFromJava != nil {
 			for certFromJava.HasNext() {
-				options.Certificate = append(options.Certificate, certFromJava.Next())
+				cert := certFromJava.Next()
+				if !tryAddCert(roots, []byte(cert)) {
+					log.Warn("failed to load java cert: ", cert)
+				}
 			}
 		}
 	case CertMozilla:
-		options.Store = C.CertificateStoreMozilla
+		roots = newMozillaIncluded()
+		if roots == nil {
+			log.Error("failed to load Mozilla cert")
+			roots = sysRoots
+		}
 	case CertChrome:
-		options.Store = C.CertificateStoreChrome
+		roots = newChromeIncluded()
+		if roots == nil {
+			log.Error("failed to load Chrome cert")
+			roots = sysRoots
+		}
 	default:
 		panic("unknown cert option")
 	}
-	customCAPath := filepath.Join(externalAssetsPath, customCaFile)
-	if fileInfo, err := os.Stat(customCAPath); err == nil && !fileInfo.IsDir() {
-		options.CertificatePath = append(options.CertificatePath, customCAPath)
+
+	if C.IsAndroid {
+		externalPem, _ := os.ReadFile(filepath.Join(externalAssetsPath, customCaFile))
+		if len(externalPem) > 0 {
+			if tryAddCert(roots, externalPem) {
+				log.Info("loaded external cert")
+			} else {
+				log.Warn("failed to load external cert")
+			}
+		}
 	}
-	certificateOptionsAccess.Lock()
-	certificateOptions = options
-	certificateOptionsAccess.Unlock()
+
+	systemRoots = roots
 }
 
-func currentCertificateOptions() *option.CertificateOptions {
-	certificateOptionsAccess.RLock()
-	defer certificateOptionsAccess.RUnlock()
-	options := certificateOptions
-	options.Certificate = append([]string(nil), options.Certificate...)
-	options.CertificatePath = append([]string(nil), options.CertificatePath...)
-	return &options
+func tryAddCert(pool *x509.CertPool, raw []byte) bool {
+	if pool.AppendCertsFromPEM(raw) {
+		return true
+	}
+	certs, err := x509.ParseCertificates(raw)
+	if err != nil {
+		return false
+	}
+	for _, cert := range certs {
+		pool.AddCert(cert)
+	}
+	return true
 }
+
+//go:linkname initSystemRoots crypto/x509.initSystemRoots
+func initSystemRoots()

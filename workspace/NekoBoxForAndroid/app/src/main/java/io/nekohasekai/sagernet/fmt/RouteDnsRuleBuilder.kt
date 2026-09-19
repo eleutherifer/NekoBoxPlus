@@ -28,6 +28,8 @@ fun buildRouteDnsRules(
     rulesetTags: List<Pair<String, Boolean>>,
     useFakeDns: Boolean,
     clashMode: String = "",
+    directDnsStrategy: String? = null,
+    remoteDnsStrategy: String? = null,
 ): List<DNSRule_DefaultOptions> {
     if (!createDnsRule) return emptyList()
 
@@ -59,8 +61,11 @@ fun buildRouteDnsRules(
         dnsRules += rule.apply(configure)
     }
 
-    fun DNSRule_DefaultOptions.routeTo(server: String) {
+    fun DNSRule_DefaultOptions.routeTo(server: String, strategy: String? = null) {
         this.server = server
+        if (!strategy.isNullOrBlank()) {
+            this.strategy = strategy
+        }
     }
 
     fun DNSRule_DefaultOptions.blockWithSuccessResponse() {
@@ -70,6 +75,7 @@ fun buildRouteDnsRules(
 
     fun addRuleSetDnsRules(
         server: String?,
+        strategy: String? = null,
         configure: DNSRule_DefaultOptions.() -> Unit = {},
     ) {
         val routeRuleSet = ruleSet ?: return
@@ -81,7 +87,7 @@ fun buildRouteDnsRules(
                 dnsRules += DNSRule_DefaultOptions().apply {
                     rule_set = mutableListOf(tag)
                     if (server != null) {
-                        routeTo(server)
+                        routeTo(server, strategy)
                     }
                     if (clashMode.isNotBlank()) clash_mode = clashMode
                     configure()
@@ -92,8 +98,8 @@ fun buildRouteDnsRules(
 
     when (outbound) {
         -1L -> {
-            addBaseDnsRule { routeTo("dns-direct") }
-            addRuleSetDnsRules("dns-direct")
+            addBaseDnsRule { routeTo("dns-direct", directDnsStrategy) }
+            addRuleSetDnsRules("dns-direct", directDnsStrategy)
         }
 
         0L -> {
@@ -109,9 +115,9 @@ fun buildRouteDnsRules(
                 }
             } else {
                 addBaseDnsRule {
-                    routeTo("dns-remote")
+                    routeTo("dns-remote", remoteDnsStrategy)
                 }
-                addRuleSetDnsRules("dns-remote")
+                addRuleSetDnsRules("dns-remote", remoteDnsStrategy)
             }
         }
 

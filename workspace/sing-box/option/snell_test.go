@@ -74,9 +74,4 @@ func TestSnellOutboundVersionsAndNetwork(t *testing.T) {
 	}
 	var v6Options SnellOutboundOptions
 	require.Error(t, json.Unmarshal([]byte(`{"server":"127.0.0.1","server_port":1080,"psk":"password1234","version":6,"obfs_mode":"tls"}`), &v6Options))
-	require.NoError(t, json.Unmarshal([]byte(`{"server":"127.0.0.1","server_port":1080,"psk":"password1234","version":6,"mode":"unshaped","quic_proxy_mode":true}`), &v6Options))
-	require.Equal(t, "unshaped", v6Options.V6Options.Mode)
-	require.True(t, v6Options.V6Options.QUICProxyMode)
-	var missingVersion SnellOutboundOptions
-	require.EqualError(t, json.Unmarshal([]byte(`{"server":"127.0.0.1","server_port":1080,"psk":"password"}`), &missingVersion), "snell: missing version")
 }

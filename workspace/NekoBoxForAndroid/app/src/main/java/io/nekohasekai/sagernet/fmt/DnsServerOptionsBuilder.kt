@@ -73,12 +73,6 @@ internal fun buildDnsServerOptions(
                     interface_ = endpoint.host
                 }
             }
-            "mdns" -> {
-                type = "mdns"
-                if (endpoint.host != "auto") {
-                    interface_ = endpoint.host
-                }
-            }
             else -> error("Unsupported DNS server scheme '${endpoint.scheme}' in $rawAddress")
         }
     }

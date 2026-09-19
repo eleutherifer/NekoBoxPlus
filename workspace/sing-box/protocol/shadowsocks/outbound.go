@@ -130,7 +130,7 @@ func (h *Outbound) MultiplexEnabled() bool {
 	return h.multiplexDialer != nil
 }
 
-func (h *Outbound) InterfaceUpdated(ctx context.Context) {
+func (h *Outbound) InterfaceUpdated() {
 	if h.multiplexDialer != nil {
 		h.multiplexDialer.Reset()
 	}

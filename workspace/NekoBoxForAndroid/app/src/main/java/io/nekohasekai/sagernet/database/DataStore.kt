@@ -23,8 +23,6 @@ import io.nekohasekai.sagernet.bg.VpnService
 import io.nekohasekai.sagernet.database.preference.OnPreferenceDataStoreChangeListener
 import io.nekohasekai.sagernet.database.preference.PublicDatabase
 import io.nekohasekai.sagernet.database.preference.RoomPreferenceDataStore
-import io.nekohasekai.sagernet.database.preference.RoomSettingsRepository
-import io.nekohasekai.sagernet.database.preference.SettingsRepository
 import io.nekohasekai.sagernet.fmt.LOCALHOST
 import io.nekohasekai.sagernet.ktx.boolean
 import io.nekohasekai.sagernet.ktx.int
@@ -72,7 +70,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
 
     val configurationStore = RoomPreferenceDataStore(PublicDatabase.kvPairDao)
     val profileCacheStore = RoomPreferenceDataStore(TempDatabase.profileCacheDao)
-    val settings: SettingsRepository = RoomSettingsRepository(configurationStore)
     private val deviceLocalPreferences by lazy {
         SagerNet.application.getSharedPreferences(
             DEVICE_LOCAL_PREFERENCES,
@@ -118,13 +115,13 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     fun currentGroupId(): Long {
         val currentSelected = configurationStore.getLong(Key.PROFILE_GROUP, -1)
         if (currentSelected > 0L) return currentSelected
-        val groups = AppData.groups.allGroups()
+        val groups = SagerDatabase.groupDao.allGroups()
         if (groups.isNotEmpty()) {
             val groupId = groups[0].id
             selectedGroup = groupId
             return groupId
         }
-        val groupId = AppData.groups.createGroup(ProxyGroup(ungrouped = true))
+        val groupId = SagerDatabase.groupDao.createGroup(ProxyGroup(ungrouped = true))
         selectedGroup = groupId
         return groupId
     }
@@ -133,14 +130,14 @@ object DataStore : OnPreferenceDataStoreChangeListener {
         var group: ProxyGroup? = null
         val currentSelected = configurationStore.getLong(Key.PROFILE_GROUP, -1)
         if (currentSelected > 0L) {
-            group = AppData.groups.getById(currentSelected)
+            group = SagerDatabase.groupDao.getById(currentSelected)
         }
         if (group != null) return group
-        val groups = AppData.groups.allGroups()
+        val groups = SagerDatabase.groupDao.allGroups()
         if (groups.isEmpty()) {
             group =
                 ProxyGroup(ungrouped = true).apply {
-                    id = AppData.groups.createGroup(this)
+                    id = SagerDatabase.groupDao.createGroup(this)
                 }
         } else {
             group = groups[0]
@@ -151,7 +148,7 @@ object DataStore : OnPreferenceDataStoreChangeListener {
 
     fun selectedGroupForImport(): Long {
         val current = currentGroup()
-        val groups = AppData.groups.allGroups()
+        val groups = SagerDatabase.groupDao.allGroups()
         val existingTargetId =
             ImportGroupSelectionPolicy.existingTargetGroupId(
                 current.toImportGroup(),
@@ -163,7 +160,7 @@ object DataStore : OnPreferenceDataStoreChangeListener {
         }
         val group =
             ProxyGroup(ungrouped = true).apply {
-                id = AppData.groups.createGroup(this)
+                id = SagerDatabase.groupDao.createGroup(this)
             }
         selectedGroup = group.id
         return group.id
@@ -191,7 +188,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
         set(value) = configurationStore.putString(Key.CLASH_API_SECRET, value)
     var confirmProfileDelete by configurationStore.boolean(Key.CONFIRM_PROFILE_DELETE) { true }
     var groupLayoutMode by configurationStore.stringToInt(Key.GROUP_LAYOUT_MODE) { 0 }
-    var profileCardBorders by configurationStore.boolean(Key.PROFILE_CARD_BORDERS)
     var groupOrderModeAlways by configurationStore.boolean(Key.GROUP_ORDER_MODE_ALWAYS) { true }
     var groupOrderModeUrlTest by configurationStore.boolean(Key.GROUP_ORDER_MODE_URL_TEST) { true }
     var groupOrderModeUpdate by configurationStore.boolean(Key.GROUP_ORDER_MODE_UPDATE) { true }
@@ -238,9 +234,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var enableGroupUpdateDialog by configurationStore.boolean(Key.ENABLE_GROUP_UPDATE_DIALOG) { true }
     var openGroupSettingsOnLongPress by configurationStore.boolean(Key.OPEN_GROUP_SETTINGS_ON_LONG_PRESS) { true }
     var serviceMode by configurationStore.string(Key.SERVICE_MODE) { Key.MODE_VPN }
-    var udpNatMapping by configurationStore.string(Key.UDP_NAT_MAPPING) { "" }
-    var udpNatFiltering by configurationStore.string(Key.UDP_NAT_FILTERING) { "" }
-    var udpNatMax by configurationStore.string(Key.UDP_NAT_MAX) { "" }
 
     var trafficSniffing by configurationStore.stringToInt(Key.TRAFFIC_SNIFFING) { 1 }
     var resolveDestination by configurationStore.boolean(Key.RESOLVE_DESTINATION)
@@ -271,10 +264,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var dnsDisableCache by configurationStore.boolean(Key.DNS_DISABLE_CACHE) { false }
     var dnsDisableExpire by configurationStore.boolean(Key.DNS_DISABLE_EXPIRE) { false }
     var dnsCacheCapacity by configurationStore.stringToIntIfExists(Key.DNS_CACHE_CAPACITY)
-    var dnsTimeout by configurationStore.string(Key.DNS_TIMEOUT) { "10s" }
-    var dnsOptimisticCache by configurationStore.boolean(Key.DNS_OPTIMISTIC_CACHE) { false }
-    var dnsOptimisticTimeout by configurationStore.string(Key.DNS_OPTIMISTIC_TIMEOUT) { "5s" }
-    var dnsStoreCache by configurationStore.boolean(Key.DNS_STORE_CACHE) { true }
     var dnsReverseMapping by configurationStore.boolean(Key.DNS_REVERSE_MAPPING) { false }
     var dnsDomainOverrides by configurationStore.string(Key.DNS_DOMAIN_OVERRIDES) { "" }
     var customDnsServers by configurationStore.string(Key.CUSTOM_DNS_SERVERS) { "" }
@@ -493,8 +482,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     // protocol
 
     var globalAllowInsecure by configurationStore.boolean(Key.GLOBAL_ALLOW_INSECURE) { false }
-    var hysteria2DisableChromeParrot by
-        configurationStore.boolean(Key.HYSTERIA2_DISABLE_CHROME_PARROT) { false }
 
     var enableTLSFragment by configurationStore.boolean(Key.ENABLE_TLS_FRAGMENT) { false }
     var trafficFragmentation: String
@@ -585,6 +572,7 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var routeCreateDnsRule by profileCacheStore.stringToInt(Key.ROUTE_CREATE_DNS_RULE) { 1 }
     var routeDnsAction by profileCacheStore.string(Key.ROUTE_DNS_ACTION) { "route" }
     var routeDnsServer by profileCacheStore.string(Key.ROUTE_DNS_SERVER)
+    var routeDnsStrategy by profileCacheStore.string(Key.ROUTE_DNS_STRATEGY)
     var routeDnsDisableCache by profileCacheStore.boolean(Key.ROUTE_DNS_DISABLE_CACHE)
     var routeDnsRewriteTtl by profileCacheStore.stringToInt(Key.ROUTE_DNS_REWRITE_TTL)
     var routeDnsClientSubnet by profileCacheStore.string(Key.ROUTE_DNS_CLIENT_SUBNET)

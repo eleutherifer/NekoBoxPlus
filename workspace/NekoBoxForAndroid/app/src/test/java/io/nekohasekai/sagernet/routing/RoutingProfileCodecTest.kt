@@ -123,13 +123,7 @@ class RoutingProfileCodecTest {
             ExternalRoutingProfile(
                 rules = listOf(
                     StableRoutingRule(type = "normal", createDnsRule = false, dnsAction = "reject"),
-                    StableRoutingRule(
-                        type = "dns",
-                        outbound = "direct",
-                        dnsAction = "reject",
-                        dnsStrategy = "ipv4_only",
-                        clashMode = "Streaming",
-                    ),
+                    StableRoutingRule(type = "dns", outbound = "direct", dnsAction = "reject"),
                 ),
             ),
         )
@@ -147,8 +141,6 @@ class RoutingProfileCodecTest {
         assertFalse(normal.has("DnsDisableCache"))
         assertTrue(dns.has("DnsAction"))
         assertTrue(dns.has("DnsDisableCache"))
-        assertFalse(dns.has("DnsStrategy"))
-        assertEquals("Streaming", dns.get("ClashMode").asString)
         assertFalse(dns.has("Outbound"))
         assertFalse(dns.has("OutboundHash"))
         assertFalse(dns.has("CreateDnsRule"))

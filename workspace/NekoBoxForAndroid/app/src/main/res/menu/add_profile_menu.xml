@@ -85,12 +85,6 @@
                         android:id="@+id/action_new_tailscale"
                         android:title="@string/action_tailscale" />
                     <item
-                        android:id="@+id/action_new_openvpn"
-                        android:title="@string/action_openvpn" />
-                    <item
-                        android:id="@+id/action_new_openconnect"
-                        android:title="@string/action_openconnect" />
-                    <item
                         android:id="@+id/action_new_snell"
                         android:title="@string/action_snell" />
                     <item
@@ -122,7 +116,7 @@
     <item
         android:id="@+id/action_misc"
         android:icon="@drawable/ic_baseline_more_vert_24"
-        android:title="@string/toolbar_more_actions"
+        android:title=""
         app:showAsAction="always">
         <menu>
             <item
@@ -232,10 +226,6 @@
                             android:id="@+id/action_layout_alternate"
                             android:title="@string/layout_alternate" />
                     </group>
-                    <item
-                        android:id="@+id/action_profile_card_borders"
-                        android:checkable="true"
-                        android:title="@string/profile_card_borders" />
                 </menu>
             </item>
         </menu>

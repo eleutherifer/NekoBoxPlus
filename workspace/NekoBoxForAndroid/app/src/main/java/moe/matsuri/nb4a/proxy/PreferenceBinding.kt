@@ -1,5 +1,10 @@
 package moe.matsuri.nb4a.proxy
 
+import androidx.preference.Preference
+import androidx.preference.PreferenceFragmentCompat
+import androidx.preference.EditTextPreference
+import androidx.preference.ListPreference
+import androidx.preference.SwitchPreferenceCompat
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ktx.readableMessage
@@ -10,13 +15,13 @@ object Type {
     const val Int = 2
     const val Bool = 3
     const val TextToDouble = 4
-    const val TextToLong = 5
 }
 
 class PreferenceBinding(
     val type: Int = Type.Text,
     var fieldName: String,
     var bean: Any? = null,
+    var pf: PreferenceFragmentCompat? = null
 ) {
 
     var cacheName = fieldName
@@ -44,10 +49,6 @@ class PreferenceBinding(
         return DataStore.profileCacheStore.getString(cacheName)?.toDoubleOrNull() ?: 0.0
     }
 
-    fun readStringToLongFromCache(): Long {
-        return DataStore.profileCacheStore.getString(cacheName)?.toLongOrNull() ?: 0L
-    }
-
     fun fromCache() {
         if (disable) return
         val f = try {
@@ -62,7 +63,6 @@ class PreferenceBinding(
             Type.Int -> f.set(bean, readIntFromCache())
             Type.Bool -> f.set(bean, readBoolFromCache())
             Type.TextToDouble -> f.set(bean, readStringToDoubleFromCache())
-            Type.TextToLong -> f.set(bean, readStringToLongFromCache())
         }
     }
 
@@ -103,12 +103,39 @@ class PreferenceBinding(
                     DataStore.profileCacheStore.putString(cacheName, value.toDouble().toString())
                 }
             }
-            Type.TextToLong -> {
-                if (value is Number) {
-                    DataStore.profileCacheStore.putString(cacheName, value.toLong().toString())
-                }
+        }
+    }
+
+    fun writeToPreference() {
+        if (disable) return
+        val value = try {
+            bean!!.javaClass.getField(fieldName).get(bean)
+        } catch (e: Exception) {
+            Logs.d("binding no field: ${e.readableMessage}")
+            return
+        }
+        when (type) {
+            Type.Text -> {
+                (preference as? EditTextPreference)?.text = value as? String ?: ""
+                (preference as? ListPreference)?.value = value as? String ?: ""
+            }
+            Type.TextToInt -> {
+                (preference as? EditTextPreference)?.text = (value as? Number)?.toInt()?.toString() ?: "0"
+                (preference as? ListPreference)?.value = (value as? Number)?.toInt()?.toString() ?: "0"
+            }
+            Type.Int -> {
+                (preference as? ListPreference)?.value = (value as? Number)?.toInt()?.toString() ?: "0"
+            }
+            Type.Bool -> {
+                (preference as? SwitchPreferenceCompat)?.isChecked = value as? Boolean ?: false
+            }
+            Type.TextToDouble -> {
+                (preference as? EditTextPreference)?.text = (value as? Number)?.toDouble()?.toString() ?: "0.0"
             }
         }
     }
 
+    val preference by lazy {
+        pf!!.findPreference<Preference>(cacheName)!!
+    }
 }

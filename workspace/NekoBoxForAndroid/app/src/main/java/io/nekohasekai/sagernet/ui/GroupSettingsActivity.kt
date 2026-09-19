@@ -2,31 +2,38 @@ package io.nekohasekai.sagernet.ui
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
+import android.os.Parcelable
+import android.view.Menu
+import android.view.MenuItem
+import android.view.View
 import android.widget.Toast
-import androidx.activity.OnBackPressedCallback
-import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.setValue
-import androidx.lifecycle.lifecycleScope
-import androidx.preference.PreferenceDataStore
+import androidx.annotation.LayoutRes
+import androidx.appcompat.app.AlertDialog
+import androidx.core.view.ViewCompat
+import androidx.preference.*
+import com.github.shadowsocks.plugin.Empty
+import com.github.shadowsocks.plugin.fragment.AlertDialogFragment
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import io.nekohasekai.sagernet.GroupOrder
 import io.nekohasekai.sagernet.GroupType
 import io.nekohasekai.sagernet.Key
 import io.nekohasekai.sagernet.R
+import io.nekohasekai.sagernet.SagerNet
 import io.nekohasekai.sagernet.SpoofApp
 import io.nekohasekai.sagernet.SubscriptionFilterMode
 import io.nekohasekai.sagernet.database.*
+import io.nekohasekai.sagernet.databinding.LayoutProgressBinding
 import io.nekohasekai.sagernet.database.preference.OnPreferenceDataStoreChangeListener
 import io.nekohasekai.sagernet.group.GroupUpdater
 import io.nekohasekai.sagernet.group.defaultSpoofUserAgent
 import io.nekohasekai.sagernet.group.normalizeSpoofUserAgent
 import io.nekohasekai.sagernet.group.shouldWarnAboutMissingSpoofHwid
+import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ktx.applyDefaultValues
-import io.nekohasekai.sagernet.ktx.onDefaultDispatcher
 import io.nekohasekai.sagernet.ktx.onMainDispatcher
 import io.nekohasekai.sagernet.ktx.runOnDefaultDispatcher
 import io.nekohasekai.sagernet.ktx.readableMessage
@@ -34,19 +41,23 @@ import io.nekohasekai.sagernet.routing.ProviderRoutingSource
 import io.nekohasekai.sagernet.routing.RoutingPreviewPayloadStore
 import io.nekohasekai.sagernet.routing.SubscriptionRoutingIntervals
 import io.nekohasekai.sagernet.routing.SubscriptionRoutingRepository
-import io.nekohasekai.sagernet.ui.compose.showBlockingProgressDialog
-import io.nekohasekai.sagernet.ui.compose.GroupSettingsScreen
-import io.nekohasekai.sagernet.ui.compose.NekoComposeTheme
-import io.nekohasekai.sagernet.ui.compose.showComposeMessageDialog
-import io.nekohasekai.sagernet.ui.compose.showComposeSingleChoiceDialog
-import kotlinx.coroutines.launch
+import io.nekohasekai.sagernet.widget.ListListener
+import io.nekohasekai.sagernet.widget.OutboundPreference
+import io.nekohasekai.sagernet.widget.UserAgentPreference
+import kotlinx.parcelize.Parcelize
+import moe.matsuri.nb4a.ui.MaterialSwitchPreference
+import moe.matsuri.nb4a.ui.SimpleMenuPreference
+import moe.matsuri.nb4a.ui.showMaterialEditTextPreferenceDialog
 import java.text.Collator
 import java.util.Locale
 
 @Suppress("UNCHECKED_CAST")
-class GroupSettingsActivity : ThemedActivity(),
+class GroupSettingsActivity(
+    @LayoutRes resId: Int = R.layout.layout_config_settings,
+) : ThemedActivity(resId),
     OnPreferenceDataStoreChangeListener {
-    private var screenRevision by mutableIntStateOf(0)
+    private lateinit var frontProxyPreference: OutboundPreference
+    private lateinit var landingProxyPreference: OutboundPreference
 
     fun ProxyGroup.init() {
         DataStore.groupName = name ?: ""
@@ -68,9 +79,9 @@ class GroupSettingsActivity : ThemedActivity(),
         DataStore.frontProxy = frontProxy
         DataStore.landingProxy = landingProxy
         DataStore.frontProxyTmp =
-            if (frontProxy >= 0) SELECT_PROFILE else 0
+            if (frontProxy >= 0) OutboundPreference.VALUE_SELECT_PROFILE.toInt() else 0
         DataStore.landingProxyTmp =
-            if (landingProxy >= 0) SELECT_PROFILE else 0
+            if (landingProxy >= 0) OutboundPreference.VALUE_SELECT_PROFILE.toInt() else 0
 
         val subscription = subscription ?: SubscriptionBean().applyDefaultValues()
         DataStore.subscriptionLink = subscription.link
@@ -111,13 +122,13 @@ class GroupSettingsActivity : ThemedActivity(),
         muxBrutalDownMbps = DataStore.groupMuxBrutalDownMbps
 
         frontProxy =
-            if (DataStore.frontProxyTmp == SELECT_PROFILE) {
+            if (DataStore.frontProxyTmp == OutboundPreference.VALUE_SELECT_PROFILE.toInt()) {
                 DataStore.frontProxy
             } else {
                 -1
             }
         landingProxy =
-            if (DataStore.landingProxyTmp == SELECT_PROFILE) {
+            if (DataStore.landingProxyTmp == OutboundPreference.VALUE_SELECT_PROFILE.toInt()) {
                 DataStore.landingProxy
             } else {
                 -1
@@ -238,13 +249,242 @@ class GroupSettingsActivity : ThemedActivity(),
         }
     }
 
+    fun PreferenceFragmentCompat.createPreferences(
+        savedInstanceState: Bundle?,
+        rootKey: String?,
+    ) {
+        addPreferencesFromResource(R.xml.group_preferences)
+
+        frontProxyPreference = findPreference(Key.GROUP_FRONT_PROXY)!!
+        frontProxyPreference.apply {
+            setEntries(R.array.front_proxy_entry)
+            setEntryValues(R.array.front_proxy_value)
+            value = DataStore.frontProxyTmp.toString()
+            setOnPreferenceChangeListener { _, newValue ->
+                if (newValue.toString() == OutboundPreference.VALUE_SELECT_PROFILE) {
+                    selectProfileForAddFront.launch(
+                        Intent(
+                            this@GroupSettingsActivity,
+                            ProfileSelectActivity::class.java,
+                        ).apply {
+                            ProfileManager.getProfile(DataStore.frontProxy)?.let {
+                                putExtra(ProfileSelectActivity.EXTRA_SELECTED, it)
+                            }
+                        },
+                    )
+                    false
+                } else {
+                    true
+                }
+            }
+        }
+        landingProxyPreference = findPreference(Key.GROUP_LANDING_PROXY)!!
+        landingProxyPreference.apply {
+            setEntries(R.array.front_proxy_entry)
+            setEntryValues(R.array.front_proxy_value)
+            value = DataStore.landingProxyTmp.toString()
+            setOnPreferenceChangeListener { _, newValue ->
+                if (newValue.toString() == OutboundPreference.VALUE_SELECT_PROFILE) {
+                    selectProfileForAddLanding.launch(
+                        Intent(
+                            this@GroupSettingsActivity,
+                            ProfileSelectActivity::class.java,
+                        ).apply {
+                            ProfileManager.getProfile(DataStore.landingProxy)?.let {
+                                putExtra(ProfileSelectActivity.EXTRA_SELECTED, it)
+                            }
+                        },
+                    )
+                    false
+                } else {
+                    true
+                }
+            }
+        }
+
+        val groupType = findPreference<SimpleMenuPreference>(Key.GROUP_TYPE)!!
+        val groupSubscription = findPreference<PreferenceCategory>(Key.GROUP_SUBSCRIPTION)!!
+        val subscriptionUpdate = findPreference<PreferenceCategory>(Key.SUBSCRIPTION_UPDATE)!!
+
+        fun updateGroupType(groupType: Int = DataStore.groupType) {
+            val isSubscription = groupType == GroupType.SUBSCRIPTION
+            groupSubscription.isVisible = isSubscription
+            subscriptionUpdate.isVisible = isSubscription
+        }
+        updateGroupType()
+        groupType.setOnPreferenceChangeListener { _, newValue ->
+            updateGroupType((newValue as String).toInt())
+            true
+        }
+
+        val enableMux = findPreference<MaterialSwitchPreference>(Key.GROUP_ENABLE_MUX)!!
+        val muxType = findPreference<Preference>(Key.GROUP_MUX_TYPE)!!
+        val muxMode = findPreference<SimpleMenuPreference>(Key.GROUP_MUX_MODE)!!
+        val muxConcurrency = findPreference<Preference>(Key.GROUP_MUX_CONCURRENCY)!!
+        val muxMaxConnections = findPreference<Preference>(Key.GROUP_MUX_MAX_CONNECTIONS)!!
+        val muxMinStreams = findPreference<Preference>(Key.GROUP_MUX_MIN_STREAMS)!!
+        val muxPadding = findPreference<Preference>(Key.GROUP_MUX_PADDING)!!
+        val muxBrutal = findPreference<MaterialSwitchPreference>(Key.GROUP_MUX_BRUTAL)!!
+        val muxBrutalUpMbps = findPreference<Preference>(Key.GROUP_MUX_BRUTAL_UP_MBPS)!!
+        val muxBrutalDownMbps = findPreference<Preference>(Key.GROUP_MUX_BRUTAL_DOWN_MBPS)!!
+        val muxDetails = listOf(
+            muxType,
+            muxMode,
+            muxConcurrency,
+            muxMaxConnections,
+            muxMinStreams,
+            muxPadding,
+            muxBrutal,
+            muxBrutalUpMbps,
+            muxBrutalDownMbps,
+        )
+        fun updateMuxVisibility(
+            enabled: Boolean = enableMux.isChecked,
+            mode: Int = DataStore.groupMuxMode,
+            brutal: Boolean = DataStore.groupMuxBrutal,
+        ) {
+            muxDetails.forEach { it.isVisible = enabled }
+            if (enabled) {
+                muxConcurrency.isVisible = mode == 0
+                muxMaxConnections.isVisible = mode == 1
+                muxMinStreams.isVisible = mode == 1
+                muxBrutalUpMbps.isVisible = brutal
+                muxBrutalDownMbps.isVisible = brutal
+            }
+        }
+        updateMuxVisibility()
+        enableMux.setOnPreferenceChangeListener { _, newValue ->
+            updateMuxVisibility(newValue as Boolean)
+            true
+        }
+        muxMode.setOnPreferenceChangeListener { _, newValue ->
+            updateMuxVisibility(mode = (newValue as String).toInt())
+            true
+        }
+        muxBrutal.setOnPreferenceChangeListener { _, newValue ->
+            updateMuxVisibility(brutal = newValue as Boolean)
+            true
+        }
+
+        val subscriptionAutoUpdate =
+            findPreference<MaterialSwitchPreference>(Key.SUBSCRIPTION_AUTO_UPDATE)!!
+        val subscriptionAutoUpdateDelay =
+            findPreference<EditTextPreference>(Key.SUBSCRIPTION_AUTO_UPDATE_DELAY)!!
+
+        subscriptionAutoUpdateDelay.isEnabled = subscriptionAutoUpdate.isChecked
+        subscriptionAutoUpdateDelay.setOnPreferenceChangeListener { _, newValue ->
+            val delay = (newValue as String).toIntOrNull()
+            if (delay == null) {
+                false
+            } else {
+                delay >= 15
+            }
+        }
+        subscriptionAutoUpdate.setOnPreferenceChangeListener { _, newValue ->
+            subscriptionAutoUpdateDelay.isEnabled = (newValue as Boolean)
+            true
+        }
+
+        val subscriptionFilterMode =
+            findPreference<SimpleMenuPreference>(Key.SUBSCRIPTION_FILTER_MODE)!!
+        val subscriptionFilterRegex =
+            findPreference<EditTextPreference>(Key.SUBSCRIPTION_FILTER_REGEX)!!
+
+        fun updateFilterMode(filterMode: Int = DataStore.subscriptionFilterMode) {
+            subscriptionFilterRegex.isVisible = filterMode != SubscriptionFilterMode.DISABLED
+        }
+        updateFilterMode()
+        subscriptionFilterMode.setOnPreferenceChangeListener { _, newValue ->
+            updateFilterMode((newValue as String).toInt())
+            true
+        }
+
+        val subscriptionHwidEnabled =
+            findPreference<MaterialSwitchPreference>(Key.SUBSCRIPTION_HWID_ENABLED)!!
+        val subscriptionSpoofApp =
+            findPreference<SimpleMenuPreference>(Key.SUBSCRIPTION_SPOOF_APP)!!
+        val subscriptionUserAgent =
+            findPreference<UserAgentPreference>(Key.SUBSCRIPTION_USER_AGENT)!!
+
+        fun showSpoofWithoutHwidWarning() {
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.spoof_app_without_hwid_title)
+                .setMessage(R.string.spoof_app_without_hwid_message)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+        }
+
+        subscriptionHwidEnabled.setOnPreferenceChangeListener { _, newValue ->
+            val enabled = newValue as Boolean
+            if (shouldWarnAboutMissingSpoofHwid(DataStore.subscriptionSpoofApp, enabled)) {
+                showSpoofWithoutHwidWarning()
+            }
+            true
+        }
+
+        subscriptionSpoofApp.setOnPreferenceChangeListener { _, newValue ->
+            val spoofApp = (newValue as String).toInt()
+            val ua = defaultSpoofUserAgent(spoofApp)
+            subscriptionUserAgent.text = ua
+            DataStore.subscriptionUserAgent = ua
+            subscriptionUserAgent.notifyChanged()
+            if (shouldWarnAboutMissingSpoofHwid(spoofApp, subscriptionHwidEnabled.isChecked)) {
+                showSpoofWithoutHwidWarning()
+            }
+            true
+        }
+
+        val subscriptionServerDns =
+            findPreference<EditTextPreference>(Key.SUBSCRIPTION_SERVER_DNS)!!
+        subscriptionServerDns.setOnPreferenceChangeListener { pref, newValue ->
+            val value = (newValue as String).trim()
+            if (isValidServerDns(value)) {
+                if (value != newValue) {
+                    (pref as EditTextPreference).text = value
+                    false
+                } else {
+                    true
+                }
+            } else {
+                Toast
+                    .makeText(
+                        requireContext(),
+                        R.string.server_dns_invalid,
+                        Toast.LENGTH_LONG,
+                    ).show()
+                false
+            }
+        }
+
+        val subscriptionRoutingEnabled =
+            findPreference<MaterialSwitchPreference>(Key.SUBSCRIPTION_ROUTING_ENABLED)!!
+        val subscriptionRoutingInterval =
+            findPreference<SimpleMenuPreference>(Key.SUBSCRIPTION_ROUTING_INTERVAL)!!
+        subscriptionRoutingInterval.isEnabled = subscriptionRoutingEnabled.isChecked
+        subscriptionRoutingEnabled.setOnPreferenceChangeListener { _, newValue ->
+            subscriptionRoutingInterval.isEnabled = newValue as Boolean
+            true
+        }
+        subscriptionRoutingInterval.setOnPreferenceChangeListener { _, newValue ->
+            newValue.toString().toIntOrNull() in SubscriptionRoutingIntervals.allowed
+        }
+        findPreference<Preference>(Key.SUBSCRIPTION_IMPORT_ROUTING)!!
+            .setOnPreferenceClickListener {
+                importSubscriptionRouting()
+                true
+            }
+    }
+
     private fun importSubscriptionRouting() {
         val link = DataStore.subscriptionLink.trim()
         if (link.isBlank()) {
             Toast.makeText(this, R.string.subscription_routing_not_found, Toast.LENGTH_LONG).show()
             return
         }
-        val progress = showBlockingProgressDialog(R.string.routing_import_preparing)
+        val progress = MaterialAlertDialogBuilder(this)
+            .setMessage(R.string.routing_import_preparing)
+            .setCancelable(false)
+            .show()
         runOnDefaultDispatcher {
             val result = runCatching {
                 val storedGroup = DataStore.editingId.takeIf { it > 0L }
@@ -292,68 +532,100 @@ class GroupSettingsActivity : ThemedActivity(),
                         }
                     }
                 }.onFailure {
-                    showComposeMessageDialog(
-                        title = getText(R.string.error_title),
-                        message = it.readableMessage,
-                    )
+                    MaterialAlertDialogBuilder(this@GroupSettingsActivity)
+                        .setTitle(R.string.error_title)
+                        .setMessage(it.readableMessage)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show()
                 }
             }
         }
     }
 
+    class UnsavedChangesDialogFragment : AlertDialogFragment<Empty, Empty>() {
+        override fun AlertDialog.Builder.prepare(listener: DialogInterface.OnClickListener) {
+            setTitle(R.string.unsaved_changes_prompt)
+            setPositiveButton(R.string.yes) { _, _ ->
+                runOnDefaultDispatcher {
+                    (requireActivity() as GroupSettingsActivity).saveAndExit()
+                }
+            }
+            setNegativeButton(R.string.no) { _, _ ->
+                requireActivity().finish()
+            }
+            setNeutralButton(android.R.string.cancel, null)
+        }
+    }
+
+    @Parcelize
+    data class GroupIdArg(
+        val groupId: Long,
+    ) : Parcelable
+
+    class DeleteConfirmationDialogFragment : AlertDialogFragment<GroupIdArg, Empty>() {
+        override fun AlertDialog.Builder.prepare(listener: DialogInterface.OnClickListener) {
+            setTitle(R.string.delete_group_prompt)
+            setPositiveButton(R.string.yes) { _, _ ->
+                runOnDefaultDispatcher {
+                    GroupManager.deleteGroup(arg.groupId)
+                }
+                requireActivity().finish()
+            }
+            setNegativeButton(R.string.no, null)
+        }
+    }
+
     companion object {
-        private const val SELECT_PROFILE = 3
         const val EXTRA_GROUP_ID = "id"
         const val EXTRA_FROM_CLIPBOARD = "fromClipboard"
         const val EXTRA_GROUP_SUBSCRIPTION_LINK = "subscription_link"
     }
 
+    @SuppressLint("CommitTransaction")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() = closeEditor()
-        })
-        val editingId = intent.getLongExtra(EXTRA_GROUP_ID, 0L)
-        isFromClipboard = intent.getBooleanExtra(EXTRA_FROM_CLIPBOARD, false)
-        val subscriptionLink = intent.getStringExtra(EXTRA_GROUP_SUBSCRIPTION_LINK)
-        DataStore.editingId = editingId
-        lifecycleScope.launch {
-            val loaded = onDefaultDispatcher {
+        setSupportActionBar(findViewById(R.id.toolbar))
+        supportActionBar?.apply {
+            setTitle(R.string.group_settings)
+            setDisplayHomeAsUpEnabled(true)
+            setHomeAsUpIndicator(R.drawable.ic_navigation_close)
+        }
+
+        if (savedInstanceState == null) {
+            val editingId = intent.getLongExtra(EXTRA_GROUP_ID, 0L)
+            isFromClipboard = intent.getBooleanExtra(EXTRA_FROM_CLIPBOARD, false)
+            val subscriptionLink = intent.getStringExtra(EXTRA_GROUP_SUBSCRIPTION_LINK)
+            DataStore.editingId = editingId
+            runOnDefaultDispatcher {
                 if (editingId == 0L) {
-                    ProxyGroup().init()
+                    val group = ProxyGroup()
+                    group.init()
+
+                    // 如果有订阅链接，设置为订阅类型并填充链接
                     if (!subscriptionLink.isNullOrEmpty()) {
                         DataStore.groupType = GroupType.SUBSCRIPTION
                         DataStore.subscriptionLink = subscriptionLink
+                        DataStore.dirty = true
                     }
-                    true
                 } else {
-                    SagerDatabase.groupDao.getById(editingId)?.also { it.init() } != null
+                    val entity = SagerDatabase.groupDao.getById(editingId)
+                    if (entity == null) {
+                        onMainDispatcher {
+                            finish()
+                        }
+                        return@runOnDefaultDispatcher
+                    }
+                    entity.init()
                 }
-            }
-            if (!loaded) {
-                finish()
-                return@launch
-            }
-            DataStore.dirty = false
-            DataStore.profileCacheStore.registerChangeListener(this@GroupSettingsActivity)
-            setContent {
-                NekoComposeTheme {
-                    screenRevision
-                    GroupSettingsScreen(
-                        canDelete = editingId == 0L || GroupManager.canDelete(editingId),
-                        frontProxyName = outboundName(DataStore.frontProxyTmp, DataStore.frontProxy),
-                        landingProxyName = outboundName(DataStore.landingProxyTmp, DataStore.landingProxy),
-                        onClose = ::closeEditor,
-                        onSave = { runOnDefaultDispatcher { saveAndExit() } },
-                        onDelete = ::requestDelete,
-                        onSelectFrontProxy = { selectProxy(true) },
-                        onSelectLandingProxy = { selectProxy(false) },
-                        onImportRouting = ::importSubscriptionRouting,
-                        onHwidChanged = ::warnIfSpoofNeedsHwid,
-                        onSpoofAppChanged = ::applySpoofApp,
-                        validateServerDns = ::validateServerDns,
-                        validateAutoUpdateDelay = { it.toIntOrNull()?.let { delay -> delay >= 15 } == true },
-                    )
+
+                onMainDispatcher {
+                    supportFragmentManager
+                        .beginTransaction()
+                        .replace(R.id.settings, MyPreferenceFragmentCompat())
+                        .commit()
+
+                    DataStore.dirty = false
+                    DataStore.profileCacheStore.registerChangeListener(this@GroupSettingsActivity)
                 }
             }
         }
@@ -445,7 +717,12 @@ class GroupSettingsActivity : ThemedActivity(),
         groupId: Long,
     ): Result<io.nekohasekai.sagernet.routing.ResolvedSubscriptionRouting?> {
         val dialog = onMainDispatcher {
-            showBlockingProgressDialog(R.string.subscription_routing_downloading)
+            val progress = LayoutProgressBinding.inflate(layoutInflater)
+            progress.content.setText(R.string.subscription_routing_downloading)
+            MaterialAlertDialogBuilder(this@GroupSettingsActivity)
+                .setView(progress.root)
+                .setCancelable(false)
+                .show()
         }
         val result = runCatching {
             val (source, routing) = SubscriptionRoutingRepository.fetchFromSubscription(group)
@@ -471,105 +748,37 @@ class GroupSettingsActivity : ThemedActivity(),
 
     private suspend fun showRoutingError(error: Throwable) {
         onMainDispatcher {
-            showComposeMessageDialog(
-                title = getText(R.string.error_title),
-                message = error.readableMessage,
-            )
+            MaterialAlertDialogBuilder(this@GroupSettingsActivity)
+                .setTitle(R.string.error_title)
+                .setMessage(error.readableMessage)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
         }
     }
 
-    private fun closeEditor() {
-        if (!needSave()) {
-            finish()
-            return
+    val child by lazy { supportFragmentManager.findFragmentById(R.id.settings) as MyPreferenceFragmentCompat }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.profile_config_menu, menu)
+        if (DataStore.editingId != 0L && !GroupManager.canDelete(DataStore.editingId)) {
+            menu.findItem(R.id.action_delete)?.isVisible = false
         }
-        showComposeMessageDialog(
-            title = getText(R.string.unsaved_changes_prompt),
-            positiveButton = getText(R.string.yes),
-            negativeButton = getText(R.string.no),
-            neutralButton = getText(android.R.string.cancel),
-            onPositive = { runOnDefaultDispatcher { saveAndExit() } },
-            onNegative = ::finish,
-        )
+        return true
     }
 
-    private fun requestDelete() {
-        val id = DataStore.editingId
-        if (id == 0L) {
-            finish()
-            return
-        }
-        if (!GroupManager.canDelete(id)) {
-            Toast.makeText(this, R.string.group_delete_unavailable, Toast.LENGTH_SHORT).show()
-            return
-        }
-        fun delete() {
-            runOnDefaultDispatcher { GroupManager.deleteGroup(id) }
-            finish()
-        }
-        if (DataStore.confirmProfileDelete) {
-            showComposeMessageDialog(
-                title = getText(R.string.delete_group_prompt),
-                positiveButton = getText(R.string.yes),
-                negativeButton = getText(R.string.no),
-                onPositive = ::delete,
-            )
-        } else delete()
-    }
+    override fun onOptionsItemSelected(item: MenuItem) = child.onOptionsItemSelected(item)
 
-    private fun outboundName(mode: Int, profileId: Long): String {
-        if (mode == SELECT_PROFILE) {
-            return ProfileManager.getProfile(profileId)?.displayName() ?: getString(R.string.none)
-        }
-        val values = resources.getStringArray(R.array.front_proxy_value)
-        val entries = resources.getStringArray(R.array.front_proxy_entry)
-        return entries.getOrElse(values.indexOf(mode.toString())) { getString(R.string.none) }
-    }
-
-    private fun selectProxy(front: Boolean) {
-        val entries = resources.getStringArray(R.array.front_proxy_entry).toList()
-        val current = if (front) DataStore.frontProxyTmp else DataStore.landingProxyTmp
-        showComposeSingleChoiceDialog(
-            title = getText(if (front) R.string.front_proxy else R.string.landing_proxy),
-            items = entries,
-            selectedIndex = if (current == SELECT_PROFILE) 1 else 0,
-            onItemSelected = { index ->
-                if (index == 0) {
-                    if (front) DataStore.frontProxyTmp = 0 else DataStore.landingProxyTmp = 0
-                    screenRevision++
-                    return@showComposeSingleChoiceDialog
-                }
-                val profileId = if (front) DataStore.frontProxy else DataStore.landingProxy
-                val intent = Intent(this, ProfileSelectActivity::class.java).apply {
-                    ProfileManager.getProfile(profileId)?.let {
-                        putExtra(ProfileSelectActivity.EXTRA_SELECTED, it)
-                    }
-                }
-                if (front) selectProfileForAddFront.launch(intent)
-                else selectProfileForAddLanding.launch(intent)
-            }
-        )
-    }
-
-    private fun warnIfSpoofNeedsHwid(enabled: Boolean) {
-        if (shouldWarnAboutMissingSpoofHwid(DataStore.subscriptionSpoofApp, enabled)) {
-            showComposeMessageDialog(
-                title = getText(R.string.spoof_app_without_hwid_title),
-                message = getText(R.string.spoof_app_without_hwid_message),
-            )
+    override fun onBackPressed() {
+        if (needSave()) {
+            UnsavedChangesDialogFragment().apply { key() }.show(supportFragmentManager, null)
+        } else {
+            super.onBackPressed()
         }
     }
 
-    private fun applySpoofApp(spoofApp: Int) {
-        DataStore.subscriptionUserAgent = defaultSpoofUserAgent(spoofApp)
-        warnIfSpoofNeedsHwid(DataStore.subscriptionHwidEnabled)
-        screenRevision++
-    }
-
-    private fun validateServerDns(value: String): Boolean {
-        if (isValidServerDns(value)) return true
-        Toast.makeText(this, R.string.server_dns_invalid, Toast.LENGTH_LONG).show()
-        return false
+    override fun onSupportNavigateUp(): Boolean {
+        onBackPressed()
+        return true
     }
 
     override fun onDestroy() {
@@ -583,15 +792,105 @@ class GroupSettingsActivity : ThemedActivity(),
     ) {
         if (key != Key.PROFILE_DIRTY) {
             DataStore.dirty = true
-            screenRevision++
+        }
+    }
+
+    class MyPreferenceFragmentCompat : PreferenceFragmentCompat() {
+        var activity: GroupSettingsActivity? = null
+
+        override fun onCreatePreferences(
+            savedInstanceState: Bundle?,
+            rootKey: String?,
+        ) {
+            preferenceManager.preferenceDataStore = DataStore.profileCacheStore
+            try {
+                activity =
+                    (requireActivity() as GroupSettingsActivity).apply {
+                        createPreferences(savedInstanceState, rootKey)
+                    }
+            } catch (e: Exception) {
+                Toast
+                    .makeText(
+                        SagerNet.application,
+                        "Error on createPreferences, please try again.",
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                Logs.e(e)
+            }
+        }
+
+        override fun onViewCreated(
+            view: View,
+            savedInstanceState: Bundle?,
+        ) {
+            super.onViewCreated(view, savedInstanceState)
+
+            ViewCompat.setOnApplyWindowInsetsListener(listView, ListListener)
+        }
+
+        override fun onOptionsItemSelected(item: MenuItem) =
+            when (item.itemId) {
+                R.id.action_delete -> {
+                    if (DataStore.editingId == 0L) {
+                        requireActivity().finish()
+                    } else if (!GroupManager.canDelete(DataStore.editingId)) {
+                        Toast
+                            .makeText(
+                                requireContext(),
+                                R.string.group_delete_unavailable,
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                    } else if (!DataStore.confirmProfileDelete) {
+                        runOnDefaultDispatcher {
+                            GroupManager.deleteGroup(DataStore.editingId)
+                        }
+                        requireActivity().finish()
+                    } else {
+                        DeleteConfirmationDialogFragment()
+                            .apply {
+                                arg(GroupIdArg(DataStore.editingId))
+                                key()
+                            }.show(parentFragmentManager, null)
+                    }
+                    true
+                }
+
+                R.id.action_apply -> {
+                    runOnDefaultDispatcher {
+                        activity?.saveAndExit()
+                    }
+                    true
+                }
+
+                else -> {
+                    false
+                }
+            }
+
+        override fun onDisplayPreferenceDialog(preference: Preference) {
+            if (showMaterialEditTextPreferenceDialog(preference)) return
+            super.onDisplayPreferenceDialog(preference)
+        }
+    }
+
+    object PasswordSummaryProvider : Preference.SummaryProvider<EditTextPreference> {
+        override fun provideSummary(preference: EditTextPreference): CharSequence {
+            val text = preference.text
+            return if (text.isNullOrBlank()) {
+                preference.context.getString(androidx.preference.R.string.not_set)
+            } else {
+                "\u2022".repeat(text.length)
+            }
         }
     }
 
     private fun showInvalidProfileDialog(messageResId: Int) {
-        showComposeMessageDialog(
-            title = getText(R.string.invalid_profile),
-            message = getText(messageResId),
-        )
+        AlertDialog
+            .Builder(this)
+            .setTitle(R.string.invalid_profile)
+            .setMessage(messageResId)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
     }
 
     val selectProfileForAddFront =
@@ -612,8 +911,8 @@ class GroupSettingsActivity : ThemedActivity(),
                     }
                     DataStore.frontProxy = profile.id
                     onMainDispatcher {
-                        DataStore.frontProxyTmp = SELECT_PROFILE
-                        screenRevision++
+                        frontProxyPreference.value = "3"
+                        frontProxyPreference.postUpdate()
                     }
                 }
             }
@@ -637,8 +936,8 @@ class GroupSettingsActivity : ThemedActivity(),
                     }
                     DataStore.landingProxy = profile.id
                     onMainDispatcher {
-                        DataStore.landingProxyTmp = SELECT_PROFILE
-                        screenRevision++
+                        landingProxyPreference.value = "3"
+                        landingProxyPreference.postUpdate()
                     }
                 }
             }

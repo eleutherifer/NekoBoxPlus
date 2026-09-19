@@ -1,8 +1,5 @@
 package io.nekohasekai.sagernet.fmt.ssh
 
-import com.google.common.io.BaseEncoding
-import io.nekohasekai.sagernet.fmt.subscriptionLines
-import io.nekohasekai.sagernet.fmt.subscriptionValue
 import io.nekohasekai.sagernet.ktx.toLink
 import moe.matsuri.nb4a.SingBoxOptions
 import moe.matsuri.nb4a.utils.listByLineOrComma
@@ -11,6 +8,7 @@ import java.net.URI
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.util.Base64
 
 private fun String.decodeUrlComponent(): String =
     URLDecoder.decode(replace("+", "%2B"), StandardCharsets.UTF_8.name())
@@ -18,22 +16,11 @@ private fun String.decodeUrlComponent(): String =
 private fun String.encodeUrlComponent(): String =
     URLEncoder.encode(this, StandardCharsets.UTF_8.name()).replace("+", "%20")
 
-private fun decodeBase64(value: String): String {
-    val padded = value + "=".repeat((4 - value.length % 4) % 4)
-    return String(BaseEncoding.base64().decode(padded), StandardCharsets.UTF_8)
-}
-
-private fun decodeBase64List(value: String): String =
-    runCatching {
-        value.split('-')
-            .mapNotNull { it.takeIf(String::isNotEmpty)?.let(::decodeBase64) }
-            .joinToString("\n")
-    }.getOrElse {
-        value.replace(',', '\n')
-    }
+private fun decodeBase64(value: String): String =
+    String(Base64.getDecoder().decode(value), StandardCharsets.UTF_8)
 
 private fun encodeBase64(value: String): String =
-    BaseEncoding.base64().omitPadding().encode(value.toByteArray(StandardCharsets.UTF_8))
+    Base64.getEncoder().withoutPadding().encodeToString(value.toByteArray(StandardCharsets.UTF_8))
 
 private fun URI.queryParameters(): Map<String, String> =
     rawQuery.orEmpty().split('&').mapNotNull { item ->
@@ -48,9 +35,7 @@ fun parseSSH(link: String): SSHBean {
     val host = uri.host ?: error("Missing SSH server")
     val query = uri.queryParameters()
     val userInfo = uri.rawUserInfo?.split(':', limit = 2).orEmpty()
-    val privateKey = query["private_key"]?.takeIf { it.isNotEmpty() }?.let {
-        runCatching { decodeBase64(it) }.getOrDefault(it)
-    }.orEmpty()
+    val privateKey = query["private_key"]?.takeIf { it.isNotEmpty() }?.let(::decodeBase64).orEmpty()
     val passwordPresent = query.containsKey("password") || userInfo.size > 1
 
     return SSHBean().apply {
@@ -63,12 +48,13 @@ fun parseSSH(link: String): SSHBean {
         this.privateKey = privateKey
         privateKeyPath = query["private_key_path"].orEmpty()
         privateKeyPassphrase = query["private_key_passphrase"].orEmpty()
-        publicKey = decodeBase64List(query["host_key"].orEmpty())
-        hostKeyAlgorithms = decodeBase64List(query["host_key_algorithms"].orEmpty())
+        publicKey = query["host_key"].orEmpty().split('-')
+            .mapNotNull { it.takeIf(String::isNotEmpty)?.let(::decodeBase64) }
+            .joinToString("\n")
+        hostKeyAlgorithms = query["host_key_algorithms"].orEmpty().split('-')
+            .mapNotNull { it.takeIf(String::isNotEmpty)?.let(::decodeBase64) }
+            .joinToString("\n")
         clientVersion = query["client_version"].orEmpty()
-        cipher = query["cipher"].orEmpty().replace(',', '\n')
-        mac = query["mac"].orEmpty().replace(',', '\n')
-        kexAlgorithm = query["kex_algorithm"].orEmpty().replace(',', '\n')
         name = uri.rawFragment?.decodeUrlComponent().orEmpty()
         authType = when {
             privateKey.isNotEmpty() || privateKeyPath.isNotEmpty() -> SSHBean.AUTH_TYPE_PRIVATE_KEY
@@ -112,45 +98,11 @@ fun SSHBean.toUri(): String {
         )
     }
     if (clientVersion.isNotEmpty()) builder.addQueryParameter("client_version", clientVersion)
-    if (cipher.isNotEmpty()) builder.addQueryParameter("cipher", cipher.replace('\n', ','))
-    if (mac.isNotEmpty()) builder.addQueryParameter("mac", mac.replace('\n', ','))
-    if (kexAlgorithm.isNotEmpty()) {
-        builder.addQueryParameter("kex_algorithm", kexAlgorithm.replace('\n', ','))
-    }
     if (name.isNotEmpty()) builder.encodedFragment(name.encodeUrlComponent())
     return builder.toLink("ssh", appendDefaultPort = false)
         .replaceFirst("/?", "?")
         .replaceFirst("/#", "#")
         .removeSuffix("/")
-}
-
-fun parseClashSSH(proxy: Map<String, Any?>): SSHBean = SSHBean().apply {
-    name = proxy.subscriptionValue("name")?.toString() ?: ""
-    serverAddress = proxy.subscriptionValue("server")?.toString().orEmpty()
-    serverPort = proxy.subscriptionValue("port", "server-port")?.toString()?.toIntOrNull() ?: 22
-    username = proxy.subscriptionValue("user", "username")?.toString() ?: "root"
-    when {
-        proxy.subscriptionValue("private-key") != null ||
-                proxy.subscriptionValue("private-key-path") != null -> {
-            authType = SSHBean.AUTH_TYPE_PRIVATE_KEY
-            privateKey = proxy.subscriptionValue("private-key")?.toString().orEmpty()
-            privateKeyPath = proxy.subscriptionValue("private-key-path")?.toString().orEmpty()
-            privateKeyPassphrase =
-                proxy.subscriptionValue("private-key-passphrase")?.toString().orEmpty()
-        }
-        proxy.subscriptionValue("password") != null -> {
-            authType = SSHBean.AUTH_TYPE_PASSWORD
-            password = proxy.subscriptionValue("password").toString()
-        }
-        else -> authType = SSHBean.AUTH_TYPE_NONE
-    }
-    publicKey = proxy.subscriptionValue("host-key").subscriptionLines()
-    hostKeyAlgorithms = proxy.subscriptionValue("host-key-algorithms").subscriptionLines()
-    clientVersion = proxy.subscriptionValue("client-version")?.toString().orEmpty()
-    cipher = proxy.subscriptionValue("cipher").subscriptionLines()
-    mac = proxy.subscriptionValue("mac").subscriptionLines()
-    kexAlgorithm = proxy.subscriptionValue("kex-algorithm").subscriptionLines()
-    initializeDefaultValues()
 }
 
 fun buildSingBoxOutboundSSHBean(bean: SSHBean): SingBoxOptions.Outbound_SSHOptions {
@@ -162,11 +114,6 @@ fun buildSingBoxOutboundSSHBean(bean: SSHBean): SingBoxOptions.Outbound_SSHOptio
         if (bean.publicKey.isNotBlank()) {
             host_key = bean.publicKey.listByLineOrComma()
         }
-        host_key_algorithms = bean.hostKeyAlgorithms.takeIf { it.isNotBlank() }?.listByLineOrComma()
-        client_version = bean.clientVersion.takeIf { it.isNotBlank() }
-        cipher = bean.cipher.takeIf { it.isNotBlank() }?.listByLineOrComma()
-        mac = bean.mac.takeIf { it.isNotBlank() }?.listByLineOrComma()
-        kex_algorithm = bean.kexAlgorithm.takeIf { it.isNotBlank() }?.listByLineOrComma()
         when (bean.authType) {
             SSHBean.AUTH_TYPE_PRIVATE_KEY -> {
                 private_key = bean.privateKey
@@ -176,6 +123,12 @@ fun buildSingBoxOutboundSSHBean(bean: SSHBean): SingBoxOptions.Outbound_SSHOptio
             SSHBean.AUTH_TYPE_PASSWORD -> {
                 password = bean.password
             }
+        }
+        if (bean.hostKeyAlgorithms.isNotBlank()) {
+            host_key_algorithms = bean.hostKeyAlgorithms.listByLineOrComma()
+        }
+        if (bean.clientVersion.isNotBlank()) {
+            client_version = bean.clientVersion
         }
     }
 }

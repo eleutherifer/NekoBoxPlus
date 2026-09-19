@@ -3,7 +3,6 @@ package io.nekohasekai.sagernet.group
 import io.nekohasekai.sagernet.fmt.hysteria.HysteriaBean
 import io.nekohasekai.sagernet.fmt.masque.MasqueBean
 import io.nekohasekai.sagernet.fmt.mieru.MieruBean
-import io.nekohasekai.sagernet.fmt.openvpn.OpenVPNBean
 import io.nekohasekai.sagernet.fmt.shadowsocks.ShadowsocksBean
 import io.nekohasekai.sagernet.fmt.shadowsocksr.ShadowsocksRBean
 import io.nekohasekai.sagernet.fmt.snell.SnellBean
@@ -23,21 +22,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ClashParserTest {
-    @Test
-    fun normalizesLegacyVlessVisionUdp443Flow() {
-        val proxies =
-            ClashParser.parse(
-                """
-                proxies:
-                  - {name: legacy, type: vless, server: legacy.example, port: 443, uuid: 11111111-1111-1111-1111-111111111111, flow: xtls-rprx-vision-udp443}
-                  - {name: current, type: vless, server: current.example, port: 443, uuid: 22222222-2222-2222-2222-222222222222, flow: xtls-rprx-vision}
-                """.trimIndent(),
-            )!!
-
-        assertEquals("xtls-rprx-vision", (proxies[0] as VMessBean).encryption)
-        assertEquals("xtls-rprx-vision", (proxies[1] as VMessBean).encryption)
-    }
-
     @Test
     fun importsMihomoCoreProtocolIntersection() {
         val proxies =
@@ -63,12 +47,12 @@ class ClashParserTest {
                   - {name: masque, type: masque, server: 192.0.2.1, port: 443, private-key: private, public-key: public}
                   - {name: trust, type: trusttunnel, server: trust.example, port: 443, username: user, password: secret}
                   - {name: tailscale, type: tailscale, auth-key: tskey-auth-test, hostname: android}
-                  - {name: openvpn, type: openvpn, server: vpn.example, port: 1194}
+                  - {name: unsupported, type: openvpn, server: vpn.example, port: 1194}
                   - {name: utility, type: direct}
                 """.trimIndent(),
             )!!
 
-        assertEquals(19, proxies.size)
+        assertEquals(18, proxies.size)
         assertTrue(proxies[0] is SOCKSBean)
         assertTrue(proxies[2] is ShadowsocksBean)
         assertTrue(proxies[3] is ShadowsocksRBean)
@@ -85,8 +69,7 @@ class ClashParserTest {
         assertTrue(proxies[15] is MasqueBean)
         assertTrue(proxies[16] is TrustTunnelBean)
         assertTrue(proxies[17] is TailscaleBean)
-        assertTrue(proxies[18] is OpenVPNBean)
-        assertFalse(proxies.any { it.name == "utility" })
+        assertFalse(proxies.any { it.name == "unsupported" || it.name == "utility" })
     }
 
     @Test

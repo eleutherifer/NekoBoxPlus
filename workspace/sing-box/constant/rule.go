@@ -18,22 +18,17 @@ const (
 	RuleSetFormatBinary = "binary"
 )
 
-const RuleSetTagPlaceholder = "{tag}"
-
 const (
 	RuleSetVersion1 = 1 + iota
 	RuleSetVersion2
 	RuleSetVersion3
 	RuleSetVersion4
-	RuleSetVersion5
-	RuleSetVersionCurrent = RuleSetVersion5
+	RuleSetVersionCurrent = RuleSetVersion4
 )
 
 const (
 	RuleActionTypeRoute        = "route"
 	RuleActionTypeRouteOptions = "route-options"
-	RuleActionTypeEvaluate     = "evaluate"
-	RuleActionTypeRespond      = "respond"
 	RuleActionTypeDirect       = "direct"
 	RuleActionTypeBypass       = "bypass"
 	RuleActionTypeReject       = "reject"

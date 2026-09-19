@@ -5,13 +5,13 @@ import (
 	"errors"
 	"io"
 	"net"
-	"net/netip"
 	"os"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/sagernet/quic-go/http3"
+	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-quic"
 	"github.com/sagernet/sing-tun"
 	E "github.com/sagernet/sing/common/exceptions"
@@ -113,24 +113,11 @@ func (t *Tunnel) ListenPacket(ctx context.Context, destination M.Socksaddr) (net
 	return t.device.ListenPacket(ctx, destination)
 }
 
-func (t *Tunnel) PortAddresses() (netip.Addr, netip.Addr) {
-	return t.device.PortAddresses()
-}
-
-func (t *Tunnel) PortMTU() uint32 {
-	return t.device.PortMTU()
-}
-
-func (t *Tunnel) AttachReturn(returnPath tun.Return) error {
-	return t.device.AttachReturn(returnPath)
-}
-
-func (t *Tunnel) DetachReturn(returnPath tun.Return) error {
-	return t.device.DetachReturn(returnPath)
-}
-
-func (t *Tunnel) WritePackets(packets [][]byte) error {
-	return t.device.WritePackets(packets)
+func (t *Tunnel) NewDirectRouteConnection(metadata adapter.InboundContext, routeContext tun.DirectRouteContext, timeout time.Duration) (tun.DirectRouteDestination, error) {
+	if _, err := t.ensureSession(t.ctx); err != nil {
+		return nil, err
+	}
+	return t.device.NewDirectRouteConnection(metadata, routeContext, timeout)
 }
 
 func (t *Tunnel) Close() error {
@@ -257,13 +244,14 @@ func (t *Tunnel) connectH3(ctx context.Context) (*tunnelSession, error) {
 	if t.options.H3Endpoint == nil {
 		return nil, E.New("missing HTTP/3 endpoint")
 	}
-	udpConn, err := t.options.Dialer.DialContext(ctx, N.NetworkUDP, M.SocksaddrFromNetIP(t.options.H3Endpoint.AddrPort()))
+	udpConn, err := t.options.Dialer.ListenPacket(ctx, M.SocksaddrFromNetIP(t.options.H3Endpoint.AddrPort()))
 	if err != nil {
 		return nil, E.Cause(err, "dial UDP")
 	}
 	quicConn, err := qtls.DialEarly(
 		ctx,
 		udpConn,
+		t.options.H3Endpoint,
 		t.options.TLSConfig,
 		DefaultQuicConfig(t.options.UDPKeepalivePeriod, t.options.UDPInitialPacketSize, t.options.DisablePathMTUDiscovery),
 	)

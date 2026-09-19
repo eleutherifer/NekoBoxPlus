@@ -22,10 +22,10 @@ import io.nekohasekai.sagernet.aidl.ISagerNetService
 import io.nekohasekai.sagernet.aidl.ISagerNetServiceCallback
 import io.nekohasekai.sagernet.aidl.SpeedTestData
 import io.nekohasekai.sagernet.bg.proto.ProxyInstance
-import io.nekohasekai.sagernet.database.AppData
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.ProxyEntity
 import io.nekohasekai.sagernet.database.RuleEntity
+import io.nekohasekai.sagernet.database.SagerDatabase
 import io.nekohasekai.sagernet.ktx.*
 import io.nekohasekai.sagernet.plugin.PluginManager
 import io.nekohasekai.sagernet.utils.DefaultNetworkListener
@@ -237,11 +237,16 @@ class BaseService {
         override fun urlTest(automatic: Boolean): Int {
             val data = data ?: error("core not started")
             val box = data.proxy?.box ?: error("core not started")
-            val retryPlan = AutomaticConnectionTestPolicy.retryPlan(
-                automatic,
-                DataStore.connectionTestAttempts,
-                DataStore.connectionTestPause,
-            )
+            val attempts = if (automatic) {
+                AutomaticConnectionTestPolicy.effectiveAttempts(DataStore.connectionTestAttempts)
+            } else {
+                DataStore.connectionTestAttempts
+            }
+            val pause = if (automatic) {
+                AutomaticConnectionTestPolicy.effectivePauseMillis(DataStore.connectionTestPause)
+            } else {
+                DataStore.connectionTestPause
+            }
             try {
                 return data.urlTestTracker.track {
                     Libcore.urlTest(
@@ -249,8 +254,8 @@ class BaseService {
                         DataStore.connectionTestURL,
                         DataStore.connectionTestTimeout,
                         DataStore.profileTestType,
-                        retryPlan.attempts,
-                        retryPlan.pauseMillis,
+                        attempts,
+                        pause,
                         DataStore.connectionTestHardened,
                     )
                 }
@@ -606,7 +611,7 @@ class BaseService {
                     stopRunner(false, (this as Context).getString(R.string.profile_empty))
                 }
                 ServiceLifecyclePolicy.ReloadAction.SelectorReload -> {
-                    val ent = AppData.profiles.getById(selectedProxy)
+                    val ent = SagerDatabase.proxyDao.getById(selectedProxy)
                     val tag = data.proxy!!.config.profileTagMap[ent?.id] ?: ""
                     if (tag.isNotBlank() && ent != null) {
                         // select from GUI
@@ -636,7 +641,7 @@ class BaseService {
 
         fun canReloadSelector(selectedProxy: Long = DataStore.selectedProxy): Boolean {
             if ((data.proxy?.config?.selectorGroupId ?: -1L) < 0) return false
-            val ent = AppData.profiles.getById(selectedProxy) ?: return false
+            val ent = SagerDatabase.proxyDao.getById(selectedProxy) ?: return false
             val tmpBox = ProxyInstance(ent)
             tmpBox.buildConfigTmp()
             if (tmpBox.lastSelectorGroupId == data.proxy?.lastSelectorGroupId) {
@@ -650,7 +655,7 @@ class BaseService {
         }
 
         fun hasActiveWifiRules(): Boolean {
-            return AppData.rules.enabledRules().any { RuleEntity.hasActiveWifiIdentity(it) }
+            return SagerDatabase.rulesDao.enabledRules().any { RuleEntity.hasActiveWifiIdentity(it) }
         }
 
         fun startRunner(
@@ -1212,7 +1217,7 @@ class BaseService {
                 return Service.START_NOT_STICKY
             }
             data.desiredProfileId = requestedProfileId
-            val profile = AppData.profiles.getById(requestedProfileId)
+            val profile = SagerDatabase.proxyDao.getById(requestedProfileId)
             this as Context
             if (profile == null) { // gracefully shutdown: https://stackoverflow.com/q/47337857/2245107
                 data.notification = createNotification(null)

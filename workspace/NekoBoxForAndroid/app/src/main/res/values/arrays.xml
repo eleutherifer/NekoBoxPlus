@@ -54,20 +54,6 @@
         <item>2</item>
     </string-array>
 
-    <string-array name="udp_nat_behavior_entries">
-        <item>@string/not_set</item>
-        <item>@string/udp_nat_endpoint_independent</item>
-        <item>@string/udp_nat_address_dependent</item>
-        <item>@string/udp_nat_address_and_port_dependent</item>
-    </string-array>
-
-    <string-array name="udp_nat_behavior_values" translatable="false">
-        <item></item>
-        <item>endpoint_independent</item>
-        <item>address_dependent</item>
-        <item>address_and_port_dependent</item>
-    </string-array>
-
     <string-array name="vless_packet_encoding_value">
         <item>3</item>
         <item>0</item>
@@ -624,19 +610,6 @@
         <item>packet-up</item>
         <item>stream-up</item>
         <item>stream-one</item>
-    </string-array>
-
-    <string-array name="xhttp_congestion_controller_entry">
-        <item>Default (BBR)</item>
-        <item>BBR</item>
-        <item>CUBIC</item>
-        <item>Reno</item>
-    </string-array>
-    <string-array name="xhttp_congestion_controller_value" translatable="false">
-        <item></item>
-        <item>bbr</item>
-        <item>cubic</item>
-        <item>reno</item>
     </string-array>
 
     <string-array name="xhttp_uplink_data_placement_entry">
@@ -1546,32 +1519,6 @@
         <item>6</item>
     </string-array>
 
-    <string-array name="snell_v6_modes_entry">
-        <item>Default</item>
-        <item>Unshaped</item>
-        <item>Unsafe raw</item>
-    </string-array>
-    <string-array name="snell_v6_modes_value">
-        <item>default</item>
-        <item>unshaped</item>
-        <item>unsafe-raw</item>
-    </string-array>
-
-    <string-array name="hysteria2_obfs_types">
-        <item>salamander</item>
-        <item>gecko</item>
-    </string-array>
-    <string-array name="hysteria2_ip_versions_entry">
-        <item>Auto</item>
-        <item>IPv4</item>
-        <item>IPv6</item>
-    </string-array>
-    <string-array name="hysteria2_ip_versions_value">
-        <item>0</item>
-        <item>4</item>
-        <item>6</item>
-    </string-array>
-
     <string-array name="snell_obfs_modes_entry">
         <item>None</item>
         <item>HTTP</item>
@@ -1594,6 +1541,18 @@
         <item></item>
         <item>tcp</item>
         <item>udp</item>
+    </string-array>
+
+    <string-array name="snell_v6_modes_entry">
+        <item>Default</item>
+        <item>Unshaped</item>
+        <item>Unsafe raw</item>
+    </string-array>
+
+    <string-array name="snell_v6_modes_value">
+        <item>default</item>
+        <item>unshaped</item>
+        <item>unsafe-raw</item>
     </string-array>
 
     <string-array name="proxy_protocol_entry">

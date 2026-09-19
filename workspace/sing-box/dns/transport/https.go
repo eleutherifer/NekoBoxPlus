@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"strconv"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
@@ -46,8 +45,6 @@ type HTTPSTransport struct {
 	dialer           N.Dialer
 	destination      *url.URL
 	headers          http.Header
-	serverAddr       M.Socksaddr
-	fallback         *atomic.Bool
 	transportAccess  sync.Mutex
 	transport        *HTTPSTransportWrapper
 	transportResetAt time.Time
@@ -126,20 +123,13 @@ func NewHTTPSRaw(
 	if tlsConfig != nil {
 		dialer = tls.NewDialer(dialer, tlsConfig)
 	}
-	fallback := new(atomic.Bool)
-	if destination.Scheme == "http" {
-		// plain HTTP DoH used by Tailscale
-		fallback.Store(true)
-	}
 	return &HTTPSTransport{
 		TransportAdapter: adapter,
 		logger:           logger,
 		dialer:           dialer,
 		destination:      destination,
 		headers:          headers,
-		serverAddr:       serverAddr,
-		fallback:         fallback,
-		transport:        NewHTTPSTransportWrapper(dialer, serverAddr, fallback),
+		transport:        NewHTTPSTransportWrapper(dialer, serverAddr, destination),
 	}
 }
 
@@ -151,21 +141,18 @@ func (t *HTTPSTransport) Start(stage adapter.StartStage) error {
 }
 
 func (t *HTTPSTransport) Close() error {
-	t.Reset()
+	t.transportAccess.Lock()
+	defer t.transportAccess.Unlock()
+	t.transport.CloseIdleConnections()
+	t.transport = t.transport.Clone()
 	return nil
 }
 
 func (t *HTTPSTransport) Reset() {
 	t.transportAccess.Lock()
 	defer t.transportAccess.Unlock()
-	t.resetTransportLocked()
-}
-
-func (t *HTTPSTransport) resetTransportLocked() {
-	oldTransport := t.transport
-	t.transport = NewHTTPSTransportWrapper(t.dialer, t.serverAddr, t.fallback)
-	t.transportResetAt = time.Now()
-	oldTransport.Close()
+	t.transport.CloseIdleConnections()
+	t.transport = t.transport.Clone()
 }
 
 func (t *HTTPSTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, error) {
@@ -178,17 +165,13 @@ func (t *HTTPSTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 			if t.transportResetAt.After(startAt) {
 				return nil, err
 			}
-			t.resetTransportLocked()
+			t.transport.CloseIdleConnections()
+			t.transport = t.transport.Clone()
+			t.transportResetAt = time.Now()
 		}
 		return nil, err
 	}
 	return response, nil
-}
-
-func (t *HTTPSTransport) ExchangeAsync(ctx context.Context, message *mDNS.Msg, callback func(response *mDNS.Msg, err error)) {
-	go func() {
-		callback(t.Exchange(ctx, message))
-	}()
 }
 
 func (t *HTTPSTransport) exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, error) {

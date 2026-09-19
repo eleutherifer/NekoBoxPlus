@@ -4,11 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net/netip"
-	"reflect"
 	"time"
 
 	C "github.com/sagernet/sing-box/constant"
-	"github.com/sagernet/sing-box/schema"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/json"
 	"github.com/sagernet/sing/common/json/badjson"
@@ -16,7 +14,7 @@ import (
 )
 
 type _RuleAction struct {
-	Action              string                    `json:"action,omitempty" enum:"route,route-options,direct,bypass,reject,hijack-dns,sniff,resolve"`
+	Action              string                    `json:"action,omitempty"`
 	RouteOptions        RouteActionOptions        `json:"-"`
 	RouteOptionsOptions RouteOptionsActionOptions `json:"-"`
 	DirectOptions       DirectActionOptions       `json:"-"`
@@ -55,9 +53,9 @@ func (r RuleAction) MarshalJSON() ([]byte, error) {
 		return nil, E.New("unknown rule action: " + r.Action)
 	}
 	if v == nil {
-		return badjson.MarshallObjects(_RuleAction(r))
+		return badjson.MarshallObjects((_RuleAction)(r))
 	}
-	return badjson.MarshallObjects(_RuleAction(r), v)
+	return badjson.MarshallObjects((_RuleAction)(r), v)
 }
 
 func (r *RuleAction) UnmarshalJSON(data []byte) error {
@@ -99,10 +97,8 @@ func (r *RuleAction) UnmarshalJSON(data []byte) error {
 }
 
 type _DNSRuleAction struct {
-	Action              string                       `json:"action,omitempty" enum:"route,evaluate,respond,route-options,reject,predefined"`
-	Race                bool                         `json:"race,omitempty"`
+	Action              string                       `json:"action,omitempty"`
 	RouteOptions        DNSRouteActionOptions        `json:"-"`
-	EvaluateOptions     DNSEvaluateActionOptions     `json:"-"`
 	RouteOptionsOptions DNSRouteOptionsActionOptions `json:"-"`
 	RejectOptions       RejectActionOptions          `json:"-"`
 	PredefinedOptions   DNSRouteActionPredefined     `json:"-"`
@@ -119,10 +115,6 @@ func (r DNSRuleAction) MarshalJSON() ([]byte, error) {
 	case C.RuleActionTypeRoute:
 		r.Action = ""
 		v = r.RouteOptions
-	case C.RuleActionTypeEvaluate:
-		v = r.EvaluateOptions
-	case C.RuleActionTypeRespond:
-		v = nil
 	case C.RuleActionTypeRouteOptions:
 		v = r.RouteOptionsOptions
 	case C.RuleActionTypeReject:
@@ -132,10 +124,7 @@ func (r DNSRuleAction) MarshalJSON() ([]byte, error) {
 	default:
 		return nil, E.New("unknown DNS rule action: " + r.Action)
 	}
-	if v == nil {
-		return badjson.MarshallObjects(_DNSRuleAction(r))
-	}
-	return badjson.MarshallObjects(_DNSRuleAction(r), v)
+	return badjson.MarshallObjects((_DNSRuleAction)(r), v)
 }
 
 func (r *DNSRuleAction) UnmarshalJSONContext(ctx context.Context, data []byte) error {
@@ -148,10 +137,6 @@ func (r *DNSRuleAction) UnmarshalJSONContext(ctx context.Context, data []byte) e
 	case "", C.RuleActionTypeRoute:
 		r.Action = C.RuleActionTypeRoute
 		v = &r.RouteOptions
-	case C.RuleActionTypeEvaluate:
-		v = &r.EvaluateOptions
-	case C.RuleActionTypeRespond:
-		v = nil
 	case C.RuleActionTypeRouteOptions:
 		v = &r.RouteOptionsOptions
 	case C.RuleActionTypeReject:
@@ -161,18 +146,11 @@ func (r *DNSRuleAction) UnmarshalJSONContext(ctx context.Context, data []byte) e
 	default:
 		return E.New("unknown DNS rule action: " + r.Action)
 	}
-	if v == nil {
-		return json.UnmarshalDisallowUnknownFields(data, &_DNSRuleAction{})
-	}
-	err = badjson.UnmarshallExcludedContext(ctx, data, (*_DNSRuleAction)(r), v)
-	if err != nil {
-		return err
-	}
-	return nil
+	return badjson.UnmarshallExcludedContext(ctx, data, (*_DNSRuleAction)(r), v)
 }
 
 type RouteActionOptions struct {
-	Outbound string `json:"outbound,omitempty" reference:"outbound"`
+	Outbound string `json:"outbound,omitempty"`
 	RawRouteOptionsActionOptions
 }
 
@@ -190,8 +168,6 @@ type RawRouteOptionsActionOptions struct {
 	TLSFragment              bool               `json:"tls_fragment,omitempty"`
 	TLSFragmentFallbackDelay badoption.Duration `json:"tls_fragment_fallback_delay,omitempty"`
 	TLSRecordFragment        bool               `json:"tls_record_fragment,omitempty"`
-	TLSSpoof                 string             `json:"tls_spoof,omitempty"`
-	TLSSpoofMethod           string             `json:"tls_spoof_method,omitempty" enum:"wrong-sequence,wrong-checksum,wrong-ack,wrong-md5,wrong-timestamp"`
 }
 
 type RouteOptionsActionOptions RawRouteOptionsActionOptions
@@ -211,32 +187,24 @@ func (r *RouteOptionsActionOptions) UnmarshalJSON(data []byte) error {
 }
 
 type DNSRouteActionOptions struct {
-	Server      string `json:"server,omitempty" reference:"dns_server"`
-	Speculative bool   `json:"speculative,omitempty"`
-	AbstractDNSRouteActionOptions
+	Server       string                `json:"server,omitempty"`
+	Strategy     DomainStrategy        `json:"strategy,omitempty"`
+	DisableCache bool                  `json:"disable_cache,omitempty"`
+	RewriteTTL   *uint32               `json:"rewrite_ttl,omitempty"`
+	ClientSubnet *badoption.Prefixable `json:"client_subnet,omitempty"`
 }
 
-type DNSEvaluateActionOptions struct {
-	Server      string `json:"server,omitempty" reference:"dns_server"`
-	Tag         string `json:"tag,omitempty"`
-	Speculative bool   `json:"speculative,omitempty"`
-	AbstractDNSRouteActionOptions
+type _DNSRouteOptionsActionOptions struct {
+	Strategy     DomainStrategy        `json:"strategy,omitempty"`
+	DisableCache bool                  `json:"disable_cache,omitempty"`
+	RewriteTTL   *uint32               `json:"rewrite_ttl,omitempty"`
+	ClientSubnet *badoption.Prefixable `json:"client_subnet,omitempty"`
 }
 
-type AbstractDNSRouteActionOptions struct {
-	Timeout                badoption.Duration    `json:"timeout,omitempty"`
-	Strategy               DomainStrategy        `json:"strategy,omitempty" schema:"omit"`
-	DisableCache           bool                  `json:"disable_cache,omitempty"`
-	DisableOptimisticCache bool                  `json:"disable_optimistic_cache,omitempty"`
-	RewriteTTL             *uint32               `json:"rewrite_ttl,omitempty"`
-	ClientSubnet           *badoption.Prefixable `json:"client_subnet,omitempty"`
-	RemoveClientSubnet     bool                  `json:"remove_client_subnet,omitempty"`
-}
-
-type DNSRouteOptionsActionOptions AbstractDNSRouteActionOptions
+type DNSRouteOptionsActionOptions _DNSRouteOptionsActionOptions
 
 func (r *DNSRouteOptionsActionOptions) UnmarshalJSON(data []byte) error {
-	err := json.Unmarshal(data, (*AbstractDNSRouteActionOptions)(r))
+	err := json.Unmarshal(data, (*_DNSRouteOptionsActionOptions)(r))
 	if err != nil {
 		return err
 	}
@@ -246,9 +214,9 @@ func (r *DNSRouteOptionsActionOptions) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-type DirectActionOptions struct {
-	AbstractDialerOptions
-}
+type _DirectActionOptions DialerOptions
+
+type DirectActionOptions _DirectActionOptions
 
 func (d DirectActionOptions) Descriptions() []string {
 	var descriptions []string
@@ -288,8 +256,19 @@ func (d DirectActionOptions) Descriptions() []string {
 	return descriptions
 }
 
+func (d *DirectActionOptions) UnmarshalJSON(data []byte) error {
+	err := json.Unmarshal(data, (*_DirectActionOptions)(d))
+	if err != nil {
+		return err
+	}
+	if d.Detour != "" {
+		return E.New("detour is not available in the current context")
+	}
+	return nil
+}
+
 type _RejectActionOptions struct {
-	Method string `json:"method,omitempty" enum:"default,drop,reply"`
+	Method string `json:"method,omitempty"`
 	NoDrop bool   `json:"no_drop,omitempty"`
 }
 
@@ -300,7 +279,7 @@ func (r RejectActionOptions) MarshalJSON() ([]byte, error) {
 	case C.RuleActionRejectMethodDefault:
 		r.Method = ""
 	}
-	return json.Marshal(_RejectActionOptions(r))
+	return json.Marshal((_RejectActionOptions)(r))
 }
 
 func (r *RejectActionOptions) UnmarshalJSON(bytes []byte) error {
@@ -323,18 +302,16 @@ func (r *RejectActionOptions) UnmarshalJSON(bytes []byte) error {
 }
 
 type RouteActionSniff struct {
-	Sniffer badoption.Listable[string] `json:"sniffer,omitempty" enum:"tls,http,quic,dns,stun,bittorrent,dtls,ssh,rdp,ntp"`
+	Sniffer badoption.Listable[string] `json:"sniffer,omitempty"`
 	Timeout badoption.Duration         `json:"timeout,omitempty"`
 }
 
 type RouteActionResolve struct {
-	Server                 string                `json:"server,omitempty" reference:"dns_server"`
-	Timeout                badoption.Duration    `json:"timeout,omitempty"`
-	Strategy               DomainStrategy        `json:"strategy,omitempty"`
-	DisableCache           bool                  `json:"disable_cache,omitempty"`
-	DisableOptimisticCache bool                  `json:"disable_optimistic_cache,omitempty"`
-	RewriteTTL             *uint32               `json:"rewrite_ttl,omitempty"`
-	ClientSubnet           *badoption.Prefixable `json:"client_subnet,omitempty"`
+	Server       string                `json:"server,omitempty"`
+	Strategy     DomainStrategy        `json:"strategy,omitempty"`
+	DisableCache bool                  `json:"disable_cache,omitempty"`
+	RewriteTTL   *uint32               `json:"rewrite_ttl,omitempty"`
+	ClientSubnet *badoption.Prefixable `json:"client_subnet,omitempty"`
 }
 
 type DNSRouteActionPredefined struct {
@@ -342,82 +319,4 @@ type DNSRouteActionPredefined struct {
 	Answer badoption.Listable[DNSRecordOptions] `json:"answer,omitempty"`
 	Ns     badoption.Listable[DNSRecordOptions] `json:"ns,omitempty"`
 	Extra  badoption.Listable[DNSRecordOptions] `json:"extra,omitempty"`
-}
-
-type actionVariant struct {
-	action         string
-	actionOptional bool
-	structType     reflect.Type
-	build          func(variant *schema.Node) error
-}
-
-func actionUnion(builder schema.Builder, variants []actionVariant) (*schema.Node, error) {
-	variantNodes := make([]*schema.Node, 0, len(variants))
-	for _, variant := range variants {
-		variantNode := schema.LooseObject()
-		variantNode.Properties.Put("action", schema.StringConst(variant.action))
-		if !variant.actionOptional {
-			variantNode.Required = []string{"action"}
-		}
-		if variant.build != nil {
-			err := variant.build(variantNode)
-			if err != nil {
-				return nil, err
-			}
-		}
-		if variant.structType != nil {
-			err := builder.FlattenStruct(variantNode, variant.structType)
-			if err != nil {
-				return nil, err
-			}
-		}
-		variantNodes = append(variantNodes, variantNode)
-	}
-	return schema.OneOf(variantNodes...), nil
-}
-
-func rejectProperties(variant *schema.Node) error {
-	variant.Properties.Put("method", schema.StringEnum(
-		"",
-		C.RuleActionRejectMethodDefault,
-		C.RuleActionRejectMethodDrop,
-		C.RuleActionRejectMethodReply,
-	))
-	variant.Properties.Put("no_drop", schema.BooleanNode())
-	return nil
-}
-
-func routeActionUnion(builder schema.Builder) (*schema.Node, error) {
-	return actionUnion(builder, []actionVariant{
-		{action: C.RuleActionTypeRoute, actionOptional: true, structType: reflect.TypeFor[RouteActionOptions]()},
-		{action: C.RuleActionTypeRouteOptions, structType: reflect.TypeFor[RawRouteOptionsActionOptions]()},
-		{action: C.RuleActionTypeDirect, structType: reflect.TypeFor[DirectActionOptions]()},
-		{action: C.RuleActionTypeBypass, structType: reflect.TypeFor[RouteActionOptions]()},
-		{action: C.RuleActionTypeReject, build: rejectProperties},
-		{action: C.RuleActionTypeHijackDNS},
-		{action: C.RuleActionTypeSniff, structType: reflect.TypeFor[RouteActionSniff]()},
-		{action: C.RuleActionTypeResolve, structType: reflect.TypeFor[RouteActionResolve]()},
-	})
-}
-
-func dnsActionUnion(builder schema.Builder) (*schema.Node, error) {
-	raceProperty := func(variant *schema.Node) error {
-		variant.Properties.Put("race", schema.BooleanNode())
-		return nil
-	}
-	rejectWithRace := func(variant *schema.Node) error {
-		err := raceProperty(variant)
-		if err != nil {
-			return err
-		}
-		return rejectProperties(variant)
-	}
-	return actionUnion(builder, []actionVariant{
-		{action: C.RuleActionTypeRoute, actionOptional: true, structType: reflect.TypeFor[DNSRouteActionOptions](), build: raceProperty},
-		{action: C.RuleActionTypeEvaluate, structType: reflect.TypeFor[DNSEvaluateActionOptions](), build: raceProperty},
-		{action: C.RuleActionTypeRespond, build: raceProperty},
-		{action: C.RuleActionTypeRouteOptions, structType: reflect.TypeFor[DNSRouteOptionsActionOptions](), build: raceProperty},
-		{action: C.RuleActionTypeReject, build: rejectWithRace},
-		{action: C.RuleActionTypePredefined, structType: reflect.TypeFor[DNSRouteActionPredefined](), build: raceProperty},
-	})
 }

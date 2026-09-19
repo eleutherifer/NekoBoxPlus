@@ -4,8 +4,6 @@ import io.nekohasekai.sagernet.fmt.masque.MasqueBean
 import io.nekohasekai.sagernet.fmt.masterdns.MasterDnsVPNBean
 import io.nekohasekai.sagernet.fmt.mieru.MieruBean
 import io.nekohasekai.sagernet.fmt.naive.NaiveBean
-import io.nekohasekai.sagernet.fmt.openconnect.OpenConnectBean
-import io.nekohasekai.sagernet.fmt.openvpn.OpenVPNBean
 import io.nekohasekai.sagernet.fmt.trusttunnel.TrustTunnelBean
 import io.nekohasekai.sagernet.fmt.wireguard.AmneziaWGBean
 import io.nekohasekai.sagernet.fmt.wireguard.WireGuardBean
@@ -15,7 +13,6 @@ import moe.matsuri.nb4a.SingBoxOptions.CustomSingBoxOption
 import moe.matsuri.nb4a.SingBoxOptions.Outbound
 import moe.matsuri.nb4a.SingBoxOptions.Outbound_MasterDnsVPNOptions
 import moe.matsuri.nb4a.SingBoxOptions.OutboundTLSOptions
-import moe.matsuri.nb4a.proxy.anytls.AnyTLSBean
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -196,21 +193,6 @@ class SingBoxSharedOptionsTest {
     }
 
     @Test
-    fun configuredDialOptionsDoNotInjectTcpFastOpenForAnyTLS() {
-        val bean = AnyTLSBean().enableAllDialOptions()
-        val outbound = Outbound().apply {
-            type = "anytls"
-            applyAllConfiguredDialOptions(bean)
-        }
-
-        assertFalse(outbound._hack_config_map.containsKey("tcp_fast_open"))
-        assertEquals(true, outbound._hack_config_map["tcp_multi_path"])
-        assertEquals(true, outbound._hack_config_map["disable_tcp_keep_alive"])
-        assertEquals("45s", outbound._hack_config_map["tcp_keep_alive"])
-        assertEquals("15s", outbound._hack_config_map["tcp_keep_alive_interval"])
-    }
-
-    @Test
     fun endpointDialOptionsRespectTransportCapabilities() {
         val wireGuardBean = WireGuardBean().enableAllDialOptions()
         val wireGuard = buildSingBoxEndpointWireguardBean(wireGuardBean).apply {
@@ -267,32 +249,6 @@ class SingBoxSharedOptionsTest {
     }
 
     @Test
-    fun openVpnAndOpenConnectCapabilitiesFollowConfiguredNetworks() {
-        val tcpOpenVpn = OpenVPNBean().enableAllDialOptions().apply { network = "tcp" }
-        val udpOpenVpn = OpenVPNBean().enableAllDialOptions().apply { network = "udp" }
-        val mixedOpenVpn = OpenVPNBean().enableAllDialOptions().apply {
-            network = "tcp"
-            additionalRemotes = "udp://vpn.example.com:1194"
-        }
-        val openVpn = Outbound().apply { type = "openvpn-client" }
-        assertEquals(DialOptionCapabilities.TCP, openVpn.resolveDialOptionCapabilities(tcpOpenVpn))
-        assertEquals(DialOptionCapabilities.UDP, openVpn.resolveDialOptionCapabilities(udpOpenVpn))
-        assertEquals(DialOptionCapabilities.TCP_AND_UDP, openVpn.resolveDialOptionCapabilities(mixedOpenVpn))
-
-        val openConnect = Outbound().apply { type = "openconnect" }
-        assertEquals(
-            DialOptionCapabilities.TCP_AND_UDP,
-            openConnect.resolveDialOptionCapabilities(OpenConnectBean().enableAllDialOptions()),
-        )
-        assertEquals(
-            DialOptionCapabilities.TCP,
-            openConnect.resolveDialOptionCapabilities(
-                OpenConnectBean().enableAllDialOptions().apply { noUDP = true },
-            ),
-        )
-    }
-
-    @Test
     fun customOutboundsOnlyReceiveOptionsForKnownTypes() {
         val bean = NaiveBean().enableAllDialOptions()
         val known = CustomSingBoxOption("""{"type":"wireguard"}""").apply {
@@ -304,6 +260,18 @@ class SingBoxSharedOptionsTest {
             applyConfiguredDialOptions(bean, true, true, "true")
         }
         assertTrue(unknown._hack_config_map.keys.intersect(dialOptionNames).isEmpty())
+    }
+
+    @Test
+    fun anyTlsDoesNotReceiveTcpFastOpen() {
+        val outbound = Outbound().apply {
+            type = "anytls"
+            applyAllConfiguredDialOptions(NaiveBean().enableAllDialOptions())
+        }
+
+        assertFalse(outbound._hack_config_map.containsKey("tcp_fast_open"))
+        assertEquals(true, outbound._hack_config_map["tcp_multi_path"])
+        assertEquals(true, outbound._hack_config_map["disable_tcp_keep_alive"])
     }
 
     @Test
@@ -326,7 +294,6 @@ class SingBoxSharedOptionsTest {
             tlsClientCertificate = "certificate"
             tlsClientKey = "private-key"
             echQueryServerName = "ech.example.com"
-            tlsHandshakeTimeout = "8s"
         }
         val tls = OutboundTLSOptions().apply { applySharedTLSOptions(bean) }
 
@@ -337,30 +304,6 @@ class SingBoxSharedOptionsTest {
         assertNotNull(tls.ech)
         assertTrue(tls.ech.enabled == true)
         assertEquals("ech.example.com", tls.ech.query_server_name)
-        assertEquals("8s", tls.handshake_timeout)
-    }
-
-    @Test
-    fun sharedQuicOptionsMapSingBox114Fields() {
-        val bean = NaiveBean().apply {
-            initializeDefaultValues()
-            quicIdleTimeout = "30s"
-            quicKeepAlivePeriod = "10s"
-            quicStreamReceiveWindow = 1_048_576L
-            quicConnectionReceiveWindow = 2_097_152L
-            quicMaxConcurrentStreams = 128
-            quicInitialPacketSize = 1350
-            quicDisablePathMtuDiscovery = true
-        }
-        val outbound = Outbound().apply { applySharedQUICOptions(bean) }
-
-        assertEquals("30s", outbound._hack_config_map["idle_timeout"])
-        assertEquals("10s", outbound._hack_config_map["keep_alive_period"])
-        assertEquals(1_048_576L, outbound._hack_config_map["stream_receive_window"])
-        assertEquals(2_097_152L, outbound._hack_config_map["connection_receive_window"])
-        assertEquals(128, outbound._hack_config_map["max_concurrent_streams"])
-        assertEquals(1350, outbound._hack_config_map["initial_packet_size"])
-        assertEquals(true, outbound._hack_config_map["disable_path_mtu_discovery"])
     }
 
     @Test

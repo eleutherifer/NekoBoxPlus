@@ -140,5 +140,6 @@ internal class StunTestViewModel : ViewModel() {
 
     override fun onCleared() {
         cancelNativeSession()
+        super.onCleared()
     }
 }

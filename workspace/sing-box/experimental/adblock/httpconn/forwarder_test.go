@@ -39,10 +39,6 @@ func (s testCertificateStore) Pool() *x509.CertPool {
 	return s.pool
 }
 
-func (testCertificateStore) ExclusiveAnchors() bool {
-	return false
-}
-
 func TestUTLSForwarderUsesHTTP2WhenNegotiated(t *testing.T) {
 	protoMajor := make(chan int, 1)
 	upstream := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
@@ -292,30 +288,4 @@ func newUTLSTestForwarder(t *testing.T, upstream *httptest.Server) ClosableRound
 	})
 	t.Cleanup(forwarder.Close)
 	return forwarder
-}
-
-func TestUTLSForwarderInsecureSkipVerify(t *testing.T) {
-	upstream := httptest.NewTLSServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
-		writer.WriteHeader(http.StatusNoContent)
-	}))
-	defer upstream.Close()
-
-	forwarder := NewHTTPForwarder(t.Context(), &adblockctx.Conn{
-		UseTLS:             true,
-		UTLS:               consts.Chrome,
-		InsecureSkipVerify: true,
-	})
-	defer forwarder.Close()
-	request, err := http.NewRequestWithContext(t.Context(), http.MethodGet, upstream.URL, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	response, err := forwarder.RoundTrip(request)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer response.Body.Close()
-	if response.StatusCode != http.StatusNoContent {
-		t.Fatalf("status = %d, want %d", response.StatusCode, http.StatusNoContent)
-	}
 }

@@ -89,5 +89,6 @@ internal class RuleSetMatchViewModel : ViewModel() {
 
     override fun onCleared() {
         cancelNativeSession()
+        super.onCleared()
     }
 }

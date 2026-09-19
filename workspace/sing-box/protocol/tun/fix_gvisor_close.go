@@ -20,16 +20,13 @@ type GVisorUnsafe struct {
 	inet6Address         netip.Addr
 	inet4LoopbackAddress []netip.Addr
 	inet6LoopbackAddress []netip.Addr
+	udpTimeout           time.Duration
 	icmpTimeout          time.Duration
-	udpNATOptions        singtun.UDPNatOptions
 	broadcastAddr        netip.Addr
 	handler              singtun.Handler
 	logger               logger.Logger
 	stack                *gvisorstack.Stack
 	endpoint             gvisorstack.LinkEndpoint
-	dispatcher           *singtun.ForwardDispatcher
-	icmpForwarder        *singtun.ICMPForwarder
-	udpForwarder         *singtun.UDPForwarder
 }
 
 const (

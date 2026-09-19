@@ -23,22 +23,6 @@ import java.util.Base64
 
 class XrayParserTest {
     @Test
-    fun normalizesLegacyVlessVisionUdp443Flow() {
-        val proxies =
-            XrayParser.parse(
-                """
-                {"outbounds":[
-                  {"protocol":"vless","settings":{"address":"legacy.example","port":443,"id":"11111111-1111-1111-1111-111111111111","flow":"xtls-rprx-vision-udp443"}},
-                  {"protocol":"vless","settings":{"address":"current.example","port":443,"id":"22222222-2222-2222-2222-222222222222","flow":"xtls-rprx-vision"}}
-                ]}
-                """.trimIndent(),
-            )!!
-
-        assertEquals("xtls-rprx-vision", (proxies[0] as VMessBean).encryption)
-        assertEquals("xtls-rprx-vision", (proxies[1] as VMessBean).encryption)
-    }
-
-    @Test
     fun convertsBalancerMembersIntoEmbeddedUrlTest() {
         val proxies = XrayParser.parse(
             """

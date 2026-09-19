@@ -4,11 +4,13 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Bundle
 import android.util.DisplayMetrics
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.ViewGroup
-import android.widget.Toast
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.ViewCompositionStrategy
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.core.os.bundleOf
 import androidx.fragment.app.DialogFragment
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
@@ -17,8 +19,6 @@ import com.google.zxing.WriterException
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ui.MainActivity
-import io.nekohasekai.sagernet.ui.compose.NekoComposeTheme
-import io.nekohasekai.sagernet.ui.compose.QrCodeContent
 import io.nekohasekai.sagernet.utils.Theme
 import java.nio.charset.StandardCharsets
 import kotlin.math.roundToInt
@@ -32,10 +32,9 @@ class QRCodeDialog() : DialogFragment() {
     }
 
     constructor(url: String, displayName: String) : this() {
-        arguments = Bundle().apply {
-            putString(KEY_URL, url)
-            putString(KEY_NAME, displayName)
-        }
+        arguments = bundleOf(
+            Pair(KEY_URL, url), Pair(KEY_NAME, displayName)
+        )
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,9 +61,6 @@ class QRCodeDialog() : DialogFragment() {
             val width: Int = displayMetrics.widthPixels
             pixelMin = if (height > width) width else height
             pixelMin = (pixelMin * 0.8).roundToInt()
-            if (width > height) {
-                pixelMin -= (16 * displayMetrics.density).roundToInt()
-            }
         } catch (e: Exception) {
         }
 
@@ -77,30 +73,35 @@ class QRCodeDialog() : DialogFragment() {
         val hints = mutableMapOf<EncodeHintType, Any>()
         if (!iso88591.canEncode(url)) hints[EncodeHintType.CHARACTER_SET] = StandardCharsets.UTF_8.name()
         val qrBits = MultiFormatWriter().encode(url, BarcodeFormat.QR_CODE, size, size, hints)
-        val pixels = IntArray(size * size)
-        for (y in 0 until size) {
-            val rowOffset = y * size
-            for (x in 0 until size) {
-                pixels[rowOffset + x] = if (qrBits.get(x, y)) Color.BLACK else Color.WHITE
-            }
-        }
-        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565).apply {
-            setPixels(pixels, 0, size, 0, 0, size, size)
-        }
+        LinearLayout(context).apply {
+            // Layout
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
 
-        ComposeView(requireContext()).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
-            setContent {
-                NekoComposeTheme {
-                    QrCodeContent(bitmap = bitmap, displayName = displayName)
-                }
-            }
+            // QR Code Image View
+            addView(ImageView(context).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+                setImageBitmap(Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565).apply {
+                    for (x in 0 until size) for (y in 0 until size) {
+                        setPixel(x, y, if (qrBits.get(x, y)) Color.BLACK else Color.WHITE)
+                    }
+                })
+            })
+
+            // Text View
+            addView(TextView(context).apply {
+                gravity = Gravity.CENTER
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+                text = displayName
+            })
         }
     } catch (e: WriterException) {
         Logs.w(e)
-        (activity as? MainActivity)?.snackbar(R.string.qr_code_data_too_large)?.show()
-            ?: Toast.makeText(requireContext(), R.string.qr_code_data_too_large, Toast.LENGTH_LONG)
-                .show()
+        (activity as MainActivity).snackbar(R.string.qr_code_data_too_large).show()
         dismiss()
         null
     }

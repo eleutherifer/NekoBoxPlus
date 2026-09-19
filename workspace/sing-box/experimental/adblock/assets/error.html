@@ -186,27 +186,6 @@
       color: white;
     }
 
-    .risk-details {
-      margin-top: 1.25rem;
-      color: var(--muted);
-      font-size: 0.92rem;
-    }
-
-    .risk-details summary {
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .risk-warning {
-      margin: 0.85rem 0;
-    }
-
-    .risk-status {
-      min-height: 1.4em;
-      margin: 0.65rem 0 0;
-      color: var(--accent);
-    }
-
     .footer {
       color: var(--muted);
       font-size: 0.85rem;
@@ -287,43 +266,6 @@
         <button class="button primary" onclick="location.reload()">Try again</button>
         <button class="button" onclick="history.back()">Go back</button>
       </div>
-
-      {{if .TLSExclusionURL}}
-      <details class="risk-details">
-        <summary>Advanced</summary>
-        <p class="risk-warning">
-          The destination certificate could not be verified. Continuing may expose passwords, messages, or payment details to an attacker. This exception expires after 6 hours.
-        </p>
-        <button
-          class="button"
-          type="button"
-          data-tls-exclusion-url="{{.TLSExclusionURL}}"
-          onclick="excludeTLS(this)"
-        >I understand the risk, proceed anyway</button>
-        <p class="risk-status" role="status" aria-live="polite"></p>
-      </details>
-      <script>
-        async function excludeTLS(button) {
-          const status = button.parentElement.querySelector(".risk-status");
-          button.disabled = true;
-          status.textContent = "";
-          try {
-            const response = await fetch(button.dataset.tlsExclusionUrl, {
-              method: "GET",
-              credentials: "same-origin",
-              cache: "no-store"
-            });
-            if (response.status !== 200) {
-              throw new Error("HTTP " + response.status);
-            }
-            window.location.reload();
-          } catch (error) {
-            status.textContent = "Could not add the temporary TLS exception. Please try again.";
-            button.disabled = false;
-          }
-        }
-      </script>
-      {{end}}
     </section>
 
     <p class="footer">

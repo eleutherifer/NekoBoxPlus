@@ -8,12 +8,11 @@ import (
 
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing/common/logger"
 )
 
 func TestMASQUEConfigUsesDedicatedBucket(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "cache.db")
-	cacheFile := New(context.Background(), logger.NOP(), option.CacheFileOptions{
+	cacheFile := New(context.Background(), option.CacheFileOptions{
 		Enabled: true,
 		Path:    path,
 	})

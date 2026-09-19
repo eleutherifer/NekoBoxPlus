@@ -1086,6 +1086,7 @@ internal class LogcatViewModel : ViewModel() {
         pageJob?.cancel()
         fileObserver.stopWatching()
         fileEvents.close()
+        super.onCleared()
     }
 
     private companion object {

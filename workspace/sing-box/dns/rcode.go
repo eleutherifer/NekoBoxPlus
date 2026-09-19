@@ -5,11 +5,10 @@ import (
 )
 
 const (
-	RcodeSuccess       RcodeError = mDNS.RcodeSuccess
-	RcodeServerFailure RcodeError = mDNS.RcodeServerFailure
-	RcodeFormatError   RcodeError = mDNS.RcodeFormatError
-	RcodeNameError     RcodeError = mDNS.RcodeNameError
-	RcodeRefused       RcodeError = mDNS.RcodeRefused
+	RcodeSuccess     RcodeError = mDNS.RcodeSuccess
+	RcodeFormatError RcodeError = mDNS.RcodeFormatError
+	RcodeNameError   RcodeError = mDNS.RcodeNameError
+	RcodeRefused     RcodeError = mDNS.RcodeRefused
 )
 
 type RcodeError int

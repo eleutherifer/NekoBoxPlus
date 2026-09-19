@@ -57,7 +57,7 @@
         android:name="io.nekohasekai.sagernet.SagerNet"
         android:allowBackup="true"
         android:autoRevokePermissions="allowed"
-        android:banner="@drawable/tv_banner"
+        android:banner="@mipmap/ic_launcher"
         android:dataExtractionRules="@xml/backup_rules"
         android:fullBackupContent="@xml/backup_descriptor"
         android:fullBackupOnly="true"
@@ -223,7 +223,6 @@
                 <data android:scheme="anytls" />
                 <data android:scheme="stormdns" />
                 <data android:scheme="vpn" />
-                <data android:scheme="openvpn" />
 
             </intent-filter>
 
@@ -503,12 +502,6 @@
             android:name="io.nekohasekai.sagernet.ui.profile.TailscaleSettingsActivity"
             android:configChanges="uiMode" />
         <activity
-            android:name="io.nekohasekai.sagernet.ui.profile.OpenVPNSettingsActivity"
-            android:configChanges="uiMode" />
-        <activity
-            android:name="io.nekohasekai.sagernet.ui.profile.OpenConnectSettingsActivity"
-            android:configChanges="uiMode" />
-        <activity
             android:name="io.nekohasekai.sagernet.ui.profile.HttpSettingsActivity"
             android:configChanges="uiMode" />
         <activity
@@ -610,17 +603,23 @@
             android:name="io.nekohasekai.sagernet.ui.AppListActivity"
             android:configChanges="uiMode" />
         <activity
+            android:name="io.nekohasekai.sagernet.ui.AdblockSettingsActivity"
+            android:configChanges="uiMode"
+            android:label="@string/adblock"
+            android:launchMode="singleTask"
+            android:parentActivityName="io.nekohasekai.sagernet.ui.MainActivity" />
+        <activity
             android:name="io.nekohasekai.sagernet.ui.AdblockBundledFiltersActivity"
             android:configChanges="uiMode"
             android:label="@string/adblock_bundled_filters"
             android:launchMode="singleTask"
-            android:parentActivityName="io.nekohasekai.sagernet.ui.MainActivity" />
+            android:parentActivityName="io.nekohasekai.sagernet.ui.AdblockSettingsActivity" />
         <activity
             android:name="io.nekohasekai.sagernet.ui.AdblockCustomFiltersActivity"
             android:configChanges="uiMode"
             android:label="@string/adblock_custom_filters"
             android:launchMode="singleTask"
-            android:parentActivityName="io.nekohasekai.sagernet.ui.MainActivity" />
+            android:parentActivityName="io.nekohasekai.sagernet.ui.AdblockSettingsActivity" />
         <activity
             android:name="io.nekohasekai.sagernet.ui.AdblockCustomFilterActivity"
             android:configChanges="uiMode"
@@ -632,7 +631,7 @@
             android:configChanges="uiMode"
             android:label="@string/adblock_custom_rules"
             android:launchMode="singleTask"
-            android:parentActivityName="io.nekohasekai.sagernet.ui.MainActivity" />
+            android:parentActivityName="io.nekohasekai.sagernet.ui.AdblockSettingsActivity" />
         <activity
             android:name=".QuickToggleShortcut"
             android:excludeFromRecents="true"

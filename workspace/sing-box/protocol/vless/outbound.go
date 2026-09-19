@@ -168,7 +168,7 @@ func (h *Outbound) MultiplexEnabled() bool {
 	return h.multiplexDialer != nil
 }
 
-func (h *Outbound) InterfaceUpdated(ctx context.Context) {
+func (h *Outbound) InterfaceUpdated() {
 	if h.transport != nil {
 		if err := adapter.ResetV2RayClientTransport(h.transport); err != nil {
 			h.logger.Warn(err)

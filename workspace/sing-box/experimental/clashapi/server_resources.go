@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -24,9 +25,9 @@ func (s *Server) checkAndDownloadExternalUI() {
 	if s.externalUI == "" {
 		return
 	}
-	entries, err := filemanager.ReadDir(s.ctx, s.externalUI)
+	entries, err := os.ReadDir(s.externalUI)
 	if err != nil {
-		filemanager.MkdirAll(s.ctx, s.externalUI, 0o755)
+		os.MkdirAll(s.externalUI, 0o755)
 	}
 	if len(entries) == 0 {
 		err = s.downloadExternalUI()
@@ -85,7 +86,7 @@ func (s *Server) downloadExternalUI() (err error) {
 	}
 	err = s.downloadZIP(response.Body, s.externalUI)
 	if err != nil {
-		removeAllInDirectory(s.ctx, s.externalUI)
+		removeAllInDirectory(s.externalUI)
 	}
 	return err
 }
@@ -95,7 +96,7 @@ func (s *Server) downloadZIP(body io.Reader, output string) error {
 	if err != nil {
 		return err
 	}
-	defer filemanager.Remove(s.ctx, tempFile.Name())
+	defer os.Remove(tempFile.Name())
 	_, err = io.Copy(tempFile, body)
 	tempFile.Close()
 	if err != nil {
@@ -119,7 +120,7 @@ func (s *Server) downloadZIP(body io.Reader, output string) error {
 		if len(pathElements) > 1 {
 			saveDirectory = filepath.Join(saveDirectory, filepath.Join(pathElements[:len(pathElements)-1]...))
 		}
-		err = filemanager.MkdirAll(s.ctx, saveDirectory, 0o755)
+		err = os.MkdirAll(saveDirectory, 0o755)
 		if err != nil {
 			return err
 		}
@@ -146,13 +147,13 @@ func downloadZIPEntry(ctx context.Context, zipFile *zip.File, savePath string) e
 	return common.Error(io.Copy(saveFile, reader))
 }
 
-func removeAllInDirectory(ctx context.Context, directory string) {
-	dirEntries, err := filemanager.ReadDir(ctx, directory)
+func removeAllInDirectory(directory string) {
+	dirEntries, err := os.ReadDir(directory)
 	if err != nil {
 		return
 	}
 	for _, dirEntry := range dirEntries {
-		filemanager.RemoveAll(ctx, filepath.Join(directory, dirEntry.Name()))
+		os.RemoveAll(filepath.Join(directory, dirEntry.Name()))
 	}
 }
 

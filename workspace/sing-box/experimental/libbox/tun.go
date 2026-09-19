@@ -7,19 +7,13 @@ import (
 	"github.com/sagernet/sing-box/option"
 	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
-)
-
-const (
-	DNSModeDisabled = tun.DNSModeDisabled
-	DNSModeNative   = tun.DNSModeNative
-	DNSModeHijack   = tun.DNSModeHijack
+	E "github.com/sagernet/sing/common/exceptions"
 )
 
 type TunOptions interface {
 	GetInet4Address() RoutePrefixIterator
 	GetInet6Address() RoutePrefixIterator
-	GetDNSMode() *StringBox
-	GetDNSServerAddress() (StringIterator, error)
+	GetDNSServerAddress() (*StringBox, error)
 	GetMTU() int32
 	GetAutoRoute() bool
 	GetStrictRoute() bool
@@ -95,16 +89,11 @@ func (o *tunOptions) GetInet6Address() RoutePrefixIterator {
 	return mapRoutePrefix(o.Inet6Address)
 }
 
-func (o *tunOptions) GetDNSMode() *StringBox {
-	return wrapString(o.Options.DNSMode)
-}
-
-func (o *tunOptions) GetDNSServerAddress() (StringIterator, error) {
-	dnsServers, err := o.Options.DNSServerAddress()
-	if err != nil {
-		return nil, err
+func (o *tunOptions) GetDNSServerAddress() (*StringBox, error) {
+	if len(o.Inet4Address) == 0 || o.Inet4Address[0].Bits() == 32 {
+		return nil, E.New("need one more IPv4 address for DNS hijacking")
 	}
-	return newIterator(common.Map(dnsServers, netip.Addr.String)), nil
+	return wrapString(o.Inet4Address[0].Addr().Next().String()), nil
 }
 
 func (o *tunOptions) GetMTU() int32 {

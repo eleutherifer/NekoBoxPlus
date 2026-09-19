@@ -1,14 +1,16 @@
 package io.nekohasekai.sagernet.ui.profile
 
-import androidx.compose.runtime.Composable
+import android.os.Bundle
+import androidx.preference.EditTextPreference
+import androidx.preference.PreferenceFragmentCompat
+import io.nekohasekai.sagernet.R
+import io.nekohasekai.sagernet.database.preference.EditTextPreferenceModifiers
 import io.nekohasekai.sagernet.fmt.wireguard.WireGuardBean
-import io.nekohasekai.sagernet.ui.compose.WireGuardProfileSettingsScreen
 import moe.matsuri.nb4a.proxy.PreferenceBinding
 import moe.matsuri.nb4a.proxy.PreferenceBindingManager
 import moe.matsuri.nb4a.proxy.Type
 
 class WireGuardSettingsActivity : ProfileSettingsActivity<WireGuardBean>() {
-    override val usesComposePreferences = true
 
     override fun createEntity() = WireGuardBean()
 
@@ -32,7 +34,18 @@ class WireGuardSettingsActivity : ProfileSettingsActivity<WireGuardBean>() {
         pbm.fromCacheAll(this)
     }
 
-    @Composable
-    override fun ComposePreferences() = WireGuardProfileSettingsScreen()
+    override fun PreferenceFragmentCompat.createPreferences(
+        savedInstanceState: Bundle?,
+        rootKey: String?,
+    ) {
+        addPreferencesFromResource(R.xml.wireguard_preferences)
+        pbm.setPreferenceFragment(this)
+
+        (serverPort.preference as EditTextPreference)
+            .setOnBindEditTextListener(EditTextPreferenceModifiers.Port)
+        (privateKey.preference as EditTextPreference).summaryProvider = PasswordSummaryProvider
+        (peerPersistentKeepalive.preference as EditTextPreference).setOnBindEditTextListener(EditTextPreferenceModifiers.Number)
+        (mtu.preference as EditTextPreference).setOnBindEditTextListener(EditTextPreferenceModifiers.Number)
+    }
 
 }

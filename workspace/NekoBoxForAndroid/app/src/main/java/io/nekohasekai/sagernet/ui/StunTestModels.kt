@@ -6,13 +6,11 @@ import io.nekohasekai.sagernet.R
 internal enum class StunPreset(
     val value: String,
     @param:StringRes val titleRes: Int,
-    @param:StringRes val descriptionRes: Int,
     val servers: List<String>,
 ) {
     BALANCED(
         "balanced",
         R.string.stun_preset_balanced,
-        R.string.stun_preset_balanced_description,
         listOf(
             "stunserver2025.stunprotocol.org:3478",
             "stun.voipgate.com:3478",
@@ -23,7 +21,6 @@ internal enum class StunPreset(
     FULL(
         "full",
         R.string.stun_preset_full,
-        R.string.stun_preset_full_description,
         listOf(
             "stunserver2025.stunprotocol.org:3478",
             "stun.voipgate.com:3478",
@@ -32,18 +29,12 @@ internal enum class StunPreset(
     FAST(
         "fast",
         R.string.stun_preset_fast,
-        R.string.stun_preset_fast_description,
         listOf(
             "stun.cloudflare.com:3478",
             "stun.l.google.com:19302",
         ),
     ),
-    CUSTOM(
-        "custom",
-        R.string.stun_preset_custom,
-        R.string.stun_preset_custom_description,
-        emptyList(),
-    ),
+    CUSTOM("custom", R.string.stun_preset_custom, emptyList()),
     ;
 
     companion object {

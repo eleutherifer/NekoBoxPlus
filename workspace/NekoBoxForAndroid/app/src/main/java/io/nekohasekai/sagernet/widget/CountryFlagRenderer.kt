@@ -13,6 +13,8 @@ import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
 object CountryFlagRenderer {
+    private const val NOTIFICATION_ICON_SCALE = 0.8f
+
     private val cache = ConcurrentHashMap<String, SVG>()
     private val missing = ConcurrentHashMap.newKeySet<String>()
 
@@ -42,21 +44,8 @@ object CountryFlagRenderer {
 
         return runCatching {
             createBitmap(size, size).apply {
-                val bounds = RectF(0f, 0f, size.toFloat(), size.toFloat())
-                val clip = Path().apply { addOval(bounds, Path.Direction.CW) }
-                Canvas(this).withClip(clip) {
-                    flag.renderToCanvas(this, bounds)
-                }
-            }
-        }.onFailure(Logs::w).getOrNull()
-    }
-
-    fun renderCircularIcon(context: Context, countryCode: String, size: Int): Bitmap? {
-        if (size <= 0) return null
-        val flag = loadSvg(context, countryCode) ?: return null
-        return runCatching {
-            createBitmap(size, size).apply {
-                val bounds = RectF(0f, 0f, size.toFloat(), size.toFloat())
+                val inset = size * (1f - NOTIFICATION_ICON_SCALE) / 2f
+                val bounds = RectF(inset, inset, size - inset, size - inset)
                 val clip = Path().apply { addOval(bounds, Path.Direction.CW) }
                 Canvas(this).withClip(clip) {
                     flag.renderToCanvas(this, bounds)

@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 26,
-    "identityHash": "c556c31ea3a7fc5a11f210831302a6d4",
+    "identityHash": "c4118acd31d418c2584804be1c0e9c57",
     "entities": [
       {
         "tableName": "proxy_groups",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `userOrder` INTEGER NOT NULL, `ungrouped` INTEGER NOT NULL, `name` TEXT, `type` INTEGER NOT NULL, `subscription` BLOB, `order` INTEGER NOT NULL, `isSelector` INTEGER NOT NULL, `frontProxy` INTEGER NOT NULL, `landingProxy` INTEGER NOT NULL, `forceUTLS` TEXT NOT NULL, `originOrder` TEXT NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `userOrder` INTEGER NOT NULL, `ungrouped` INTEGER NOT NULL, `name` TEXT, `type` INTEGER NOT NULL, `subscription` BLOB, `order` INTEGER NOT NULL, `isSelector` INTEGER NOT NULL, `frontProxy` INTEGER NOT NULL, `landingProxy` INTEGER NOT NULL, `forceUTLS` TEXT NOT NULL, `enableMux` INTEGER NOT NULL, `muxType` INTEGER NOT NULL, `muxMode` INTEGER NOT NULL, `muxConcurrency` INTEGER NOT NULL, `muxMaxConnections` INTEGER NOT NULL, `muxMinStreams` INTEGER NOT NULL, `muxPadding` INTEGER NOT NULL, `muxBrutal` INTEGER NOT NULL, `muxBrutalUpMbps` INTEGER NOT NULL, `muxBrutalDownMbps` INTEGER NOT NULL, `originOrder` TEXT NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -73,6 +73,66 @@
             "notNull": true
           },
           {
+            "fieldPath": "enableMux",
+            "columnName": "enableMux",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "muxType",
+            "columnName": "muxType",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "muxMode",
+            "columnName": "muxMode",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "muxConcurrency",
+            "columnName": "muxConcurrency",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "muxMaxConnections",
+            "columnName": "muxMaxConnections",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "muxMinStreams",
+            "columnName": "muxMinStreams",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "muxPadding",
+            "columnName": "muxPadding",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "muxBrutal",
+            "columnName": "muxBrutal",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "muxBrutalUpMbps",
+            "columnName": "muxBrutalUpMbps",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "muxBrutalDownMbps",
+            "columnName": "muxBrutalDownMbps",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
             "fieldPath": "originOrder",
             "columnName": "originOrder",
             "affinity": "TEXT",
@@ -88,7 +148,7 @@
       },
       {
         "tableName": "proxy_entities",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `groupId` INTEGER NOT NULL, `type` INTEGER NOT NULL, `userOrder` INTEGER NOT NULL, `tx` INTEGER NOT NULL, `rx` INTEGER NOT NULL, `status` INTEGER NOT NULL, `ping` INTEGER NOT NULL, `uuid` TEXT NOT NULL, `error` TEXT, `socksBean` BLOB, `httpBean` BLOB, `ssBean` BLOB, `ssrBean` BLOB, `vmessBean` BLOB, `trojanBean` BLOB, `trojanGoBean` BLOB, `mieruBean` BLOB, `naiveBean` BLOB, `hysteriaBean` BLOB, `tuicBean` BLOB, `juicityBean` BLOB, `snellBean` BLOB, `masterDnsVPNBean` BLOB, `byeDPIBean` BLOB, `sshBean` BLOB, `wgBean` BLOB, `awgBean` BLOB, `shadowTLSBean` BLOB, `anyTLSBean` BLOB, `trustTunnelBean` BLOB, `masqueBean` BLOB, `directBean` BLOB, `tailscaleBean` BLOB, `openVPNBean` BLOB, `openConnectBean` BLOB, `proxySetBean` BLOB, `chainBean` BLOB, `nekoBean` BLOB, `configBean` BLOB)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `groupId` INTEGER NOT NULL, `type` INTEGER NOT NULL, `userOrder` INTEGER NOT NULL, `tx` INTEGER NOT NULL, `rx` INTEGER NOT NULL, `status` INTEGER NOT NULL, `ping` INTEGER NOT NULL, `uuid` TEXT NOT NULL, `error` TEXT, `socksBean` BLOB, `httpBean` BLOB, `ssBean` BLOB, `ssrBean` BLOB, `vmessBean` BLOB, `trojanBean` BLOB, `trojanGoBean` BLOB, `mieruBean` BLOB, `naiveBean` BLOB, `hysteriaBean` BLOB, `tuicBean` BLOB, `juicityBean` BLOB, `snellBean` BLOB, `masterDnsVPNBean` BLOB, `byeDPIBean` BLOB, `sshBean` BLOB, `wgBean` BLOB, `awgBean` BLOB, `shadowTLSBean` BLOB, `anyTLSBean` BLOB, `trustTunnelBean` BLOB, `masqueBean` BLOB, `directBean` BLOB, `tailscaleBean` BLOB, `proxySetBean` BLOB, `chainBean` BLOB, `nekoBean` BLOB, `configBean` BLOB)",
         "fields": [
           {
             "fieldPath": "id",
@@ -267,16 +327,6 @@
           {
             "fieldPath": "tailscaleBean",
             "columnName": "tailscaleBean",
-            "affinity": "BLOB"
-          },
-          {
-            "fieldPath": "openVPNBean",
-            "columnName": "openVPNBean",
-            "affinity": "BLOB"
-          },
-          {
-            "fieldPath": "openConnectBean",
-            "columnName": "openConnectBean",
             "affinity": "BLOB"
           },
           {
@@ -544,7 +594,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c556c31ea3a7fc5a11f210831302a6d4')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c4118acd31d418c2584804be1c0e9c57')"
     ]
   }
 }

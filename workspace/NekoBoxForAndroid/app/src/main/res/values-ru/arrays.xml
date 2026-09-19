@@ -69,13 +69,6 @@
         <item>Stream One</item>
     </string-array>
 
-    <string-array name="xhttp_congestion_controller_entry">
-        <item>По умолчанию (BBR)</item>
-        <item>BBR</item>
-        <item>CUBIC</item>
-        <item>Reno</item>
-    </string-array>
-
     <string-array name="xhttp_uplink_data_placement_entry">
         <item>По умолчанию: тело</item>
         <item>Заголовок</item>
@@ -378,13 +371,6 @@
         <item>0</item>
         <item>1</item>
         <item>2</item>
-    </string-array>
-
-    <string-array name="udp_nat_behavior_entries">
-        <item>@string/not_set</item>
-        <item>@string/udp_nat_endpoint_independent</item>
-        <item>@string/udp_nat_address_dependent</item>
-        <item>@string/udp_nat_address_and_port_dependent</item>
     </string-array>
 
     <string-array name="int_array_4">
@@ -1284,32 +1270,6 @@
         <item>3</item>
         <item>4</item>
         <item>5</item>
-        <item>6</item>
-    </string-array>
-
-    <string-array name="snell_v6_modes_entry">
-        <item>По умолчанию</item>
-        <item>Без шейпинга</item>
-        <item>Небезопасный raw</item>
-    </string-array>
-    <string-array name="snell_v6_modes_value">
-        <item>default</item>
-        <item>unshaped</item>
-        <item>unsafe-raw</item>
-    </string-array>
-
-    <string-array name="hysteria2_obfs_types">
-        <item>salamander</item>
-        <item>gecko</item>
-    </string-array>
-    <string-array name="hysteria2_ip_versions_entry">
-        <item>Авто</item>
-        <item>IPv4</item>
-        <item>IPv6</item>
-    </string-array>
-    <string-array name="hysteria2_ip_versions_value">
-        <item>0</item>
-        <item>4</item>
         <item>6</item>
     </string-array>
 

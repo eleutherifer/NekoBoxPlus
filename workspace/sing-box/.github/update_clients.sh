@@ -4,7 +4,7 @@ PROJECTS=$(dirname "$0")/../..
 
 function updateClient() {
   pushd clients/$1
-  git fetch origin main
+  git fetch
   git reset FETCH_HEAD --hard
   popd
   git add clients/$1
@@ -12,4 +12,3 @@ function updateClient() {
 
 updateClient "apple"
 updateClient "android"
-updateClient "desktop"

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_update_all"
+        android:icon="@drawable/ic_baseline_update_24"
+        android:title="@string/update_all_subscription"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_new_group"
+        android:icon="@drawable/ic_av_playlist_add"
+        android:title="@string/group_create"
+        app:showAsAction="always">
+        <menu>
+            <item
+                android:id="@+id/action_new_group_new"
+                android:title="@string/action_new" />
+            <item
+                android:id="@+id/action_new_group_clipboard"
+                android:title="@string/action_from_clipboard" />
+            <item
+                android:id="@+id/action_new_group_scan_qr"
+                android:title="@string/add_profile_methods_scan_qr_code" />
+        </menu>
+    </item>
+</menu>

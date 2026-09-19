@@ -58,9 +58,9 @@ Object format:
 
 ```json
 {
-  "url": "",
-
-  ... // HTTP Client Fields
+  "url": "https://my-headscale.com/verify",
+  
+  ... // Dial Fields
 }
 ```
 

@@ -9,8 +9,9 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.util.Size
+import android.view.Menu
+import android.view.MenuItem
 import android.widget.Toast
-import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
@@ -21,10 +22,6 @@ import androidx.camera.core.resolutionselector.AspectRatioStrategy
 import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import androidx.core.net.toUri
@@ -40,10 +37,9 @@ import com.google.zxing.qrcode.QRCodeReader
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.ProfileManager
+import io.nekohasekai.sagernet.databinding.LayoutScannerBinding
 import io.nekohasekai.sagernet.ktx.*
 import io.nekohasekai.sagernet.routing.RoutingLinkProcessors
-import io.nekohasekai.sagernet.ui.compose.NekoComposeTheme
-import io.nekohasekai.sagernet.ui.compose.ScannerScreen
 import java.nio.ByteBuffer
 import java.util.EnumSet
 import java.util.concurrent.ExecutorService
@@ -60,10 +56,9 @@ class ScannerActivity : ThemedActivity() {
         const val EXTRA_SCAN_TEXT = "scanText"
     }
 
-    private var previewView: PreviewView? = null
+    lateinit var binding: LayoutScannerBinding
     private var cameraProvider: ProcessCameraProvider? = null
     private var camera: Camera? = null
-    private var torchEnabled by mutableStateOf(false)
     private var analyzingImage = AtomicBoolean(false)
     private val analyzerExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private val checkedNonAmneziaBarcodes = hashSetOf<String>()
@@ -72,22 +67,21 @@ class ScannerActivity : ThemedActivity() {
         super.onCreate(savedInstanceState)
 
         if (Build.VERSION.SDK_INT >= 25) getSystemService<ShortcutManager>()!!.reportShortcutUsed("scan")
-        setContent {
-            NekoComposeTheme {
-                ScannerScreen(
-                    torchEnabled = torchEnabled,
-                    onPreviewReady = { view ->
-                        if (previewView !== view) {
-                            previewView = view
-                            startCamera()
-                        }
-                    },
-                    onClose = ::finish,
-                    onImportFile = { startFilesForResult(importCodeFile, "image/*") },
-                    onToggleTorch = ::toggleTorchState,
-                )
-            }
+        binding = LayoutScannerBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        setSupportActionBar(findViewById(R.id.toolbar))
+        supportActionBar?.apply {
+            setDisplayHomeAsUpEnabled(true)
+            setHomeAsUpIndicator(R.drawable.ic_navigation_close)
         }
+
+        startCamera()
+        binding.ivFlashlight.setOnClickListener { toggleTorchState() }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.scanner_menu, menu)
+        return true
     }
 
     val importCodeFile = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) {
@@ -143,6 +137,15 @@ class ScannerActivity : ThemedActivity() {
                     finish()
                 }
             }
+        }
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return if (item.itemId == R.id.action_import_file) {
+            startFilesForResult(importCodeFile, "image/*")
+            true
+        } else {
+            super.onOptionsItemSelected(item)
         }
     }
 
@@ -262,7 +265,6 @@ class ScannerActivity : ThemedActivity() {
     }
 
     private fun startCameraX() {
-        val previewView = previewView ?: return
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener({
             try {
@@ -271,7 +273,7 @@ class ScannerActivity : ThemedActivity() {
                 provider.unbindAll()
 
                 val preview = Preview.Builder().build().also {
-                    it.setSurfaceProvider(previewView.surfaceProvider)
+                    it.setSurfaceProvider(binding.previewView.surfaceProvider)
                 }
                 val imageAnalysis = ImageAnalysis.Builder()
                     .setResolutionSelector(
@@ -317,7 +319,6 @@ class ScannerActivity : ThemedActivity() {
                     preview,
                     imageAnalysis,
                 )
-                torchEnabled = false
             } catch (e: Exception) {
                 Log.w(TAG, "Unable to start CameraX scanner", e)
                 Toast.makeText(app, e.readableMessage, Toast.LENGTH_SHORT).show()
@@ -495,25 +496,16 @@ class ScannerActivity : ThemedActivity() {
         cameraProvider?.unbindAll()
         cameraProvider = null
         camera = null
-        previewView = null
-        torchEnabled = false
         analyzerExecutor.shutdown()
     }
 
     /**
      * 切换闪光灯状态（开启/关闭）
      */
-    private fun toggleTorchState() {
-        val activeCamera = camera ?: return
-        if (!activeCamera.cameraInfo.hasFlashUnit()) return
-
-        val isTorch = activeCamera.cameraInfo.torchState.value == androidx.camera.core.TorchState.ON
-        val torchResult = activeCamera.cameraControl.enableTorch(!isTorch)
-        torchResult.addListener({
-            runCatching { torchResult.get() }
-                .onSuccess { torchEnabled = !isTorch }
-                .onFailure { error -> Log.w(TAG, "Unable to change torch state", error) }
-        }, ContextCompat.getMainExecutor(this))
+    protected fun toggleTorchState() {
+        val isTorch = camera?.cameraInfo?.torchState?.value == androidx.camera.core.TorchState.ON
+        camera?.cameraControl?.enableTorch(!isTorch)
+        binding.ivFlashlight.isSelected = !isTorch
     }
 
     val CAMERA_PERMISSION_REQUEST_CODE = 0X86

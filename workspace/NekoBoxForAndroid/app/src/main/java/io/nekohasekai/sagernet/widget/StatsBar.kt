@@ -241,13 +241,6 @@ class StatsBar @JvmOverloads constructor(
         }
     }
 
-    override fun onFocusChanged(gainFocus: Boolean, direction: Int, previouslyFocusedRect: Rect?) {
-        super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
-        if (!gainFocus && SagerNet.isTv && !DataStore.serviceState.connected) {
-            post(::hideStats)
-        }
-    }
-
     private fun applyThemeColors() {
         val usePrimary = Theme.isCustom() && DataStore.customThemeStatsBarPrimary
         val backgroundColor = context.getColorAttr(
@@ -449,10 +442,6 @@ class StatsBar @JvmOverloads constructor(
             performShow()
         }
         reconcileAnchoredViewsAfterTransition()
-    }
-
-    internal fun revealForTvFocus() {
-        if (allowShow) showStats()
     }
 
     private fun hideStats() {

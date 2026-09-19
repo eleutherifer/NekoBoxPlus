@@ -18,7 +18,6 @@
 | 类型             | 格式                             |
 |----------------|--------------------------------|
 | `direct`       | [Direct](./direct/)             |
-| `bridge`       | [Bridge](./bridge/)             |
 | `block`        | [Block](./block/)               |
 | `socks`        | [SOCKS](./socks/)               |
 | `http`         | [HTTP](./http/)                 |

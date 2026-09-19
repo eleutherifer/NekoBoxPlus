@@ -1,11 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/coordinator"
+    android:id="@+id/drawer_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:clipChildren="false">
+    tools:openDrawer="start">
+
+    <androidx.coordinatorlayout.widget.CoordinatorLayout
+        android:id="@+id/coordinator"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipChildren="false">
 
         <androidx.coordinatorlayout.widget.CoordinatorLayout
             android:id="@+id/fragment_holder"
@@ -121,7 +127,7 @@
                             android:maxLines="1"
                             android:textColor="?attr/colorOnSurface"
                             android:textSize="14sp"
-                            tools:text="🇳🇱 121.17.03.17 NL, North Holland" />
+                            tools:text="🇳🇱 116.116.116.116 NL, North Holland" />
 
                         <androidx.appcompat.widget.AppCompatTextView
                             android:id="@+id/compact_status"
@@ -247,4 +253,14 @@
 
         </io.nekohasekai.sagernet.widget.FabCluster>
 
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+    </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+    <com.google.android.material.navigation.NavigationView
+        android:id="@+id/nav_view"
+        style="@style/Widget.SagerNet.Material3.NavigationView"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        app:menu="@menu/main_drawer_menu" />
+
+</androidx.drawerlayout.widget.DrawerLayout>

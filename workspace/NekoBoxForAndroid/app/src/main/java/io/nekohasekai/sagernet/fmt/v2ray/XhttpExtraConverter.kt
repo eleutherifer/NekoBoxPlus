@@ -60,8 +60,6 @@ object XhttpExtraConverter {
     private val singBoxOnlyFieldNames = setOf(
         "domain_strategy",
         "trusted_x_forwarded_for",
-        "congestion_controller",
-        "cwnd",
     )
 
     fun extractSupportedToGui(bean: StandardV2RayBean, rawExtra: String?): String {
@@ -90,8 +88,6 @@ object XhttpExtraConverter {
             extractXmuxField(extra, "sc_stream_up_server_secs") { bean.xhttpScStreamUpServerSecs = it }
             extractXmuxField(extra, "uplink_chunk_size") { bean.xhttpUplinkChunkSize = it }
             extractStringField(extra, "server_max_header_bytes") { bean.xhttpServerMaxHeaderBytes = it }
-            extractStringField(extra, "congestion_controller") { bean.xhttpCongestionController = it }
-            extractStringField(extra, "cwnd") { bean.xhttpCwnd = it }
             extractStringField(extra, "x_padding_key") { bean.xhttpXPaddingKey = it }
             extractStringField(extra, "x_padding_header") { bean.xhttpXPaddingHeader = it }
             extractStringField(extra, "x_padding_placement") { bean.xhttpXPaddingPlacement = it }

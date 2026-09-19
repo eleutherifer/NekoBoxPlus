@@ -45,8 +45,9 @@ func newQUICProxyAuthenticationService(parser quicProxyInitParser, nat *quicProx
 		queue:   make(chan *quicProxyAuthenticationTask, quicProxyAuthenticationQueueSize),
 		done:    make(chan struct{}),
 	}
+	service.workers.Add(quicProxyAuthenticationWorkers)
 	for range quicProxyAuthenticationWorkers {
-		service.workers.Go(service.run)
+		go service.run()
 	}
 	return service
 }
@@ -102,6 +103,7 @@ func (s *quicProxyAuthenticationService) appendPendingPacket(task *quicProxyAuth
 }
 
 func (s *quicProxyAuthenticationService) run() {
+	defer s.workers.Done()
 	for {
 		select {
 		case <-s.done:

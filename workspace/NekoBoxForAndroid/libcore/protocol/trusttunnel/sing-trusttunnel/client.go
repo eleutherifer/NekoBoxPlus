@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/netip"
 	"net/url"
-	"runtime"
 	"slices"
 	"strconv"
 	"sync"
@@ -49,28 +48,9 @@ type ClientOptions struct {
 	HealthCheck             bool
 	TLSServerName           string
 	TrustedRootCertificates string
-	// UserAgents is the set of user-agent values to send for each request type.
-	// Empty values keep the client anonymous by default.
-	UserAgents ClientUserAgents
 	// ResolveFunc is the function to resolve FQDN for packet conn.
 	// If not set, the packet conn will reject FQDN when writing.
 	ResolveFunc func(fqdn string) (netip.Addr, error)
-}
-
-type ClientUserAgents struct {
-	TCPUserAgent         string
-	UDPUserAgent         string
-	ICMPUserAgent        string
-	HealthCheckUserAgent string
-}
-
-func NewUserAgentFromAppName(name string) ClientUserAgents {
-	return ClientUserAgents{
-		TCPUserAgent:         runtime.GOOS + " " + name + "/" + Version,
-		UDPUserAgent:         runtime.GOOS + " " + UDPMagicAddress,
-		ICMPUserAgent:        runtime.GOOS + " " + ICMPMagicAddress,
-		HealthCheckUserAgent: runtime.GOOS,
-	}
 }
 
 type Client struct {
@@ -91,8 +71,6 @@ type Client struct {
 	timeFunc          func() time.Time
 	resolveFunc       func(fqdn string) (netip.Addr, error)
 	clientRandomSpec  *clientRandomSpec
-	userAgents        ClientUserAgents
-	connTracker       *connTracker
 }
 
 func NewClient(options ClientOptions) (client *Client, err error) {
@@ -117,8 +95,6 @@ func NewClient(options ClientOptions) (client *Client, err error) {
 		auth:             buildAuth(options.Auth),
 		resolveFunc:      options.ResolveFunc,
 		clientRandomSpec: clientRandomSpec,
-		userAgents:       options.UserAgents,
-		connTracker:      newConnTracker(),
 	}
 	if options.QUIC {
 		quicTLSConfig := options.QUICTLSConfig
@@ -197,9 +173,9 @@ func (c *Client) newH2RoundTripper(tlsConfig tls.Config) (RoundTripper, func(err
 						_ = conn.Close()
 						return nil, err
 					}
-					return c.connTracker.track(newPassiveRecoveryConn(tlsConn, func(err error) {
+					return newPassiveRecoveryConn(tlsConn, func(err error) {
 						c.schedulePassiveRoundTripperRecovery(transport, err)
-					})), nil
+					}), nil
 				}
 				tlsConn, err := tlsConfig.Client(conn)
 				if err != nil {
@@ -211,18 +187,18 @@ func (c *Client) newH2RoundTripper(tlsConfig tls.Config) (RoundTripper, func(err
 					_ = tlsConn.Close()
 					return nil, err
 				}
-				return c.connTracker.track(newPassiveRecoveryConn(tlsConn, func(err error) {
+				return newPassiveRecoveryConn(tlsConn, func(err error) {
 					c.schedulePassiveRoundTripperRecovery(transport, err)
-				})), nil
+				}), nil
 			}
 			tlsConn, err := tlsConfig.Client(conn)
 			if err != nil {
 				_ = conn.Close()
 				return nil, err
 			}
-			return c.connTracker.track(newPassiveRecoveryConn(tlsConn, func(err error) {
+			return newPassiveRecoveryConn(tlsConn, func(err error) {
 				c.schedulePassiveRoundTripperRecovery(transport, err)
-			})), nil
+			}), nil
 		},
 		AllowHTTP:       false,
 		IdleConnTimeout: DefaultSessionTimeout,
@@ -396,7 +372,7 @@ func (c *Client) Dial(ctx context.Context, destination M.Socksaddr) (net.Conn, e
 	pipeReader, pipeWriter := io.Pipe()
 	host := destination.String()
 	request := newRequest(c.originHost, host, pipeReader)
-	request.Header.Add("User-Agent", c.userAgents.TCPUserAgent)
+	request.Header.Add("User-Agent", TCPUserAgent)
 	request.Header.Add("Proxy-Authorization", c.auth)
 	conn := &tcpConn{
 		httpConn: httpConn{
@@ -442,7 +418,7 @@ func (c *Client) ListenPacket(ctx context.Context) (net.PacketConn, error) {
 	roundTripper, wrapError := c.currentRoundTripper()
 	pipeReader, pipeWriter := io.Pipe()
 	request := newRequest(c.originHost, UDPMagicAddress, pipeReader)
-	request.Header.Add("User-Agent", c.userAgents.UDPUserAgent)
+	request.Header.Add("User-Agent", UDPUserAgent)
 	request.Header.Add("Proxy-Authorization", c.auth)
 	conn := &clientPacketConn{
 		packetConn: packetConn{
@@ -491,7 +467,7 @@ func (c *Client) ListenICMP(ctx context.Context) (*IcmpConn, error) {
 	roundTripper, wrapError := c.currentRoundTripper()
 	pipeReader, pipeWriter := io.Pipe()
 	request := newRequest(c.originHost, ICMPMagicAddress, pipeReader)
-	request.Header.Add("User-Agent", c.userAgents.ICMPUserAgent)
+	request.Header.Add("User-Agent", ICMPUserAgent)
 	request.Header.Add("Proxy-Authorization", c.auth)
 	conn := &IcmpConn{
 		httpConn{
@@ -539,7 +515,6 @@ func (c *Client) Close() error {
 	c.roundTripperMu.RUnlock()
 	forceCloseAllConnections(roundTripper)
 	forceCloseAllConnections(fallbackRoundTripper)
-	_ = c.connTracker.Close()
 	if c.healthCheckTimer != nil {
 		c.healthCheckTimer.Stop()
 	}
@@ -551,7 +526,6 @@ func (c *Client) ResetConnections() {
 	roundTripper := c.roundTripper
 	c.roundTripperMu.RUnlock()
 	resetRoundTripperConnections(roundTripper)
-	_ = c.connTracker.Close()
 	c.resetHealthCheckTimer()
 }
 
@@ -572,7 +546,7 @@ func (c *Client) healthCheck(ctx context.Context, roundTripper RoundTripper, wra
 		Header: make(http.Header),
 		Host:   HealthCheckMagicAddress,
 	}
-	request.Header.Add("User-Agent", c.userAgents.HealthCheckUserAgent)
+	request.Header.Add("User-Agent", HealthCheckUserAgent)
 	request.Header.Add("Proxy-Authorization", c.auth)
 	response, err := roundTripper.RoundTrip(request.WithContext(ctx))
 	if err != nil {

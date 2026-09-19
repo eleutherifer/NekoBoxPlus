@@ -25,9 +25,6 @@ public class SSHBean extends AbstractBean {
     public String publicKey;
     public String hostKeyAlgorithms;
     public String clientVersion;
-    public String cipher;
-    public String mac;
-    public String kexAlgorithm;
 
     @Override
     public void initializeDefaultValues() {
@@ -44,14 +41,11 @@ public class SSHBean extends AbstractBean {
         if (publicKey == null) publicKey = "";
         if (hostKeyAlgorithms == null) hostKeyAlgorithms = "";
         if (clientVersion == null) clientVersion = "";
-        if (cipher == null) cipher = "";
-        if (mac == null) mac = "";
-        if (kexAlgorithm == null) kexAlgorithm = "";
     }
 
     @Override
     public void serialize(ByteBufferOutput output) {
-        output.writeInt(2);
+        output.writeInt(1);
         super.serialize(output);
         output.writeString(username);
         output.writeInt(authType);
@@ -67,12 +61,9 @@ public class SSHBean extends AbstractBean {
                 break;
         }
         output.writeString(publicKey);
+        output.writeString(privateKeyPath);
         output.writeString(hostKeyAlgorithms);
         output.writeString(clientVersion);
-        output.writeString(cipher);
-        output.writeString(mac);
-        output.writeString(kexAlgorithm);
-        output.writeString(privateKeyPath);
     }
 
     @Override
@@ -94,14 +85,9 @@ public class SSHBean extends AbstractBean {
         }
         publicKey = input.readString();
         if (version >= 1) {
+            privateKeyPath = input.readString();
             hostKeyAlgorithms = input.readString();
             clientVersion = input.readString();
-            cipher = input.readString();
-            mac = input.readString();
-            kexAlgorithm = input.readString();
-        }
-        if (version >= 2) {
-            privateKeyPath = input.readString();
         }
     }
 

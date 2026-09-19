@@ -2,32 +2,33 @@ package io.nekohasekai.sagernet.ktx
 
 import android.app.Activity
 import android.content.Context
-import androidx.activity.ComponentDialog
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.ui.SubscriptionLinkImportPolicy
-import io.nekohasekai.sagernet.ui.compose.createComposeMessageDialog
 
-fun Context.alert(text: String): ComponentDialog {
-    return createComposeMessageDialog(
-        title = getText(R.string.error_title),
-        message = text,
-    )
+fun Context.alert(text: String): AlertDialog {
+    return MaterialAlertDialogBuilder(this).setTitle(R.string.error_title)
+        .setMessage(text)
+        .setPositiveButton(android.R.string.ok, null)
+        .create()
 }
 
 fun Fragment.alert(text: String) = requireContext().alert(text)
 
-fun Context.happCryptUnsupportedDialog(): ComponentDialog {
-    return createComposeMessageDialog(
-        title = getText(R.string.happ_crypt_unsupported_title),
-        message = getText(R.string.happ_crypt_unsupported_message),
-        positiveButton = getText(R.string.action_open),
-        negativeButton = getText(android.R.string.cancel),
-        onPositive = { launchCustomTab(SubscriptionLinkImportPolicy.HAPP_DECRYPTOR_URL) },
-    )
+fun Context.happCryptUnsupportedDialog(): AlertDialog {
+    return MaterialAlertDialogBuilder(this)
+        .setTitle(R.string.happ_crypt_unsupported_title)
+        .setMessage(R.string.happ_crypt_unsupported_message)
+        .setPositiveButton(R.string.action_open) { _, _ ->
+            launchCustomTab(SubscriptionLinkImportPolicy.HAPP_DECRYPTOR_URL)
+        }
+        .setNegativeButton(android.R.string.cancel, null)
+        .create()
 }
 
-fun ComponentDialog.tryToShow() {
+fun AlertDialog.tryToShow() {
     try {
         val activity = context as Activity
         if (!activity.isFinishing) {

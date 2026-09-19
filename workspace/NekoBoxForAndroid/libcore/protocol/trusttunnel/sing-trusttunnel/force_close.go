@@ -42,6 +42,43 @@ func resetRoundTripperConnections(roundTripper RoundTripper) {
 		return
 	}
 	roundTripper.CloseIdleConnections()
+	if h2Transport, isH2Transport := roundTripper.(*http2.Transport); isH2Transport {
+		forceCloseH2ClientConnections(h2Transport)
+	}
+}
+
+func forceCloseH2ClientConnections(h2Transport *http2.Transport) {
+	connPool := transportConnPool(h2Transport)
+	p := (*h2ClientConnPool)((*efaceWords)(unsafe.Pointer(&connPool)).data)
+	p.mu.Lock()
+	connections := make(map[*http2.ClientConn]struct{})
+	for _, clientConns := range p.conns {
+		for _, clientConn := range clientConns {
+			connections[clientConn] = struct{}{}
+		}
+	}
+	p.mu.Unlock()
+	for clientConn := range connections {
+		_ = clientConn.Close()
+	}
+}
+
+type efaceWords struct {
+	typ  unsafe.Pointer
+	data unsafe.Pointer
+}
+
+//go:linkname transportConnPool golang.org/x/net/http2.(*Transport).connPool
+func transportConnPool(t *http2.Transport) http2.ClientConnPool
+
+type h2ClientConnPool struct {
+	t *http2.Transport
+
+	mu    sync.Mutex
+	conns map[string][]*http2.ClientConn // key is host:port
+	/*dialing      map[string]*dialCall     // currently in-flight dials
+	keys         map[*ClientConn][]string
+	addConnCalls map[string]*addConnCall // in-flight addConnIfNeeded calls*/
 }
 
 func forceCloseAllH2ServerConnections(server *http2.Server) {

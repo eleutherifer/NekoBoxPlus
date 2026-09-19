@@ -1,13 +1,13 @@
 # syntax=docker/dockerfile:1.7
 
 ARG DEBIAN_VERSION=bookworm
-ARG BOOTSTRAP_GO_VERSION=1.26.6
+ARG BOOTSTRAP_GO_VERSION=1.26.5
 
 FROM debian:${DEBIAN_VERSION} AS go-builder
 
 ARG TARGETARCH
-ARG GO_VERSION=1.27.0
-ARG BOOTSTRAP_GO_VERSION=1.26.6
+ARG GO_VERSION=1.26.5
+ARG BOOTSTRAP_GO_VERSION=1.26.5
 ARG GO_PATCH_DIR=buildScript/lib/core/go-runtime-patches
 
 ENV GO_VERSION=${GO_VERSION} \
@@ -51,7 +51,7 @@ RUN set -eux; \
 
 FROM debian:${DEBIAN_VERSION}
 
-ARG GO_VERSION=1.27.0
+ARG GO_VERSION=1.26.5
 ARG ANDROID_CMDLINE_TOOLS_VERSION=11076708
 ARG ADBLOCK_RUST_TOOLCHAIN=1.97.0
 
@@ -96,7 +96,7 @@ RUN go version && which go && go env GOROOT GOPATH
 # install command-line tools only. The wrapper mounts the real SDK by default.
 RUN set -eux; \
     mkdir -p /opt/android-sdk/cmdline-tools; \
-    curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 "https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_CMDLINE_TOOLS_VERSION}_latest.zip" -o /tmp/android-cmdline-tools.zip; \
+    curl -fsSL "https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_CMDLINE_TOOLS_VERSION}_latest.zip" -o /tmp/android-cmdline-tools.zip; \
     unzip -q /tmp/android-cmdline-tools.zip -d /tmp/android-cmdline-tools; \
     mv /tmp/android-cmdline-tools/cmdline-tools /opt/android-sdk/cmdline-tools/latest; \
     rm -rf /tmp/android-cmdline-tools /tmp/android-cmdline-tools.zip

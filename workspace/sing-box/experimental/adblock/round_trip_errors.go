@@ -25,10 +25,9 @@ const (
 )
 
 type roundTripErrorTexts struct {
-	Heading             string
-	TitleHumanReadable  string
-	Description         string
-	TLSExclusionAllowed bool
+	Heading            string
+	TitleHumanReadable string
+	Description        string
 }
 
 func textsForRoundTripError(err error) roundTripErrorTexts {
@@ -149,30 +148,27 @@ func textsForRoundTripError(err error) roundTripErrorTexts {
 	var certInvalid x509.CertificateInvalidError
 	if errors.As(err, &certInvalid) {
 		return roundTripErrorTexts{
-			Heading:             "TLS error",
-			TitleHumanReadable:  "Invalid certificate",
-			Description:         describeCertificateInvalidError(certInvalid),
-			TLSExclusionAllowed: true,
+			Heading:            "TLS error",
+			TitleHumanReadable: "Invalid certificate",
+			Description:        describeCertificateInvalidError(certInvalid),
 		}
 	}
 
 	var unknownAuthority x509.UnknownAuthorityError
 	if errors.As(err, &unknownAuthority) {
 		return roundTripErrorTexts{
-			Heading:             "TLS error",
-			TitleHumanReadable:  "Untrusted certificate",
-			Description:         "The destination server presented a certificate that is not trusted by this proxy.",
-			TLSExclusionAllowed: true,
+			Heading:            "TLS error",
+			TitleHumanReadable: "Untrusted certificate",
+			Description:        "The destination server presented a certificate that is not trusted by this proxy.",
 		}
 	}
 
 	var hostnameErr x509.HostnameError
 	if errors.As(err, &hostnameErr) {
 		return roundTripErrorTexts{
-			Heading:             "TLS error",
-			TitleHumanReadable:  "Certificate name mismatch",
-			Description:         "The destination server presented a certificate that is not valid for the requested hostname.",
-			TLSExclusionAllowed: true,
+			Heading:            "TLS error",
+			TitleHumanReadable: "Certificate name mismatch",
+			Description:        "The destination server presented a certificate that is not valid for the requested hostname.",
 		}
 	}
 
@@ -251,33 +247,6 @@ func textsForRoundTripError(err error) roundTripErrorTexts {
 		}
 	}
 
-	// Cronet exposes Chromium certificate failures as network errors rather than
-	// Go x509 errors, so classify the user-overridable cases before net.Error.
-	msg := strings.ToLower(err.Error())
-	switch {
-	case strings.Contains(msg, "cert common name invalid"), strings.Contains(msg, "err_cert_common_name_invalid"):
-		return roundTripErrorTexts{
-			Heading:             "TLS error",
-			TitleHumanReadable:  "Certificate name mismatch",
-			Description:         "The destination server presented a certificate that is not valid for the requested hostname.",
-			TLSExclusionAllowed: true,
-		}
-	case strings.Contains(msg, "cert date invalid"), strings.Contains(msg, "err_cert_date_invalid"):
-		return roundTripErrorTexts{
-			Heading:             "TLS error",
-			TitleHumanReadable:  "Invalid certificate",
-			Description:         "The destination server certificate has expired or is not yet valid.",
-			TLSExclusionAllowed: true,
-		}
-	case strings.Contains(msg, "cert authority invalid"), strings.Contains(msg, "err_cert_authority_invalid"):
-		return roundTripErrorTexts{
-			Heading:             "TLS error",
-			TitleHumanReadable:  "Untrusted certificate",
-			Description:         "The destination server presented a certificate that is not trusted by this proxy.",
-			TLSExclusionAllowed: true,
-		}
-	}
-
 	// Generic network error. This must come after the more specific net errors above.
 	var netErr net.Error
 	if errors.As(err, &netErr) {
@@ -298,6 +267,8 @@ func textsForRoundTripError(err error) roundTripErrorTexts {
 
 	// Some errors only expose useful classification through their text.
 	// Keep this small and conservative.
+	msg := strings.ToLower(err.Error())
+
 	switch {
 	case strings.Contains(msg, "server gave http response to https client"):
 		return roundTripErrorTexts{

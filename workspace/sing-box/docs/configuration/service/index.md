@@ -21,17 +21,13 @@ icon: material/new-box
 
 ### Fields
 
-| Type              | Format                                |
-|-------------------|---------------------------------------|
-| `api`             | [sing-box API](./api)                 |
-| `ccm`             | [CCM](./ccm)                          |
-| `derp`            | [DERP](./derp)                        |
-| `hysteria-realm`  | [Hysteria Realm](./hysteria-realm)    |
-| `ocm`             | [OCM](./ocm)                          |
-| `resolved`        | [Resolved](./resolved)                |
-| `ssm-api`         | [SSM API](./ssm-api)                  |
-| `usbip-server`    | [USB/IP Server](./usbip-server)       |
-| `usbip-client`    | [USB/IP Client](./usbip-client)       |
+| Type       | Format                 |
+|------------|------------------------|
+| `ccm`      | [CCM](./ccm)           |
+| `derp`     | [DERP](./derp)         |
+| `ocm`      | [OCM](./ocm)           |
+| `resolved` | [Resolved](./resolved) |
+| `ssm-api`  | [SSM API](./ssm-api)   |
 
 #### tag
 

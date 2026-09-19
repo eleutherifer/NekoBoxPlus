@@ -4,19 +4,18 @@ import (
 	"context"
 	"net"
 	"net/netip"
-	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/adapter/endpoint"
 	"github.com/sagernet/sing-box/common/dialer"
-	"github.com/sagernet/sing-box/common/iponly"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
+	"github.com/sagernet/sing-box/route/rule"
 	"github.com/sagernet/sing-box/transport/wireguard"
-	tun "github.com/sagernet/sing-tun"
+	"github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/bufio"
 	E "github.com/sagernet/sing/common/exceptions"
@@ -28,8 +27,8 @@ import (
 
 var (
 	_ adapter.OutboundWithPreferredRoutes = (*Endpoint)(nil)
-	_ adapter.InterfaceUpdateListener     = (*Endpoint)(nil)
 	_ dialer.PacketDialerWithDestination  = (*Endpoint)(nil)
+	_ adapter.InterfaceUpdateListener     = (*Endpoint)(nil)
 )
 
 func RegisterEndpoint(registry *endpoint.Registry) {
@@ -45,9 +44,7 @@ type Endpoint struct {
 	localAddresses []netip.Prefix
 	endpoint       *wireguard.Endpoint
 	resolveOnStart bool
-	bindAccess     sync.Mutex
 	started        atomic.Bool
-	detoured       bool
 }
 
 func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.WireGuardEndpointOptions) (adapter.Endpoint, error) {
@@ -58,7 +55,6 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 		dnsRouter:      service.FromContext[adapter.DNSRouter](ctx),
 		logger:         logger,
 		localAddresses: options.Address,
-		detoured:       options.Detour != "",
 	}
 	if options.Detour != "" && options.ListenPort != 0 {
 		return nil, E.New("`listen_port` is conflict with `detour`")
@@ -82,42 +78,25 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 	} else {
 		udpTimeout = C.UDPTimeout
 	}
-	networkManager := service.FromContext[adapter.NetworkManager](ctx)
 	wgEndpoint, err := wireguard.NewEndpoint(wireguard.EndpointOptions{
-		Context:         ctx,
-		Logger:          logger,
-		System:          options.System,
-		Handler:         ep,
-		UDPTimeout:      udpTimeout,
-		ICMPTimeout:     C.ICMPTimeout,
-		UDPMapping:      tun.NATMapping(options.UDPMapping),
-		UDPFiltering:    tun.NATFiltering(options.UDPFiltering),
-		UDPNATMax:       options.UDPNATMax,
-		InterfaceFinder: networkManager.InterfaceFinder(),
-		EgressPoolOptions: tun.UDPEgressPoolOptions{
-			Logger:           logger,
-			InterfaceFinder:  networkManager.InterfaceFinder(),
-			InterfaceMonitor: networkManager.InterfaceMonitor(),
-			ExcludeInterface: options.Name,
-			IsExempt: func() bool {
-				return networkManager.AutoRedirectOutputMark() != 0
-			},
-		},
-		Dialer: outboundDialer,
+		Context:     ctx,
+		Logger:      logger,
+		System:      options.System,
+		Handler:     ep,
+		UDPTimeout:  udpTimeout,
+		ICMPTimeout: C.ICMPTimeout,
+		Dialer:      outboundDialer,
 		CreateDialer: func(interfaceName string) N.Dialer {
 			return common.Must1(dialer.NewDefault(ctx, option.DialerOptions{
-				AbstractDialerOptions: option.AbstractDialerOptions{
-					BindInterface: interfaceName,
-				},
+				BindInterface: interfaceName,
 			}))
 		},
-		Tag:        tag,
 		Name:       options.Name,
 		MTU:        options.MTU,
 		Address:    options.Address,
 		PrivateKey: options.PrivateKey,
 		ListenPort: options.ListenPort,
-		ResolvePeer: func(domain string) ([]netip.Addr, error) {
+		ResolvePeer: func(domain string) (netip.Addr, error) {
 			queryOptions := outboundDialer.(dialer.ResolveDialer).QueryOptions()
 			if options.Detour != "" {
 				var resolveErr error
@@ -128,17 +107,17 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 					queryOptions,
 				)
 				if resolveErr != nil {
-					return nil, resolveErr
+					return netip.Addr{}, resolveErr
 				}
 			}
 			endpointAddresses, lookupErr := ep.dnsRouter.Lookup(ctx, domain, queryOptions)
 			if lookupErr != nil {
-				return nil, lookupErr
+				return netip.Addr{}, lookupErr
 			}
 			if len(endpointAddresses) == 0 {
-				return nil, E.New("empty DNS response for ", domain)
+				return netip.Addr{}, E.New("empty DNS response for ", domain)
 			}
-			return endpointAddresses, nil
+			return endpointAddresses[0], nil
 		},
 		Peers: common.Map(options.Peers, func(it option.WireGuardPeer) wireguard.PeerOptions {
 			return wireguard.PeerOptions{
@@ -174,75 +153,45 @@ func (w *Endpoint) Start(stage adapter.StartStage) error {
 }
 
 func (w *Endpoint) Close() error {
-	w.bindAccess.Lock()
 	w.started.Store(false)
-	w.bindAccess.Unlock()
 	return w.endpoint.Close()
 }
 
-func (w *Endpoint) InterfaceUpdated(ctx context.Context) {
-	if !w.started.Load() || w.detoured {
-		return
-	}
-	go w.updateBind(ctx)
-}
-
-func (w *Endpoint) updateBind(ctx context.Context) {
-	w.bindAccess.Lock()
-	defer w.bindAccess.Unlock()
-	if ctx.Err() != nil || !w.started.Load() {
-		return
-	}
+func (w *Endpoint) InterfaceUpdated() {
 	w.endpoint.InterfaceUpdated()
 }
 
-func (w *Endpoint) PreMatchFlow(network string, destination netip.Addr) adapter.PreMatchAction {
-	return adapter.PreMatchFlow
-}
-
-func (w *Endpoint) PortAddresses() (netip.Addr, netip.Addr) {
-	return w.endpoint.PortAddresses()
-}
-
-func (w *Endpoint) PortMTU() uint32 {
-	return w.endpoint.PortMTU()
-}
-
-func (w *Endpoint) AttachReturn(returnPath tun.Return) error {
-	return w.endpoint.AttachReturn(returnPath)
-}
-
-func (w *Endpoint) DetachReturn(returnPath tun.Return) error {
-	return w.endpoint.DetachReturn(returnPath)
-}
-
-func (w *Endpoint) JudgeFlow(network uint8, source netip.AddrPort, destination netip.AddrPort, firstPacket []byte) tun.FlowVerdict {
-	for _, localPrefix := range w.localAddresses {
-		if localPrefix.Contains(destination.Addr()) {
-			return tun.FlowVerdict{Action: tun.ActionAccept}
+func (w *Endpoint) PrepareConnection(network string, source M.Socksaddr, destination M.Socksaddr, routeContext tun.DirectRouteContext, timeout time.Duration) (tun.DirectRouteDestination, error) {
+	if !w.started.Load() {
+		return nil, E.New("WireGuard is not ready yet")
+	}
+	var ipVersion uint8
+	if !destination.IsIPv6() {
+		ipVersion = 4
+	} else {
+		ipVersion = 6
+	}
+	routeDestination, err := w.router.PreMatch(adapter.InboundContext{
+		Inbound:     w.Tag(),
+		InboundType: w.Type(),
+		IPVersion:   ipVersion,
+		Network:     network,
+		Source:      source,
+		Destination: destination,
+	}, routeContext, timeout, false)
+	if err != nil {
+		switch {
+		case rule.IsBypassed(err):
+			err = nil
+		case rule.IsRejected(err):
+			w.logger.Trace("reject ", network, " connection from ", source.AddrString(), " to ", destination.AddrString())
+		default:
+			if network == N.NetworkICMP {
+				w.logger.Warn(E.Cause(err, "link ", network, " connection from ", source.AddrString(), " to ", destination.AddrString()))
+			}
 		}
 	}
-	return adapter.JudgeFlow(w.router, w.Tag(), w.Type(), network, source, destination, firstPacket)
-}
-
-func (w *Endpoint) NewDNSPacket(payload []byte, source M.Socksaddr, destination M.Socksaddr, writer N.PacketWriter) {
-	ctx := log.ContextWithNewID(w.ctx)
-	var metadata adapter.InboundContext
-	metadata.Inbound = w.Tag()
-	metadata.InboundType = w.Type()
-	metadata.Network = N.NetworkUDP
-	metadata.Source = source
-	metadata.Destination = destination
-	metadata.Protocol = C.ProtocolDNS
-	w.logger.InfoContext(ctx, "inbound DNS packet from ", source)
-	w.router.HijackDNSPacket(ctx, payload, writer, metadata)
-}
-
-func (w *Endpoint) WritePackets(packets [][]byte) error {
-	if !w.started.Load() {
-		return E.New("WireGuard is not ready yet")
-	}
-	return w.endpoint.WritePackets(packets)
+	return routeDestination, err
 }
 
 func (w *Endpoint) NewConnectionEx(ctx context.Context, conn net.Conn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
@@ -321,20 +270,16 @@ func (w *Endpoint) ListenPacketWithDestination(ctx context.Context, destination 
 		if err != nil {
 			return nil, netip.Addr{}, err
 		}
-		packetConn, destinationAddress, err := N.ListenSerial(ctx, w.endpoint, destination, destinationAddresses)
-		if err != nil {
-			return nil, netip.Addr{}, err
-		}
-		return iponly.NewPacketConn(w.logger, packetConn), destinationAddress, nil
+		return N.ListenSerial(ctx, w.endpoint, destination, destinationAddresses)
 	}
 	packetConn, err := w.endpoint.ListenPacket(ctx, destination)
 	if err != nil {
 		return nil, netip.Addr{}, err
 	}
 	if destination.IsIP() {
-		return iponly.NewPacketConn(w.logger, packetConn), destination.Addr, nil
+		return packetConn, destination.Addr, nil
 	}
-	return iponly.NewPacketConn(w.logger, packetConn), netip.Addr{}, nil
+	return packetConn, netip.Addr{}, nil
 }
 
 func (w *Endpoint) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
@@ -348,13 +293,20 @@ func (w *Endpoint) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 	return packetConn, nil
 }
 
-func (w *Endpoint) PreferredDomain(metadata *adapter.InboundContext, domain string) bool {
+func (w *Endpoint) PreferredDomain(domain string) bool {
 	return false
 }
 
-func (w *Endpoint) PreferredAddress(metadata *adapter.InboundContext, address netip.Addr) bool {
+func (w *Endpoint) PreferredAddress(address netip.Addr) bool {
 	if !w.started.Load() {
 		return false
 	}
 	return w.endpoint.Lookup(address) != nil
+}
+
+func (w *Endpoint) NewDirectRouteConnection(metadata adapter.InboundContext, routeContext tun.DirectRouteContext, timeout time.Duration) (tun.DirectRouteDestination, error) {
+	if !w.started.Load() {
+		return nil, E.New("WireGuard is not ready yet")
+	}
+	return w.endpoint.NewDirectRouteConnection(metadata, routeContext, timeout)
 }

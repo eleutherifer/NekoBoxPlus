@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 27,
-    "identityHash": "2a7707d741d7cbc4d815e2270de4dc68",
+    "identityHash": "7111b8f48c10dc21003e029c139541cd",
     "entities": [
       {
         "tableName": "proxy_groups",
@@ -148,7 +148,7 @@
       },
       {
         "tableName": "proxy_entities",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `groupId` INTEGER NOT NULL, `type` INTEGER NOT NULL, `userOrder` INTEGER NOT NULL, `tx` INTEGER NOT NULL, `rx` INTEGER NOT NULL, `status` INTEGER NOT NULL, `ping` INTEGER NOT NULL, `uuid` TEXT NOT NULL, `error` TEXT, `socksBean` BLOB, `httpBean` BLOB, `ssBean` BLOB, `ssrBean` BLOB, `vmessBean` BLOB, `trojanBean` BLOB, `trojanGoBean` BLOB, `mieruBean` BLOB, `naiveBean` BLOB, `hysteriaBean` BLOB, `tuicBean` BLOB, `juicityBean` BLOB, `snellBean` BLOB, `masterDnsVPNBean` BLOB, `byeDPIBean` BLOB, `sshBean` BLOB, `wgBean` BLOB, `awgBean` BLOB, `shadowTLSBean` BLOB, `anyTLSBean` BLOB, `trustTunnelBean` BLOB, `masqueBean` BLOB, `directBean` BLOB, `tailscaleBean` BLOB, `openVPNBean` BLOB, `openConnectBean` BLOB, `proxySetBean` BLOB, `chainBean` BLOB, `nekoBean` BLOB, `configBean` BLOB)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `groupId` INTEGER NOT NULL, `type` INTEGER NOT NULL, `userOrder` INTEGER NOT NULL, `tx` INTEGER NOT NULL, `rx` INTEGER NOT NULL, `status` INTEGER NOT NULL, `ping` INTEGER NOT NULL, `uuid` TEXT NOT NULL, `error` TEXT, `countryCode` TEXT NOT NULL, `countrySource` INTEGER NOT NULL, `socksBean` BLOB, `httpBean` BLOB, `ssBean` BLOB, `ssrBean` BLOB, `vmessBean` BLOB, `trojanBean` BLOB, `trojanGoBean` BLOB, `mieruBean` BLOB, `naiveBean` BLOB, `hysteriaBean` BLOB, `tuicBean` BLOB, `juicityBean` BLOB, `snellBean` BLOB, `masterDnsVPNBean` BLOB, `byeDPIBean` BLOB, `sshBean` BLOB, `wgBean` BLOB, `awgBean` BLOB, `shadowTLSBean` BLOB, `anyTLSBean` BLOB, `trustTunnelBean` BLOB, `masqueBean` BLOB, `directBean` BLOB, `tailscaleBean` BLOB, `proxySetBean` BLOB, `chainBean` BLOB, `nekoBean` BLOB, `configBean` BLOB)",
         "fields": [
           {
             "fieldPath": "id",
@@ -208,6 +208,18 @@
             "fieldPath": "error",
             "columnName": "error",
             "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "countryCode",
+            "columnName": "countryCode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "countrySource",
+            "columnName": "countrySource",
+            "affinity": "INTEGER",
+            "notNull": true
           },
           {
             "fieldPath": "socksBean",
@@ -327,16 +339,6 @@
           {
             "fieldPath": "tailscaleBean",
             "columnName": "tailscaleBean",
-            "affinity": "BLOB"
-          },
-          {
-            "fieldPath": "openVPNBean",
-            "columnName": "openVPNBean",
-            "affinity": "BLOB"
-          },
-          {
-            "fieldPath": "openConnectBean",
-            "columnName": "openConnectBean",
             "affinity": "BLOB"
           },
           {
@@ -604,7 +606,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2a7707d741d7cbc4d815e2270de4dc68')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7111b8f48c10dc21003e029c139541cd')"
     ]
   }
 }

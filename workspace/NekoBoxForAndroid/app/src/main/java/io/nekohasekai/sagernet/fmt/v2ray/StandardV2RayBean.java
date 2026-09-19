@@ -93,8 +93,6 @@ public abstract class StandardV2RayBean extends AbstractBean {
     public String xhttpScStreamUpServerSecs;  // sc_stream_up_server_secs
     public String xhttpUplinkChunkSize;       // uplink_chunk_size
     public String xhttpServerMaxHeaderBytes;  // server_max_header_bytes
-    public String xhttpCongestionController; // H3: "", "bbr", "cubic", "reno"
-    public String xhttpCwnd;                 // H3 BBR initial CWND; blank/0 = 32
 
     // --------------------------------------- kcp
 
@@ -220,8 +218,6 @@ public abstract class StandardV2RayBean extends AbstractBean {
         if (JavaUtil.isNullOrBlank(xhttpScStreamUpServerSecs)) xhttpScStreamUpServerSecs = "";
         if (JavaUtil.isNullOrBlank(xhttpUplinkChunkSize)) xhttpUplinkChunkSize = "";
         if (JavaUtil.isNullOrBlank(xhttpServerMaxHeaderBytes)) xhttpServerMaxHeaderBytes = "";
-        if (JavaUtil.isNullOrBlank(xhttpCongestionController)) xhttpCongestionController = "";
-        if (JavaUtil.isNullOrBlank(xhttpCwnd)) xhttpCwnd = "";
 
         if (JavaUtil.isNullOrBlank(mKcpSeed)) mKcpSeed = "";
         if (JavaUtil.isNullOrBlank(headerType)) headerType = "none";
@@ -235,7 +231,7 @@ public abstract class StandardV2RayBean extends AbstractBean {
 
     @Override
     public void serialize(ByteBufferOutput output) {
-        output.writeInt(18);
+        output.writeInt(17);
         super.serialize(output);
         output.writeString(uuid);
         output.writeString(encryption);
@@ -315,9 +311,6 @@ public abstract class StandardV2RayBean extends AbstractBean {
                 // v16
                 output.writeString(xhttpSessionPlacementOld);
                 output.writeString(xhttpSessionKeyOld);
-                // v18
-                output.writeString(xhttpCongestionController);
-                output.writeString(xhttpCwnd);
                 break;
             }
             case "kcp": {
@@ -458,10 +451,6 @@ public abstract class StandardV2RayBean extends AbstractBean {
                 if (version >= 16) {
                     xhttpSessionPlacementOld = input.readString();
                     xhttpSessionKeyOld = input.readString();
-                }
-                if (version >= 18) {
-                    xhttpCongestionController = input.readString();
-                    xhttpCwnd = input.readString();
                 }
                 break;
             }

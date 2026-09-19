@@ -1,3 +1,3 @@
 package constant
 
-var Version = "unknown"
+var Version = "v1.13.19" + plusVersionSuffix

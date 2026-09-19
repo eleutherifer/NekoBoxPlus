@@ -2,29 +2,26 @@ package io.nekohasekai.sagernet.ui.profile
 
 import android.app.Activity
 import android.content.Intent
+import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.setValue
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import androidx.preference.EditTextPreference
+import androidx.preference.Preference
+import androidx.preference.PreferenceFragmentCompat
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.ProfileManager
+import io.nekohasekai.sagernet.database.preference.EditTextPreferenceModifiers
 import io.nekohasekai.sagernet.fmt.masque.MasqueBean
 import io.nekohasekai.sagernet.ktx.applyDefaultValues
 import io.nekohasekai.sagernet.ktx.onMainDispatcher
 import io.nekohasekai.sagernet.ktx.runOnDefaultDispatcher
 import io.nekohasekai.sagernet.ui.ProfileSelectActivity
-import io.nekohasekai.sagernet.ui.compose.MasqueProfileSettingsScreen
-import io.nekohasekai.sagernet.ui.compose.showComposeItemDialog
-import io.nekohasekai.sagernet.ui.compose.showComposeMessageDialog
 import moe.matsuri.nb4a.proxy.PreferenceBinding
 import moe.matsuri.nb4a.proxy.PreferenceBindingManager
 import moe.matsuri.nb4a.proxy.Type
 
 class MasqueSettingsActivity : ProfileSettingsActivity<MasqueBean>() {
-
-    override val usesComposePreferences = true
 
     companion object {
         private const val KEY_PROFILE_DETOUR = "profileDetour"
@@ -68,7 +65,7 @@ class MasqueSettingsActivity : ProfileSettingsActivity<MasqueBean>() {
         add(PreferenceBinding(Type.Bool, "tlsKernelRx"))
     }
 
-    private var detourRevision by mutableIntStateOf(0)
+    private var detourPreference: Preference? = null
 
     override fun MasqueBean.init() {
         pbm.writeToCacheAll(this)
@@ -80,35 +77,51 @@ class MasqueSettingsActivity : ProfileSettingsActivity<MasqueBean>() {
         profileDetour = DataStore.profileCacheStore.getLong(KEY_PROFILE_DETOUR) ?: 0L
     }
 
+    override fun PreferenceFragmentCompat.createPreferences(
+        savedInstanceState: Bundle?,
+        rootKey: String?,
+    ) {
+        addPreferencesFromResource(R.xml.masque_preferences)
+        pbm.setPreferenceFragment(this)
+
+        findPreference<EditTextPreference>("udpInitialPacketSize")!!.apply {
+            setOnBindEditTextListener(EditTextPreferenceModifiers.Number)
+        }
+        findPreference<EditTextPreference>("profileAuthToken")!!.summaryProvider = PasswordSummaryProvider
+        findPreference<EditTextPreference>("profilePrivateKey")!!.summaryProvider = PasswordSummaryProvider
+        findPreference<EditTextPreference>("configPrivateKey")!!.summaryProvider = PasswordSummaryProvider
+        findPreference<EditTextPreference>("configAccessToken")!!.summaryProvider = PasswordSummaryProvider
+
+        detourPreference = findPreference(KEY_PROFILE_DETOUR)
+        detourPreference!!.setOnPreferenceClickListener {
+            showDetourDialog()
+            true
+        }
+        updateDetourSummary()
+    }
+
     private fun currentDetourId(): Long {
         return DataStore.profileCacheStore.getLong(KEY_PROFILE_DETOUR) ?: 0L
     }
 
-    @Composable
-    override fun ComposePreferences() {
-        detourRevision
-        val detourId = currentDetourId()
-        MasqueProfileSettingsScreen(
-            detourName = detourId.takeIf { it > 0 }
-                ?.let { ProfileManager.getProfile(it)?.displayName() }
-                ?: getString(R.string.masque_profile_detour_direct),
-            onSelectDetour = ::showDetourDialog,
-        )
+    private fun updateDetourSummary() {
+        detourPreference?.summary = currentDetourId().takeIf { it > 0 }
+            ?.let { ProfileManager.getProfile(it)?.displayName() }
+            ?: getString(R.string.masque_profile_detour_direct)
     }
 
     private fun showDetourDialog() {
-        showComposeItemDialog(
-            title = getText(R.string.masque_profile_detour),
-            items = listOf(getString(R.string.masque_profile_detour_direct), getString(R.string.route_profile)),
-            onItemSelected = { which ->
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.masque_profile_detour)
+            .setItems(arrayOf(getString(R.string.masque_profile_detour_direct), getString(R.string.route_profile))) { _, which ->
                 if (which == 0) {
                     DataStore.profileCacheStore.putLong(KEY_PROFILE_DETOUR, 0L)
-                    detourRevision++
+                    updateDetourSummary()
                 } else {
                     selectDetour.launch(Intent(this, ProfileSelectActivity::class.java))
                 }
-            },
-        )
+            }
+            .show()
     }
 
     private val selectDetour = registerForActivityResult(
@@ -118,15 +131,16 @@ class MasqueSettingsActivity : ProfileSettingsActivity<MasqueBean>() {
             val profileId = it.data!!.getLongExtra(ProfileSelectActivity.EXTRA_PROFILE_ID, 0L)
             if (profileId == DataStore.editingId && profileId > 0L) {
                 onMainDispatcher {
-                    showComposeMessageDialog(
-                        title = getText(R.string.invalid_profile),
-                        message = getText(R.string.masque_profile_detour_self_error),
-                    )
+                    MaterialAlertDialogBuilder(this@MasqueSettingsActivity)
+                        .setTitle(R.string.invalid_profile)
+                        .setMessage(R.string.masque_profile_detour_self_error)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show()
                 }
                 return@runOnDefaultDispatcher
             }
             DataStore.profileCacheStore.putLong(KEY_PROFILE_DETOUR, profileId)
-            onMainDispatcher { detourRevision++ }
+            onMainDispatcher { updateDetourSummary() }
         }
     }
 }

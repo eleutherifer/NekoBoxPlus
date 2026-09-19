@@ -47,6 +47,10 @@ type DefaultRule struct {
 	abstractDefaultRule
 }
 
+func (r *DefaultRule) matchStates(metadata *adapter.InboundContext) ruleMatchStateSet {
+	return r.abstractDefaultRule.matchStates(metadata)
+}
+
 type RuleItem interface {
 	Match(metadata *adapter.InboundContext) bool
 	String() string
@@ -273,16 +277,6 @@ func NewDefaultRule(ctx context.Context, logger log.ContextLogger, options optio
 		rule.items = append(rule.items, item)
 		rule.allItems = append(rule.allItems, item)
 	}
-	if len(options.SourceMACAddress) > 0 {
-		item := NewSourceMACAddressItem(options.SourceMACAddress)
-		rule.items = append(rule.items, item)
-		rule.allItems = append(rule.allItems, item)
-	}
-	if len(options.SourceHostname) > 0 {
-		item := NewSourceHostnameItem(options.SourceHostname)
-		rule.items = append(rule.items, item)
-		rule.allItems = append(rule.allItems, item)
-	}
 	if len(options.PreferredBy) > 0 {
 		item := NewPreferredByItem(ctx, options.PreferredBy)
 		rule.items = append(rule.items, item)
@@ -310,6 +304,10 @@ type LogicalRule struct {
 	abstractLogicalRule
 }
 
+func (r *LogicalRule) matchStates(metadata *adapter.InboundContext) ruleMatchStateSet {
+	return r.abstractLogicalRule.matchStates(metadata)
+}
+
 func NewLogicalRule(ctx context.Context, logger log.ContextLogger, options option.LogicalRule) (*LogicalRule, error) {
 	action, err := NewRuleAction(ctx, logger, options.RuleAction)
 	if err != nil {
@@ -331,10 +329,6 @@ func NewLogicalRule(ctx context.Context, logger log.ContextLogger, options optio
 		return nil, E.New("unknown logical mode: ", options.Mode)
 	}
 	for i, subOptions := range options.Rules {
-		err = validateNoNestedRuleActions(subOptions, true)
-		if err != nil {
-			return nil, E.Cause(err, "sub rule[", i, "]")
-		}
 		subRule, err := NewRule(ctx, logger, subOptions, false)
 		if err != nil {
 			return nil, E.Cause(err, "sub rule[", i, "]")

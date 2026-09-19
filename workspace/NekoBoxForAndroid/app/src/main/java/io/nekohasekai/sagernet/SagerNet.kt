@@ -65,10 +65,6 @@ class SagerNet : Application(),
 
         Thread.setDefaultUncaughtExceptionHandler(CrashHandler)
 
-        if (isMainProcess && isTv) {
-            AppIconManager.set(this, AppIcon.NEKOBOX_PLUS)
-        }
-
         if (isMainProcess || isBgProcess) {
             clearCacheAfterAppUpdate()
             externalAssets.mkdirs()

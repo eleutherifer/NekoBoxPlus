@@ -1,0 +1,82 @@
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <EditTextPreference
+        app:icon="@drawable/ic_social_emoji_symbols"
+        app:key="name"
+        app:title="@string/profile_name"
+        app:useSimpleSummaryProvider="true" />
+
+    <PreferenceCategory app:title="@string/tailscale_account_settings">
+        <EditTextPreference
+            app:icon="@drawable/ic_settings_password"
+            app:key="authKey"
+            app:title="@string/tailscale_auth_key" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_http_24"
+            app:key="controlURL"
+            app:title="@string/tailscale_control_url"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_domain_24"
+            app:key="hostname"
+            app:title="@string/tailscale_hostname"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_baseline_delete_24"
+            app:key="ephemeral"
+            app:title="@string/tailscale_ephemeral" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/tailscale_route_settings">
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_baseline_call_split_24"
+            app:key="acceptRoutes"
+            app:title="@string/tailscale_accept_routes" />
+        <EditTextPreference
+            app:icon="@drawable/baseline_public_24"
+            app:key="exitNode"
+            app:title="@string/tailscale_exit_node"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_baseline_layers_24"
+            app:key="exitNodeAllowLANAccess"
+            app:title="@string/tailscale_exit_node_allow_lan_access" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_call_split_24"
+            app:key="advertiseRoutes"
+            app:title="@string/tailscale_advertise_routes"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/baseline_public_24"
+            app:key="advertiseExitNode"
+            app:title="@string/tailscale_advertise_exit_node" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="advertiseTags"
+            app:title="@string/tailscale_advertise_tags"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/tailscale_advanced_settings">
+        <EditTextPreference
+            app:icon="@drawable/ic_action_settings"
+            app:key="relayServerPort"
+            app:title="@string/tailscale_relay_server_port"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/baseline_public_24"
+            app:key="relayServerStaticEndpoints"
+            app:title="@string/tailscale_relay_server_static_endpoints"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="udpTimeout"
+            app:title="@string/tailscale_udp_timeout"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_baseline_dns_24"
+            app:key="magicDNS"
+            app:title="@string/tailscale_magic_dns"
+            app:summary="@string/tailscale_magic_dns_summary" />
+    </PreferenceCategory>
+</PreferenceScreen>

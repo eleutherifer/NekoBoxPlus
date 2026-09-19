@@ -18,10 +18,12 @@ import (
 	"github.com/sagernet/sing/common/observable"
 )
 
+var _ adapter.URLTestHistoryStorage = (*HistoryStorage)(nil)
+
 type HistoryStorage struct {
 	access       sync.RWMutex
 	delayHistory map[string]*adapter.URLTestHistory
-	updateHooks  []*observable.Subscriber[struct{}]
+	updateHook   *observable.Subscriber[struct{}]
 }
 
 func NewHistoryStorage() *HistoryStorage {
@@ -30,16 +32,8 @@ func NewHistoryStorage() *HistoryStorage {
 	}
 }
 
-func (s *HistoryStorage) AddUpdateHook(hook *observable.Subscriber[struct{}]) {
-	s.access.Lock()
-	defer s.access.Unlock()
-	s.updateHooks = append(s.updateHooks, hook)
-}
-
-func (s *HistoryStorage) NotifyUpdated() {
-	s.access.RLock()
-	defer s.access.RUnlock()
-	s.notifyUpdated()
+func (s *HistoryStorage) SetHook(hook *observable.Subscriber[struct{}]) {
+	s.updateHook = hook
 }
 
 func (s *HistoryStorage) LoadURLTestHistory(tag string) *adapter.URLTestHistory {
@@ -66,7 +60,8 @@ func (s *HistoryStorage) StoreURLTestHistory(tag string, history *adapter.URLTes
 }
 
 func (s *HistoryStorage) notifyUpdated() {
-	for _, updateHook := range s.updateHooks {
+	updateHook := s.updateHook
+	if updateHook != nil {
 		updateHook.Emit(struct{}{})
 	}
 }
@@ -74,7 +69,7 @@ func (s *HistoryStorage) notifyUpdated() {
 func (s *HistoryStorage) Close() error {
 	s.access.Lock()
 	defer s.access.Unlock()
-	s.updateHooks = nil
+	s.updateHook = nil
 	return nil
 }
 

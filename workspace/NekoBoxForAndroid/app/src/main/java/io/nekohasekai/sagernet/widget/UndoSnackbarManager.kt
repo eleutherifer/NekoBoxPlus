@@ -25,7 +25,7 @@ class UndoSnackbarManager<in T>(
     private val removedCallback = object : Snackbar.Callback() {
         override fun onDismissed(transientBottomBar: Snackbar?, event: Int) {
             if (last === transientBottomBar && event != DISMISS_EVENT_ACTION) {
-                callback.commit(recycleBin.toList())
+                callback.commit(recycleBin)
                 recycleBin.clear()
                 last = null
             }

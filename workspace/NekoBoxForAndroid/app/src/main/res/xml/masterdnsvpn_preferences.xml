@@ -1,0 +1,379 @@
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <EditTextPreference
+        app:icon="@drawable/ic_social_emoji_symbols"
+        app:key="name"
+        app:title="@string/profile_name"
+        app:useSimpleSummaryProvider="true" />
+
+    <PreferenceCategory app:title="@string/masterdnsvpn">
+        <Preference
+            app:icon="@drawable/ic_baseline_tune_24"
+            app:key="preset"
+            app:title="@string/masterdnsvpn_preset" />
+        <EditTextPreference
+            app:icon="@drawable/baseline_public_24"
+            app:key="domains"
+            app:title="@string/masterdnsvpn_domains"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_vpn_key_24"
+            app:key="encryptionKey"
+            app:title="@string/masterdnsvpn_encryption_key"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:entries="@array/masterdnsvpn_encryption_method_entry"
+            app:entryValues="@array/masterdnsvpn_encryption_method_value"
+            app:icon="@drawable/ic_notification_enhanced_encryption"
+            app:key="dataEncryptionMethod"
+            app:title="@string/masterdnsvpn_encryption_method"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_action_dns"
+            app:key="resolvers"
+            app:summary="@string/masterdnsvpn_dns_resolvers_summary"
+            app:title="@string/masterdnsvpn_dns_resolvers" />
+        <Preference
+            app:icon="@drawable/ic_file_file_upload"
+            app:key="importResolvers"
+            app:title="@string/masterdnsvpn_import_dns_resolvers" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/masterdnsvpn_dns_cache">
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_dns_24"
+            app:key="localDNSCacheMaxRecords"
+            app:title="@string/masterdnsvpn_local_dns_cache_max_records"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="localDNSCacheTTLSeconds"
+            app:title="@string/masterdnsvpn_local_dns_cache_ttl_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="localDNSPendingTimeoutSeconds"
+            app:title="@string/masterdnsvpn_local_dns_pending_timeout_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="dnsResponseFragmentTimeoutSeconds"
+            app:title="@string/masterdnsvpn_dns_response_fragment_timeout_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_baseline_save_24"
+            app:key="localDNSCachePersistToFile"
+            app:title="@string/masterdnsvpn_local_dns_cache_persist_to_file" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_update_24"
+            app:key="localDNSCacheFlushIntervalSeconds"
+            app:title="@string/masterdnsvpn_local_dns_cache_flush_interval_seconds"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/masterdnsvpn_resolver_health">
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:entries="@array/masterdnsvpn_resolver_balancing_entry"
+            app:entryValues="@array/masterdnsvpn_resolver_balancing_value"
+            app:icon="@drawable/ic_baseline_shuffle_24"
+            app:key="resolverBalancingStrategy"
+            app:title="@string/masterdnsvpn_resolver_balancing_strategy"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_filter_list_24"
+            app:key="packetDuplicationCount"
+            app:title="@string/masterdnsvpn_packet_duplication_count"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_filter_list_24"
+            app:key="setupPacketDuplicationCount"
+            app:title="@string/masterdnsvpn_setup_packet_duplication_count"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_low_priority_24"
+            app:key="streamResolverFailoverResendThreshold"
+            app:title="@string/masterdnsvpn_stream_resolver_failover_resend_threshold"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="streamResolverFailoverCooldown"
+            app:title="@string/masterdnsvpn_stream_resolver_failover_cooldown"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_baseline_refresh_24"
+            app:key="recheckInactiveServersEnabled"
+            app:title="@string/masterdnsvpn_recheck_inactive_servers_enabled" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_baseline_running_with_errors_24"
+            app:key="autoDisableTimeoutServers"
+            app:title="@string/masterdnsvpn_auto_disable_timeout_servers" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="autoDisableTimeoutWindowSeconds"
+            app:title="@string/masterdnsvpn_auto_disable_timeout_window_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_baseline_security_24"
+            app:key="baseEncodeData"
+            app:title="@string/masterdnsvpn_base_encode_data" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/masterdnsvpn_compression">
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:entries="@array/masterdnsvpn_compression_entry"
+            app:entryValues="@array/masterdnsvpn_compression_value"
+            app:icon="@drawable/ic_baseline_compress_24"
+            app:key="uploadCompressionType"
+            app:title="@string/masterdnsvpn_upload_compression_type"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:entries="@array/masterdnsvpn_compression_entry"
+            app:entryValues="@array/masterdnsvpn_compression_value"
+            app:icon="@drawable/ic_baseline_compress_24"
+            app:key="downloadCompressionType"
+            app:title="@string/masterdnsvpn_download_compression_type"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_format_align_left_24"
+            app:key="compressionMinSize"
+            app:title="@string/masterdnsvpn_compression_min_size"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/masterdnsvpn_mtu_discovery">
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_upload_24"
+            app:key="minUploadMTU"
+            app:title="@string/masterdnsvpn_min_upload_mtu"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_download_24"
+            app:key="minDownloadMTU"
+            app:title="@string/masterdnsvpn_min_download_mtu"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_upload_24"
+            app:key="maxUploadMTU"
+            app:title="@string/masterdnsvpn_max_upload_mtu"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_download_24"
+            app:key="maxDownloadMTU"
+            app:title="@string/masterdnsvpn_max_download_mtu"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_baseline_filter_list_24"
+            app:key="autoRemoveLowMTUServers"
+            app:title="@string/masterdnsvpn_auto_remove_low_mtu_servers" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_refresh_24"
+            app:key="mtuTestRetries"
+            app:title="@string/masterdnsvpn_mtu_test_retries"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="mtuTestTimeout"
+            app:title="@string/masterdnsvpn_mtu_test_timeout"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_speed_24"
+            app:key="mtuTestParallelism"
+            app:title="@string/masterdnsvpn_mtu_test_parallelism"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/masterdnsvpn_runtime">
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_speed_24"
+            app:key="rxTxWorkers"
+            app:title="@string/masterdnsvpn_rx_tx_workers"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_speed_24"
+            app:key="tunnelProcessWorkers"
+            app:title="@string/masterdnsvpn_tunnel_process_workers"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="tunnelPacketTimeoutSeconds"
+            app:title="@string/masterdnsvpn_tunnel_packet_timeout_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="dispatcherIdlePollIntervalSeconds"
+            app:title="@string/masterdnsvpn_dispatcher_idle_poll_interval_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_view_list_24"
+            app:key="rxChannelSize"
+            app:title="@string/masterdnsvpn_rx_channel_size"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="socksUDPAssociateReadTimeoutSeconds"
+            app:title="@string/masterdnsvpn_socks_udp_associate_read_timeout_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="clientTerminalStreamRetentionSeconds"
+            app:title="@string/masterdnsvpn_client_terminal_stream_retention_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="clientCancelledSetupRetentionSeconds"
+            app:title="@string/masterdnsvpn_client_cancelled_setup_retention_seconds"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/masterdnsvpn_session_ping">
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_refresh_24"
+            app:key="sessionInitRetryBaseSeconds"
+            app:title="@string/masterdnsvpn_session_init_retry_base_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_refresh_24"
+            app:key="sessionInitRetryStepSeconds"
+            app:title="@string/masterdnsvpn_session_init_retry_step_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_refresh_24"
+            app:key="sessionInitRetryLinearAfter"
+            app:title="@string/masterdnsvpn_session_init_retry_linear_after"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_refresh_24"
+            app:key="sessionInitRetryMaxSeconds"
+            app:title="@string/masterdnsvpn_session_init_retry_max_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_refresh_24"
+            app:key="sessionInitBusyRetryIntervalSeconds"
+            app:title="@string/masterdnsvpn_session_init_busy_retry_interval_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_speed_24"
+            app:key="sessionInitRacingCount"
+            app:title="@string/masterdnsvpn_session_init_racing_count"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="pingAggressiveIntervalSeconds"
+            app:title="@string/masterdnsvpn_ping_aggressive_interval_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="pingLazyIntervalSeconds"
+            app:title="@string/masterdnsvpn_ping_lazy_interval_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="pingCooldownIntervalSeconds"
+            app:title="@string/masterdnsvpn_ping_cooldown_interval_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="pingColdIntervalSeconds"
+            app:title="@string/masterdnsvpn_ping_cold_interval_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="pingWarmThresholdSeconds"
+            app:title="@string/masterdnsvpn_ping_warm_threshold_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="pingCoolThresholdSeconds"
+            app:title="@string/masterdnsvpn_ping_cool_threshold_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="pingColdThresholdSeconds"
+            app:title="@string/masterdnsvpn_ping_cold_threshold_seconds"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/masterdnsvpn_arq">
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_view_list_24"
+            app:key="maxPacketsPerBatch"
+            app:title="@string/masterdnsvpn_max_packets_per_batch"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_view_list_24"
+            app:key="arqWindowSize"
+            app:title="@string/masterdnsvpn_arq_window_size"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="arqInitialRTOSeconds"
+            app:title="@string/masterdnsvpn_arq_initial_rto_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="arqMaxRTOSeconds"
+            app:title="@string/masterdnsvpn_arq_max_rto_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="arqControlInitialRTOSeconds"
+            app:title="@string/masterdnsvpn_arq_control_initial_rto_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="arqControlMaxRTOSeconds"
+            app:title="@string/masterdnsvpn_arq_control_max_rto_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_refresh_24"
+            app:key="arqMaxControlRetries"
+            app:title="@string/masterdnsvpn_arq_max_control_retries"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="arqInactivityTimeoutSeconds"
+            app:title="@string/masterdnsvpn_arq_inactivity_timeout_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="arqDataPacketTTLSeconds"
+            app:title="@string/masterdnsvpn_arq_data_packet_ttl_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="arqControlPacketTTLSeconds"
+            app:title="@string/masterdnsvpn_arq_control_packet_ttl_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_refresh_24"
+            app:key="arqMaxDataRetries"
+            app:title="@string/masterdnsvpn_arq_max_data_retries"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_low_priority_24"
+            app:key="arqDataNackMaxGap"
+            app:title="@string/masterdnsvpn_arq_data_nack_max_gap"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="arqDataNackInitialDelaySeconds"
+            app:title="@string/masterdnsvpn_arq_data_nack_initial_delay_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="arqDataNackRepeatSeconds"
+            app:title="@string/masterdnsvpn_arq_data_nack_repeat_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="arqTerminalDrainTimeoutSeconds"
+            app:title="@string/masterdnsvpn_arq_terminal_drain_timeout_seconds"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="arqTerminalAckWaitTimeoutSeconds"
+            app:title="@string/masterdnsvpn_arq_terminal_ack_wait_timeout_seconds"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

@@ -16,8 +16,8 @@ import (
 	"github.com/matsuridayo/libneko/neko_log"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/boxapi"
-	"github.com/sagernet/sing-box/common/trafficcontrol"
 	adblockRegexpr "github.com/sagernet/sing-box/experimental/adblock/regexpr"
+	"github.com/sagernet/sing-box/experimental/clashapi/trafficontrol"
 	sblog "github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/protocol/group"
 
@@ -33,7 +33,7 @@ var mainInstance *BoxInstance
 
 func VersionBox() string {
 	version := []string{
-		"sing-box-plus: " + constant.Version,
+		"sing-box: " + constant.Version,
 		runtime.Version() + "@" + runtime.GOOS + "/" + runtime.GOARCH,
 	}
 
@@ -82,7 +82,7 @@ func ResetAllConnections(system bool) {
 }
 
 type clashTrafficManagerProvider interface {
-	TrafficManager() *trafficcontrol.Manager
+	TrafficManager() *trafficontrol.Manager
 }
 
 type BoxInstance struct {
@@ -204,7 +204,6 @@ func newSingBoxInstanceWithRoutingPathsContext(
 	ctx = box.Context(ctx,
 		nekoboxAndroidInboundRegistry(), nekoboxAndroidOutboundRegistry(), nekoboxAndroidEndpointRegistry(),
 		nekoboxAndroidDNSTransportRegistry(localTransport), nekoboxAndroidServiceRegistry(),
-		nekoboxAndroidCertificateProviderRegistry(),
 	)
 	ctx = service.ContextWithDefaultRegistry(ctx)
 	ctx = filemanager.WithDefault(ctx, workingPath, tempPath, os.Getuid(), os.Getgid())
@@ -220,7 +219,6 @@ func newSingBoxInstanceWithRoutingPathsContext(
 		cancel()
 		return nil, fmt.Errorf("decode config: %w", err)
 	}
-	options.Certificate = currentCertificateOptions()
 	err = validateByeDPIOptions(options)
 	if err != nil {
 		cancel()
@@ -334,93 +332,12 @@ func (b *BoxInstance) Start() (err error) {
 	if b.state == boxStateNew {
 		b.state = boxStateStarted
 		err = b.Box.Start()
-		if err == nil {
-			b.watchEndpointAuthentication()
-		}
 		if err == nil && !b.forTest {
 			debug.FreeOSMemory()
 		}
 		return err
 	}
 	return errors.New("already started")
-}
-
-func (b *BoxInstance) watchEndpointAuthentication() {
-	for _, currentEndpoint := range b.Endpoint().Endpoints() {
-		switch endpoint := currentEndpoint.(type) {
-		case adapter.OpenVPNEndpoint:
-			go b.watchOpenVPNAuthentication(endpoint)
-		case adapter.OpenConnectEndpoint:
-			go b.watchOpenConnectAuthentication(endpoint)
-		}
-	}
-}
-
-func (b *BoxInstance) watchOpenVPNAuthentication(endpoint adapter.OpenVPNEndpoint) {
-	for {
-		status := endpoint.OpenVPNStatus()
-		if detail, required := openVPNAuthenticationDetail(status); required {
-			if intfNB4A != nil {
-				intfNB4A.EndpointAuthenticationRequired("OpenVPN", detail)
-			}
-			return
-		}
-		select {
-		case <-b.ctx.Done():
-			return
-		case <-endpoint.StatusUpdated():
-		}
-	}
-}
-
-func (b *BoxInstance) watchOpenConnectAuthentication(endpoint adapter.OpenConnectEndpoint) {
-	for {
-		status := endpoint.OpenConnectStatus()
-		if detail, required := openConnectAuthenticationDetail(status); required {
-			if intfNB4A != nil {
-				intfNB4A.EndpointAuthenticationRequired("OpenConnect", detail)
-			}
-			return
-		}
-		select {
-		case <-b.ctx.Done():
-			return
-		case <-endpoint.StatusUpdated():
-		}
-	}
-}
-
-func openVPNAuthenticationDetail(status adapter.OpenVPNStatus) (string, bool) {
-	if status.State != adapter.OpenVPNStateAuthPending {
-		return "", false
-	}
-	if status.Challenge == nil {
-		return "", true
-	}
-	if status.Challenge.Message != "" {
-		return status.Challenge.Message, true
-	}
-	return status.Challenge.URL, true
-}
-
-func openConnectAuthenticationDetail(status adapter.OpenConnectStatus) (string, bool) {
-	if status.State != adapter.OpenConnectStateAuthPending {
-		return "", false
-	}
-	challenge := status.AuthChallenge
-	if challenge == nil {
-		return "", true
-	}
-	if challenge.Message != "" {
-		return challenge.Message, true
-	}
-	if challenge.Browser != nil {
-		return challenge.Browser.URL, true
-	}
-	if challenge.Error != "" {
-		return challenge.Error, true
-	}
-	return challenge.Banner, true
 }
 
 func (b *BoxInstance) Close() (err error) {
@@ -531,7 +448,10 @@ func (b *BoxInstance) resetConnectionsLocked() error {
 	clashServer := clashServerFromInstance(b)
 	if trafficManagerProvider, ok := clashServer.(clashTrafficManagerProvider); ok {
 		if trafficManager := trafficManagerProvider.TrafficManager(); trafficManager != nil {
-			trafficManager.CloseAllConnections()
+			snapshot := trafficManager.Snapshot()
+			for _, connection := range snapshot.Connections {
+				_ = connection.Close()
+			}
 		}
 	}
 	b.Box.Router().ResetNetwork()

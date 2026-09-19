@@ -51,7 +51,7 @@ func TestQUICProxyAuthenticationDoesNotBlockUDPListener(t *testing.T) {
 	initPacket := buf.As([]byte{1})
 	returned := make(chan struct{})
 	go func() {
-		(*inboundPacketHandler)(inbound).NewPacket(initPacket, source)
+		(*inboundPacketHandler)(inbound).NewPacketEx(initPacket, source)
 		close(returned)
 	}()
 	select {
@@ -66,7 +66,7 @@ func TestQUICProxyAuthenticationDoesNotBlockUDPListener(t *testing.T) {
 	}
 
 	nextPacket := []byte{0xc0, 0, 0, 0, 1, 2, 3}
-	(*inboundPacketHandler)(inbound).NewPacket(buf.As(nextPacket), source)
+	(*inboundPacketHandler)(inbound).NewPacketEx(buf.As(nextPacket), source)
 	close(parser.release)
 
 	var event quicProxyNATTestEvent

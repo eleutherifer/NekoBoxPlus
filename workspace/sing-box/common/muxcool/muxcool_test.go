@@ -230,67 +230,6 @@ func TestMuxCoolClientUDP(t *testing.T) {
 	}
 }
 
-func TestMuxCoolClientTCPOutlivesDialContext(t *testing.T) {
-	client, _, cleanup := newTestClient(t)
-	defer cleanup()
-
-	ctx, cancel := context.WithCancel(t.Context())
-	conn, err := client.DialContext(ctx, N.NetworkTCP, M.Socksaddr{Fqdn: "example.com", Port: 80})
-	if err != nil {
-		t.Fatalf("DialContext: %v", err)
-	}
-	cancel()
-
-	payload := []byte("hello after dial context cancellation")
-	if _, err = conn.Write(payload); err != nil {
-		t.Fatalf("Write after dial context cancellation: %v", err)
-	}
-	response := make([]byte, len(payload))
-	if _, err = io.ReadFull(conn, response); err != nil {
-		t.Fatalf("Read after dial context cancellation: %v", err)
-	}
-	if !bytes.Equal(response, payload) {
-		t.Fatalf("echo mismatch: got %q want %q", response, payload)
-	}
-	if err = conn.Close(); err != nil {
-		t.Fatalf("Close: %v", err)
-	}
-	if size := client.workers[0].sessionManager.size(); size != 0 {
-		t.Fatalf("session count after close = %d, want 0", size)
-	}
-}
-
-func TestMuxCoolClientUDPOutlivesDialContext(t *testing.T) {
-	client, _, cleanup := newTestClient(t)
-	defer cleanup()
-
-	ctx, cancel := context.WithCancel(t.Context())
-	packetConn, err := client.ListenPacket(ctx, M.Socksaddr{Fqdn: "dns.example", Port: 53})
-	if err != nil {
-		t.Fatalf("ListenPacket: %v", err)
-	}
-	cancel()
-
-	payload := []byte("packet after dial context cancellation")
-	if _, err = packetConn.WriteTo(payload, M.Socksaddr{Fqdn: "dns.example", Port: 53}); err != nil {
-		t.Fatalf("WriteTo after dial context cancellation: %v", err)
-	}
-	response := make([]byte, len(payload))
-	n, _, err := packetConn.ReadFrom(response)
-	if err != nil {
-		t.Fatalf("ReadFrom after dial context cancellation: %v", err)
-	}
-	if !bytes.Equal(response[:n], payload) {
-		t.Fatalf("echo mismatch: got %q want %q", response[:n], payload)
-	}
-	if err = packetConn.Close(); err != nil {
-		t.Fatalf("Close: %v", err)
-	}
-	if size := client.workers[0].sessionManager.size(); size != 0 {
-		t.Fatalf("session count after close = %d, want 0", size)
-	}
-}
-
 func TestMuxCoolClientDisabledByDefault(t *testing.T) {
 	c, err := NewClientWithOptions(&pipeDialer{}, logger.NOP(), option.OutboundMultiplexOptions{Enabled: false})
 	if err != nil {

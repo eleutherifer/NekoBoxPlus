@@ -1,16 +1,15 @@
 package com.github.shadowsocks.plugin.fragment
 
 import android.app.Activity
-import android.app.Dialog
 import android.content.DialogInterface
 import android.os.Bundle
 import android.os.Parcelable
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatDialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.setFragmentResult
 import androidx.fragment.app.setFragmentResultListener
-import androidx.annotation.StringRes
-import io.nekohasekai.sagernet.ui.compose.createComposeMessageDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 /**
  * Based on: https://android.googlesource.com/platform/
@@ -34,17 +33,7 @@ abstract class AlertDialogFragment<Arg : Parcelable, Ret : Parcelable?> :
             fragment: Fragment, noinline listener: (Int, Ret?) -> Unit) =
             setResultListener(fragment, T::class.java.name, listener)
     }
-    @get:StringRes
-    protected abstract val titleRes: Int
-    @get:StringRes
-    protected open val positiveButtonRes: Int = io.nekohasekai.sagernet.R.string.yes
-    @get:StringRes
-    protected open val negativeButtonRes: Int? = io.nekohasekai.sagernet.R.string.no
-    @get:StringRes
-    protected open val neutralButtonRes: Int? = null
-    protected abstract fun onPositive()
-    protected open fun onNegative() = Unit
-    protected open fun onNeutral() = Unit
+    protected abstract fun AlertDialog.Builder.prepare(listener: DialogInterface.OnClickListener)
 
     private val resultKey get() = requireArguments().getString(KEY_RESULT)
     protected val arg by lazy { requireArguments().getParcelable<Arg>(KEY_ARG)!! }
@@ -54,25 +43,8 @@ abstract class AlertDialogFragment<Arg : Parcelable, Ret : Parcelable?> :
     fun arg(arg: Arg) = args().putParcelable(KEY_ARG, arg)
     fun key(resultKey: String = javaClass.name) = args().putString(KEY_RESULT, resultKey)
 
-    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog =
-        requireContext().createComposeMessageDialog(
-            title = getText(titleRes),
-            positiveButton = getText(positiveButtonRes),
-            negativeButton = negativeButtonRes?.let(::getText),
-            neutralButton = neutralButtonRes?.let(::getText),
-            onPositive = {
-                onClick(dialog, DialogInterface.BUTTON_POSITIVE)
-                onPositive()
-            },
-            onNegative = {
-                onClick(dialog, DialogInterface.BUTTON_NEGATIVE)
-                onNegative()
-            },
-            onNeutral = {
-                onClick(dialog, DialogInterface.BUTTON_NEUTRAL)
-                onNeutral()
-            },
-        )
+    override fun onCreateDialog(savedInstanceState: Bundle?): AlertDialog =
+        MaterialAlertDialogBuilder(requireContext()).also { it.prepare(this) }.create()
 
     override fun onClick(dialog: DialogInterface?, which: Int) {
         setFragmentResult(resultKey ?: return, Bundle().apply {

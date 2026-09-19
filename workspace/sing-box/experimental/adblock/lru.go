@@ -8,13 +8,12 @@ import (
 	"sync"
 
 	xxhash "github.com/cespare/xxhash/v2"
-	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/contrab/freelru"
 )
 
 const defaultCheckCacheSize = 16384
 
-func MustNewLRU[K comparable, V comparable](capacity uint32, customHashFunc ...freelru.HashKeyCallback[K]) *freelru.Cache[K, V] {
+func MustNewLRU[K comparable, V comparable](capacity uint32, customHashFunc ...freelru.HashKeyCallback[K]) *freelru.ShardedLRU[K, V] {
 	var hashFunc freelru.HashKeyCallback[K]
 	if len(customHashFunc) > 0 {
 		hashFunc = customHashFunc[0]
@@ -22,7 +21,11 @@ func MustNewLRU[K comparable, V comparable](capacity uint32, customHashFunc ...f
 		hashFunc = newHasherFunc[K]()
 	}
 
-	return common.Must1(freelru.New[K, V](capacity, hashFunc, true))
+	cache, err := freelru.NewSharded[K, V](capacity, hashFunc)
+	if err != nil {
+		panic(err)
+	}
+	return cache
 }
 
 type BinaryMarshaler interface {

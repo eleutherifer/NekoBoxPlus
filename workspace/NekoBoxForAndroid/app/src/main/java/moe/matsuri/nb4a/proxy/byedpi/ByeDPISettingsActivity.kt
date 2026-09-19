@@ -1,12 +1,12 @@
 package moe.matsuri.nb4a.proxy.byedpi
 
-import androidx.compose.runtime.Composable
+import android.os.Bundle
+import androidx.preference.PreferenceFragmentCompat
+import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.ui.profile.ProfileSettingsActivity
-import io.nekohasekai.sagernet.ui.compose.ByeDPIProfileSettingsScreen
 
 class ByeDPISettingsActivity : ProfileSettingsActivity<ByeDPIBean>() {
-    override val usesComposePreferences = true
 
     companion object {
         private const val KEY_CLI_STRATEGY = "byeDpiCliStrategy"
@@ -24,6 +24,7 @@ class ByeDPISettingsActivity : ProfileSettingsActivity<ByeDPIBean>() {
         cliStrategy = DataStore.profileCacheStore.getString(KEY_CLI_STRATEGY) ?: ""
     }
 
-    @Composable
-    override fun ComposePreferences() = ByeDPIProfileSettingsScreen()
+    override fun PreferenceFragmentCompat.createPreferences(savedInstanceState: Bundle?, rootKey: String?) {
+        addPreferencesFromResource(R.xml.byedpi_preferences)
+    }
 }

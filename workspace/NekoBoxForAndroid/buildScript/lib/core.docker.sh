@@ -38,6 +38,13 @@ fi
 
 cd "$PROJECT_ROOT"
 
+VERSION_SING_BOX="$(sed -nE 's/^VERSION_NAME=.*-([0-9]+)[[:space:]]*$/\1/p' nb4a.properties | tail -n1)"
+if [[ -z "$VERSION_SING_BOX" ]]; then
+	echo "Unable to derive VERSION_SING_BOX from nb4a.properties" >&2
+	exit 1
+fi
+export VERSION_SING_BOX
+
 export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Android/Sdk}}"
 export ANDROID_SDK_ROOT="$ANDROID_HOME"
 
@@ -64,8 +71,8 @@ if [ -f "buildScript/lib/core/get_source_env.sh" ]; then
 	source "buildScript/lib/core/get_source_env.sh"
 fi
 
-GO_VERSION="${GO_VERSION:-1.27.0}"
-BOOTSTRAP_GO_VERSION="${BOOTSTRAP_GO_VERSION:-1.26.6}"
+GO_VERSION="${GO_VERSION:-1.26.5}"
+BOOTSTRAP_GO_VERSION="${BOOTSTRAP_GO_VERSION:-1.26.5}"
 GO_PATCH_DIR="${GO_PATCH_DIR:-buildScript/lib/core/go-runtime-patches}"
 DOCKERFILE="${DOCKERFILE:-buildScript/lib/core/Dockerfile}"
 IMAGE_NAME="${PATCHED_GO_ANDROID_IMAGE:-neko-android-aar-go:${GO_VERSION}-runtime-patches-v2}"
@@ -147,6 +154,7 @@ DOCKER_ARGS=(
 	-e "CGO_ENABLED=${CGO_ENABLED:-1}"
 	-e "GO386=${GO386:-softfloat}"
 	-e "ENV_NB4A=${ENV_NB4A:-1}"
+	-e "VERSION_SING_BOX=$VERSION_SING_BOX"
 	-e "COMMIT_SING_BOX=${COMMIT_SING_BOX:-}"
 	-e "COMMIT_LIBNEKO=${COMMIT_LIBNEKO:-}"
 	-e "COMMIT_BYEDPI=${COMMIT_BYEDPI:-}"

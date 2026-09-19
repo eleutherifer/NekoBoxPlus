@@ -4,17 +4,11 @@ import io.nekohasekai.sagernet.database.SubscriptionBean
 import io.nekohasekai.sagernet.fmt.KryoConverters
 import io.nekohasekai.sagernet.ktx.applyDefaultValues
 import io.nekohasekai.sagernet.utils.parseSubscriptionUserinfo
-import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 class RawUpdaterTest {
-    @Test
-    fun `unsupported JSON cannot become a destructive empty update`() = runBlocking {
-        assertNull(RawUpdater.parseRaw("""{"unrelated":"document"}"""))
-    }
-
     @Test
     fun `parses expiration from subscription userinfo`() {
         assertEquals(

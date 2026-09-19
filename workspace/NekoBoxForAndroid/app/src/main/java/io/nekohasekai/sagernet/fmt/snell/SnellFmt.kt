@@ -1,7 +1,7 @@
 package io.nekohasekai.sagernet.fmt.snell
 
-import io.nekohasekai.sagernet.ktx.linkBuilder
-import io.nekohasekai.sagernet.ktx.toLink
+import io.nekohasekai.sagernet.ktx.unUrlSafe
+import io.nekohasekai.sagernet.ktx.urlSafe
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 fun parseSnell(url: String): SnellBean {
@@ -11,37 +11,44 @@ fun parseSnell(url: String): SnellBean {
     return SnellBean().apply {
         serverAddress = link.host
         serverPort = link.port
-        psk = link.username
+        psk = link.username.unUrlSafe()
         name = link.fragment ?: ""
 
         link.queryParameter("version")?.toIntOrNull()?.let {
             version = it.coerceIn(1, 6)
         }
-        link.queryParameter("userkey")?.let { userKey = it }
+        link.queryParameter("userkey")?.let { userKey = it.unUrlSafe() }
         link.queryParameter("obfs-mode")?.let { obfsMode = it }
         link.queryParameter("obfs-host")?.let { obfsHost = it }
         link.queryParameter("reuse")?.let { reuse = it.toBoolean() }
         link.queryParameter("network")?.let { network = it }
         link.queryParameter("mode")?.let { mode = it }
-        link.queryParameter("quic-proxy-mode")?.let { quicProxyMode = it.toBoolean() }
     }
 }
 
 fun SnellBean.toUri(): String {
-    val builder = linkBuilder().username(psk).host(serverAddress).port(serverPort)
-    builder.addQueryParameter("version", version.toString())
+    val builder = StringBuilder("snell://")
+    builder.append(psk.urlSafe()).append("@")
+    builder.append(serverAddress).append(":").append(serverPort)
+
+    val params = mutableListOf("version=$version")
+    if (userKey.isNotBlank()) params.add("userkey=${userKey.urlSafe()}")
     if (version == 6) {
-        if (mode.isNotBlank() && mode != "default") builder.addQueryParameter("mode", mode)
-        if (quicProxyMode == true) builder.addQueryParameter("quic-proxy-mode", "true")
+        if (mode.isNotBlank() && mode != "default") params.add("mode=$mode")
     } else {
-        if (obfsMode.isNotBlank()) builder.addQueryParameter("obfs-mode", obfsMode)
-        if (obfsHost.isNotBlank()) builder.addQueryParameter("obfs-host", obfsHost)
+        if (obfsMode.isNotBlank()) params.add("obfs-mode=$obfsMode")
+        if (obfsHost.isNotBlank()) params.add("obfs-host=$obfsHost")
     }
-    if (reuse) builder.addQueryParameter("reuse", "true")
-    if (network.isNotBlank()) builder.addQueryParameter("network", network)
-    if (userKey.isNotBlank()) builder.addQueryParameter("userkey", userKey)
-    if (name.isNotBlank()) builder.fragment(name)
-    return builder.toLink("snell")
+    if (reuse) params.add("reuse=true")
+    if (network.isNotBlank()) params.add("network=$network")
+
+    builder.append("?").append(params.joinToString("&"))
+
+    if (name.isNotBlank()) {
+        builder.append("#").append(name.urlSafe())
+    }
+
+    return builder.toString()
 }
 
 fun parseClashSnell(proxy: Map<String, Any?>): SnellBean {
@@ -50,9 +57,8 @@ fun parseClashSnell(proxy: Map<String, Any?>): SnellBean {
         serverAddress = proxy["server"] as? String ?: ""
         serverPort = (proxy["port"] as? Number)?.toInt() ?: 443
         psk = proxy["psk"] as? String ?: ""
-        version = ((proxy["version"] as? Number)?.toInt() ?: 4).coerceIn(1, 6)
-        userKey = proxy["userkey"] as? String ?: ""
-        mode = proxy["mode"] as? String ?: ""
+        val clashVersion = ((proxy["version"] as? Number)?.toInt() ?: 4).coerceIn(1, 5)
+        version = if (clashVersion == 5) 4 else clashVersion
         reuse = proxy["reuse"] as? Boolean ?: false
 
         val udpEnabled = proxy["udp"] as? Boolean ?: false

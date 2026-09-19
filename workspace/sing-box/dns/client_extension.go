@@ -13,7 +13,7 @@ import (
 	E "github.com/sagernet/sing/common/exceptions"
 )
 
-func (c *Client) lookupToExchange_A_AAAA(ctx context.Context, transport adapter.DNSTransport, dnsName string, strategy C.DomainStrategy, options adapter.DNSQueryOptions, responseChecker func(response *dns.Msg) bool) ([]netip.Addr, []netip.Addr, error) {
+func (c *Client) lookupToExchange_A_AAAA(ctx context.Context, transport adapter.DNSTransport, dnsName string, strategy C.DomainStrategy, options adapter.DNSQueryOptions, responseChecker func(responseAddrs []netip.Addr) bool) ([]netip.Addr, []netip.Addr, error) {
 	var response4 []netip.Addr = []netip.Addr{}
 	var response6 []netip.Addr = []netip.Addr{}
 	dnsQueryTypes := []uint16{dns.TypeA, dns.TypeAAAA}

@@ -5,9 +5,7 @@ package trusttunnel
 import (
 	"bytes"
 	"context"
-	"net"
 	"net/netip"
-	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -15,189 +13,146 @@ import (
 	"github.com/sagernet/gvisor/pkg/tcpip"
 	"github.com/sagernet/gvisor/pkg/tcpip/checksum"
 	"github.com/sagernet/gvisor/pkg/tcpip/header"
+	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/log"
 	tun "github.com/sagernet/sing-tun"
+	"github.com/sagernet/sing/common/buf"
 	E "github.com/sagernet/sing/common/exceptions"
 
 	trusttunnel "libcore/protocol/trusttunnel/sing-trusttunnel"
 )
 
-const (
-	withGvisor         = true
-	defaultICMPTimeout = time.Minute
-)
+const withGvisor = true
+
+func (h *Outbound) NewDirectRouteConnection(metadata adapter.InboundContext, routeContext tun.DirectRouteContext, timeout time.Duration) (tun.DirectRouteDestination, error) {
+	ctx := log.ContextWithNewID(h.ctx)
+	icmpConn, err := h.client.ListenICMP(ctx)
+	if err != nil {
+		return nil, err
+	}
+	pinger := &pingAdapter{
+		ctx:          ctx,
+		logger:       h.logger,
+		routeContext: routeContext,
+		source:       metadata.Source.Addr,
+		destination:  metadata.Destination.Addr,
+		timeout:      timeout,
+		requests:     make(map[pingRequest]pingRequestData),
+		IcmpConn:     icmpConn,
+	}
+	go pinger.loopRead()
+	h.logger.InfoContext(ctx, "linked ", metadata.Network, " connection from ", metadata.Source.AddrString(), " to ", metadata.Destination.AddrString())
+	return pinger, nil
+}
+
+var _ tun.DirectRouteDestination = (*pingAdapter)(nil)
 
 type pingAdapter struct {
-	ctx     context.Context
-	logger  log.ContextLogger
-	client  *trusttunnel.Client
-	timeout time.Duration
-	closed  atomic.Bool
-
-	connAccess sync.Mutex
-	conn       *trusttunnel.IcmpConn
-
-	returnAccess sync.Mutex
-	returnPaths  []tun.Return
-
+	isClosed      atomic.Bool
+	ctx           context.Context
+	logger        log.ContextLogger
+	routeContext  tun.DirectRouteContext
+	source        netip.Addr
+	destination   netip.Addr
+	timeout       time.Duration
 	requestAccess sync.Mutex
 	requests      map[pingRequest]pingRequestData
+	*trusttunnel.IcmpConn
+}
+
+func (p *pingAdapter) WritePacket(packet *buf.Buffer) error {
+	data := packet.Bytes()
+	ipVersion := header.IPVersion(data)
+	switch ipVersion {
+	case header.IPv4Version:
+		ipHdr := header.IPv4(data)
+		if !ipHdr.IsValid(packet.Len()) {
+			return E.New("invalid IPv4 header")
+		}
+		if ipHdr.TransportProtocol() != header.ICMPv4ProtocolNumber {
+			return E.New("invalid ICMPv4 protocol")
+		}
+		if ipHdr.PayloadLength() < header.ICMPv4MinimumSize {
+			return E.New("invalid ICMPv4 header")
+		}
+		icmpHdr := header.ICMPv4(ipHdr.Payload())
+		if icmpHdr.Type() != header.ICMPv4Echo {
+			return E.New("unsupported ICMPv4 type: ", icmpHdr.Type())
+		}
+		payload := bytes.Clone(icmpHdr.Payload())
+		p.registerRequest(false, icmpHdr.Ident(), icmpHdr.Sequence(), payload)
+		return p.IcmpConn.WritePing(icmpHdr.Ident(), p.destination, icmpHdr.Sequence(), ipHdr.TTL(), uint16(len(payload)))
+	case header.IPv6Version:
+		ipHdr := header.IPv6(data)
+		if !ipHdr.IsValid(packet.Len()) {
+			return E.New("invalid IPv6 header")
+		}
+		if ipHdr.TransportProtocol() != header.ICMPv6ProtocolNumber {
+			return E.New("invalid ICMPv6 protocol")
+		}
+		if ipHdr.PayloadLength() < header.ICMPv6MinimumSize {
+			return E.New("invalid ICMPv6 header")
+		}
+		icmpHdr := header.ICMPv6(ipHdr.Payload())
+		if icmpHdr.Type() != header.ICMPv6EchoRequest {
+			return E.New("unsupported ICMPv6 type: ", icmpHdr.Type())
+		}
+		payload := bytes.Clone(icmpHdr.Payload())
+		p.registerRequest(true, icmpHdr.Ident(), icmpHdr.Sequence(), payload)
+		return p.IcmpConn.WritePing(icmpHdr.Ident(), p.destination, icmpHdr.Sequence(), ipHdr.HopLimit(), uint16(len(payload)))
+	default:
+		return E.New("invalid IP version ", ipVersion)
+	}
+}
+
+func (p *pingAdapter) Close() error {
+	p.isClosed.Store(true)
+	return p.IcmpConn.Close()
+}
+
+func (p *pingAdapter) IsClosed() bool {
+	return p.isClosed.Load()
 }
 
 type pingRequest struct {
-	destination netip.Addr
-	id          uint16
-	seq         uint16
+	id     uint16
+	seq    uint16
+	isIPv6 bool
 }
 
 type pingRequestData struct {
 	createdAt time.Time
-	source    netip.Addr
 	payload   []byte
 }
 
-func newPingAdapter(ctx context.Context, logger log.ContextLogger, client *trusttunnel.Client) *pingAdapter {
-	return &pingAdapter{
-		ctx:      ctx,
-		logger:   logger,
-		client:   client,
-		timeout:  defaultICMPTimeout,
-		requests: make(map[pingRequest]pingRequestData),
-	}
-}
-
-func (p *pingAdapter) PortAddresses() (netip.Addr, netip.Addr) {
-	return netip.IPv4Unspecified(), netip.IPv6Unspecified()
-}
-
-func (p *pingAdapter) PortMTU() uint32 {
-	return 0
-}
-
-func (p *pingAdapter) AttachReturn(returnPath tun.Return) error {
-	p.returnAccess.Lock()
-	defer p.returnAccess.Unlock()
-	if !slices.Contains(p.returnPaths, returnPath) {
-		p.returnPaths = append(p.returnPaths[:len(p.returnPaths):len(p.returnPaths)], returnPath)
-	}
-	return nil
-}
-
-func (p *pingAdapter) DetachReturn(returnPath tun.Return) error {
-	p.returnAccess.Lock()
-	defer p.returnAccess.Unlock()
-	p.returnPaths = slices.DeleteFunc(p.returnPaths, func(existing tun.Return) bool {
-		return existing == returnPath
-	})
-	return nil
-}
-
-func (p *pingAdapter) WritePackets(packets [][]byte) error {
-	var errs []error
-	for _, packet := range packets {
-		if err := p.writePacket(packet); err != nil {
-			errs = append(errs, err)
-		}
-	}
-	return E.Errors(errs...)
-}
-
-func (p *pingAdapter) writePacket(packet []byte) error {
-	if p.closed.Load() {
-		return net.ErrClosed
-	}
-	conn, err := p.ensureConn()
-	if err != nil {
-		return err
-	}
-	var (
-		source      netip.Addr
-		destination netip.Addr
-		id          uint16
-		sequence    uint16
-		ttl         uint8
-		payload     []byte
-	)
-	switch header.IPVersion(packet) {
-	case header.IPv4Version:
-		ipHdr := header.IPv4(packet)
-		if !ipHdr.IsValid(len(packet)) || ipHdr.TransportProtocol() != header.ICMPv4ProtocolNumber || ipHdr.PayloadLength() < header.ICMPv4MinimumSize {
-			return nil
-		}
-		icmpHdr := header.ICMPv4(ipHdr.Payload())
-		if icmpHdr.Type() != header.ICMPv4Echo || icmpHdr.Code() != 0 {
-			return nil
-		}
-		source = netip.AddrFrom4(ipHdr.SourceAddress().As4())
-		destination = netip.AddrFrom4(ipHdr.DestinationAddress().As4())
-		id, sequence, ttl = icmpHdr.Ident(), icmpHdr.Sequence(), ipHdr.TTL()
-		payload = bytes.Clone(icmpHdr.Payload())
-	case header.IPv6Version:
-		ipHdr := header.IPv6(packet)
-		if !ipHdr.IsValid(len(packet)) || ipHdr.TransportProtocol() != header.ICMPv6ProtocolNumber || ipHdr.PayloadLength() < header.ICMPv6MinimumSize {
-			return nil
-		}
-		icmpHdr := header.ICMPv6(ipHdr.Payload())
-		if icmpHdr.Type() != header.ICMPv6EchoRequest || icmpHdr.Code() != 0 {
-			return nil
-		}
-		source = netip.AddrFrom16(ipHdr.SourceAddress().As16())
-		destination = netip.AddrFrom16(ipHdr.DestinationAddress().As16())
-		id, sequence, ttl = icmpHdr.Ident(), icmpHdr.Sequence(), ipHdr.HopLimit()
-		payload = bytes.Clone(icmpHdr.Payload())
-	default:
-		return nil
-	}
-	p.registerRequest(destination, source, id, sequence, payload)
-	return conn.WritePing(id, destination, sequence, ttl, uint16(len(payload)))
-}
-
-func (p *pingAdapter) ensureConn() (*trusttunnel.IcmpConn, error) {
-	p.connAccess.Lock()
-	defer p.connAccess.Unlock()
-	if p.conn != nil {
-		return p.conn, nil
-	}
-	ctx := log.ContextWithNewID(p.ctx)
-	conn, err := p.client.ListenICMP(ctx)
-	if err != nil {
-		return nil, err
-	}
-	p.conn = conn
-	go p.loopRead(ctx, conn)
-	return conn, nil
-}
-
-func (p *pingAdapter) registerRequest(destination netip.Addr, source netip.Addr, id uint16, sequence uint16, payload []byte) {
+func (p *pingAdapter) registerRequest(isIPv6 bool, id uint16, seq uint16, payload []byte) {
 	p.requestAccess.Lock()
-	defer p.requestAccess.Unlock()
-	p.requests[pingRequest{destination: destination, id: id, seq: sequence}] = pingRequestData{
+	p.requests[pingRequest{id: id, seq: seq, isIPv6: isIPv6}] = pingRequestData{
 		createdAt: time.Now(),
-		source:    source,
 		payload:   payload,
 	}
+	p.requestAccess.Unlock()
 }
 
-func (p *pingAdapter) loopRead(ctx context.Context, conn *trusttunnel.IcmpConn) {
+func (p *pingAdapter) loopRead() {
 	for {
-		id, source, icmpType, code, sequence, err := conn.ReadPing()
+		id, source, icmpType, code, sequence, err := p.IcmpConn.ReadPing()
 		if err != nil {
-			p.connAccess.Lock()
-			if p.conn == conn {
-				p.conn = nil
-			}
-			p.connAccess.Unlock()
-			if !p.closed.Load() {
-				p.logger.ErrorContext(ctx, "read ICMP response: ", err)
+			if !p.IsClosed() {
+				p.logger.ErrorContext(p.ctx, "read ICMP response: ", err)
 			}
 			return
 		}
-		p.handleResponse(source, id, sequence, icmpType, code)
+		p.handleResponse(id, source, icmpType, code, sequence)
 	}
 }
 
-func (p *pingAdapter) handleResponse(source netip.Addr, id uint16, sequence uint16, icmpType uint8, code uint8) {
-	key := pingRequest{destination: source, id: id, seq: sequence}
+func (p *pingAdapter) handleResponse(id uint16, source netip.Addr, icmpType uint8, code uint8, sequence uint16) {
+	key := pingRequest{
+		id:     id,
+		seq:    sequence,
+		isIPv6: source.Is6(),
+	}
 	p.requestAccess.Lock()
 	request, ok := p.requests[key]
 	if ok {
@@ -213,50 +168,25 @@ func (p *pingAdapter) handleResponse(source netip.Addr, id uint16, sequence uint
 	if !ok {
 		return
 	}
-	var packet []byte
-	if source.Is6() {
-		packet = buildIPv6EchoReply(request.source, source, id, sequence, icmpType, code, request.payload)
+	var packet *buf.Buffer
+	if key.isIPv6 {
+		packet = buildIPv6EchoReply(p.source, source, id, sequence, icmpType, code, request.payload)
 	} else {
-		packet = buildIPv4EchoReply(request.source, source, id, sequence, icmpType, code, request.payload)
+		packet = buildIPv4EchoReply(p.source, source, id, sequence, icmpType, code, request.payload)
 	}
-	p.returnPacket(packet)
-}
-
-func (p *pingAdapter) returnPacket(packet []byte) {
-	p.returnAccess.Lock()
-	returnPaths := slices.Clone(p.returnPaths)
-	p.returnAccess.Unlock()
-	for _, returnPath := range returnPaths {
-		headroom := returnPath.ReturnHeadroom()
-		buffer := make([]byte, headroom+len(packet))
-		copy(buffer[headroom:], packet)
-		if len(returnPath.ReturnPackets([][]byte{buffer})) == 0 {
-			return
-		}
+	defer packet.Release()
+	err := p.routeContext.WritePacket(packet.Bytes())
+	if err != nil && !p.IsClosed() {
+		p.logger.ErrorContext(p.ctx, "write ICMP response: ", err)
 	}
 }
 
-func (p *pingAdapter) Reset() error {
-	p.connAccess.Lock()
-	conn := p.conn
-	p.conn = nil
-	p.connAccess.Unlock()
-	if conn != nil {
-		return conn.Close()
-	}
-	return nil
-}
-
-func (p *pingAdapter) Close() error {
-	p.closed.Store(true)
-	return p.Reset()
-}
-
-func buildIPv4EchoReply(destination netip.Addr, source netip.Addr, id uint16, seq uint16, icmpType uint8, code uint8, payload []byte) []byte {
-	packet := make([]byte, header.IPv4MinimumSize+header.ICMPv4MinimumSize+len(payload))
-	ipHdr := header.IPv4(packet)
+func buildIPv4EchoReply(destination netip.Addr, source netip.Addr, id uint16, seq uint16, icmpType uint8, code uint8, payload []byte) *buf.Buffer {
+	packet := buf.NewSize(header.IPv4MinimumSize + header.ICMPv4MinimumSize + len(payload))
+	packet.Resize(0, header.IPv4MinimumSize+header.ICMPv4MinimumSize+len(payload))
+	ipHdr := header.IPv4(packet.Bytes())
 	ipHdr.Encode(&header.IPv4Fields{
-		TotalLength: uint16(len(packet)),
+		TotalLength: uint16(packet.Len()),
 		TTL:         64,
 		Protocol:    uint8(header.ICMPv4ProtocolNumber),
 		SrcAddr:     tcpip.AddrFromSlice(source.AsSlice()),
@@ -268,14 +198,17 @@ func buildIPv4EchoReply(destination netip.Addr, source netip.Addr, id uint16, se
 	icmpHdr.SetIdent(id)
 	icmpHdr.SetSequence(seq)
 	copy(icmpHdr.Payload(), payload)
+	icmpHdr.SetChecksum(0)
 	icmpHdr.SetChecksum(^checksum.Checksum(icmpHdr, 0))
+	ipHdr.SetChecksum(0)
 	ipHdr.SetChecksum(^ipHdr.CalculateChecksum())
 	return packet
 }
 
-func buildIPv6EchoReply(destination netip.Addr, source netip.Addr, id uint16, seq uint16, icmpType uint8, code uint8, payload []byte) []byte {
-	packet := make([]byte, header.IPv6MinimumSize+header.ICMPv6MinimumSize+len(payload))
-	ipHdr := header.IPv6(packet)
+func buildIPv6EchoReply(destination netip.Addr, source netip.Addr, id uint16, seq uint16, icmpType uint8, code uint8, payload []byte) *buf.Buffer {
+	packet := buf.NewSize(header.IPv6MinimumSize + header.ICMPv6MinimumSize + len(payload))
+	packet.Resize(0, header.IPv6MinimumSize+header.ICMPv6MinimumSize+len(payload))
+	ipHdr := header.IPv6(packet.Bytes())
 	ipHdr.Encode(&header.IPv6Fields{
 		PayloadLength:     uint16(header.ICMPv6MinimumSize + len(payload)),
 		TransportProtocol: header.ICMPv6ProtocolNumber,
@@ -289,6 +222,7 @@ func buildIPv6EchoReply(destination netip.Addr, source netip.Addr, id uint16, se
 	icmpHdr.SetIdent(id)
 	icmpHdr.SetSequence(seq)
 	copy(icmpHdr.Payload(), payload)
+	icmpHdr.SetChecksum(0)
 	icmpHdr.SetChecksum(^checksum.Checksum(icmpHdr, header.PseudoHeaderChecksum(
 		header.ICMPv6ProtocolNumber,
 		tcpip.AddrFromSlice(source.AsSlice()),

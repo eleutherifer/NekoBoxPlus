@@ -39,30 +39,6 @@ func TestV2RayXHTTPOptionsDefaults(t *testing.T) {
 	}
 }
 
-func TestV2RayXHTTPCongestionOptions(t *testing.T) {
-	for _, controller := range []string{"", "bbr", "cubic", "reno"} {
-		content := []byte(`{"congestion_controller":"` + controller + `","cwnd":64,"download":{"congestion_controller":"` + controller + `","cwnd":48}}`)
-		var options V2RayXHTTPOptions
-		if err := json.Unmarshal(content, &options); err != nil {
-			t.Fatalf("controller %q: %v", controller, err)
-		}
-		if options.CWND != 64 || options.Download == nil || options.Download.CWND != 48 {
-			t.Fatalf("controller %q did not preserve cwnd", controller)
-		}
-	}
-	for _, content := range []string{
-		`{"congestion_controller":"invalid"}`,
-		`{"cwnd":-1}`,
-		`{"download":{"congestion_controller":"invalid"}}`,
-		`{"download":{"cwnd":-1}}`,
-	} {
-		var options V2RayXHTTPOptions
-		if err := json.Unmarshal([]byte(content), &options); err == nil {
-			t.Fatalf("expected error for %s", content)
-		}
-	}
-}
-
 func TestV2RayXHTTPNormalizedPath(t *testing.T) {
 	tests := []struct {
 		name               string

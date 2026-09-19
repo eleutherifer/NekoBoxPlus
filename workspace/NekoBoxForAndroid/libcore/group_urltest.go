@@ -123,12 +123,6 @@ func (t *GroupURLTester) testProfile(ctx context.Context, config, tag string) (l
 	if err != nil {
 		return -1, err
 	}
-	readyCtx, cancelReady := context.WithTimeout(ctx, t.timeout)
-	err = waitURLTestOutboundReady(readyCtx, instance.Outbound(), detour)
-	cancelReady()
-	if err != nil {
-		return -1, err
-	}
 	latency, err = t.testWithRetry(ctx, instance, detour)
 	if errors.Is(err, context.DeadlineExceeded) {
 		closeSynchronously = false

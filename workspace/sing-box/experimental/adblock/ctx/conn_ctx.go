@@ -13,17 +13,16 @@ import (
 )
 
 type Conn struct {
-	Ctx                context.Context
-	Engine             adblockrust.Engine
-	Conn               net.Conn
-	PacketConn         N.PacketConn
-	Metadata           adapter.InboundContext
-	Outbound           adapter.Outbound
-	UTLS               consts.UTLSFingerprintID
-	Cronet             bool
-	UseTLS             bool
-	UseHTTP2           bool
-	InsecureSkipVerify bool
+	Ctx        context.Context
+	Engine     adblockrust.Engine
+	Conn       net.Conn
+	PacketConn N.PacketConn
+	Metadata   adapter.InboundContext
+	Outbound   adapter.Outbound
+	UTLS       consts.UTLSFingerprintID
+	Cronet     bool
+	UseTLS     bool
+	UseHTTP2   bool
 }
 
 func NewConn(ctx context.Context, engine adblockrust.Engine, conn net.Conn, packetConn N.PacketConn, metadata adapter.InboundContext, outbound adapter.Outbound) *Conn {

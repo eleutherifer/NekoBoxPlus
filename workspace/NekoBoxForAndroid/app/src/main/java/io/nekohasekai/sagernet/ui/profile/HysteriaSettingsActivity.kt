@@ -1,14 +1,18 @@
 package io.nekohasekai.sagernet.ui.profile
 
-import androidx.compose.runtime.Composable
+import android.os.Bundle
+import androidx.preference.EditTextPreference
+import androidx.preference.PreferenceFragmentCompat
+import moe.matsuri.nb4a.ui.MaterialSwitchPreference
+import io.nekohasekai.sagernet.Key
+import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.database.DataStore
+import io.nekohasekai.sagernet.database.preference.EditTextPreferenceModifiers
 import io.nekohasekai.sagernet.fmt.hysteria.HysteriaBean
 import io.nekohasekai.sagernet.ktx.applyDefaultValues
-import io.nekohasekai.sagernet.ui.compose.HysteriaProfileSettingsScreen
+import moe.matsuri.nb4a.ui.SimpleMenuPreference
 
 class HysteriaSettingsActivity : ProfileSettingsActivity<HysteriaBean>() {
-
-    override val usesComposePreferences = true
 
     override fun createEntity() = HysteriaBean().applyDefaultValues()
 
@@ -31,20 +35,6 @@ class HysteriaSettingsActivity : ProfileSettingsActivity<HysteriaBean>() {
         DataStore.serverConnectionReceiveWindow = connectionReceiveWindow
         DataStore.serverDisableMtuDiscovery = disableMtuDiscovery
         DataStore.serverHopInterval = hopInterval
-        DataStore.profileCacheStore.putString("hysteria2HopIntervalMax", hopIntervalMax)
-        DataStore.profileCacheStore.putString("hysteria2BbrProfile", bbrProfile)
-        DataStore.profileCacheStore.putBoolean("hysteria2BrutalDebug", brutalDebug)
-        DataStore.profileCacheStore.putString("hysteria2ObfsType", obfsType)
-        DataStore.profileCacheStore.putString("hysteria2GeckoMinPacketSize", geckoMinPacketSize?.takeIf { it > 0 }?.toString().orEmpty())
-        DataStore.profileCacheStore.putString("hysteria2GeckoMaxPacketSize", geckoMaxPacketSize?.takeIf { it > 0 }?.toString().orEmpty())
-        DataStore.profileCacheStore.putString("hysteria2RealmServerUrl", realmServerUrl)
-        DataStore.profileCacheStore.putString("hysteria2RealmToken", realmToken)
-        DataStore.profileCacheStore.putString("hysteria2RealmId", realmId)
-        DataStore.profileCacheStore.putString("hysteria2RealmStunServers", realmStunServers)
-        DataStore.profileCacheStore.putString("hysteria2RealmIpVersion", realmIpVersion.toString())
-        DataStore.profileCacheStore.putBoolean("hysteria2RealmPortMapping", realmPortMapping)
-        DataStore.profileCacheStore.putString("hysteria2RealmPortMappingTimeout", realmPortMappingTimeout)
-        DataStore.profileCacheStore.putString("hysteria2RealmPortMappingLifetime", realmPortMappingLifetime)
     }
 
     override fun HysteriaBean.serialize() {
@@ -66,23 +56,86 @@ class HysteriaSettingsActivity : ProfileSettingsActivity<HysteriaBean>() {
         connectionReceiveWindow = DataStore.serverConnectionReceiveWindow
         disableMtuDiscovery = DataStore.serverDisableMtuDiscovery
         hopInterval = DataStore.serverHopInterval
-        hopIntervalMax = DataStore.profileCacheStore.getString("hysteria2HopIntervalMax").orEmpty()
-        bbrProfile = DataStore.profileCacheStore.getString("hysteria2BbrProfile").orEmpty()
-        brutalDebug = DataStore.profileCacheStore.getBoolean("hysteria2BrutalDebug", false)
-        obfsType = DataStore.profileCacheStore.getString("hysteria2ObfsType") ?: "salamander"
-        geckoMinPacketSize = DataStore.profileCacheStore.getString("hysteria2GeckoMinPacketSize")?.toIntOrNull() ?: 0
-        geckoMaxPacketSize = DataStore.profileCacheStore.getString("hysteria2GeckoMaxPacketSize")?.toIntOrNull() ?: 0
-        realmServerUrl = DataStore.profileCacheStore.getString("hysteria2RealmServerUrl").orEmpty()
-        realmToken = DataStore.profileCacheStore.getString("hysteria2RealmToken").orEmpty()
-        realmId = DataStore.profileCacheStore.getString("hysteria2RealmId").orEmpty()
-        realmStunServers = DataStore.profileCacheStore.getString("hysteria2RealmStunServers").orEmpty()
-        realmIpVersion = DataStore.profileCacheStore.getString("hysteria2RealmIpVersion")?.toIntOrNull() ?: 0
-        realmPortMapping = DataStore.profileCacheStore.getBoolean("hysteria2RealmPortMapping", false)
-        realmPortMappingTimeout = DataStore.profileCacheStore.getString("hysteria2RealmPortMappingTimeout").orEmpty()
-        realmPortMappingLifetime = DataStore.profileCacheStore.getString("hysteria2RealmPortMappingLifetime").orEmpty()
     }
 
-    @Composable
-    override fun ComposePreferences() = HysteriaProfileSettingsScreen()
+    override fun PreferenceFragmentCompat.createPreferences(
+        savedInstanceState: Bundle?,
+        rootKey: String?,
+    ) {
+        addPreferencesFromResource(R.xml.hysteria_preferences)
+
+        val authType = findPreference<SimpleMenuPreference>(Key.SERVER_AUTH_TYPE)!!
+        val authPayload = findPreference<EditTextPreference>(Key.SERVER_PASSWORD)!!
+        authPayload.isVisible = authType.value != "${HysteriaBean.TYPE_NONE}"
+        authType.setOnPreferenceChangeListener { _, newValue ->
+            authPayload.isVisible = newValue != "${HysteriaBean.TYPE_NONE}"
+            true
+        }
+
+        val protocol = findPreference<SimpleMenuPreference>(Key.SERVER_PROTOCOL)!!
+        val alpn = findPreference<EditTextPreference>(Key.SERVER_ALPN)!!
+
+        fun updateVersion(v: Int) {
+            if (v == 2) {
+                authPayload.isVisible = true
+                //
+                authType.isVisible = false
+                protocol.isVisible = false
+                alpn.isVisible = false
+                //
+                findPreference<EditTextPreference>(Key.SERVER_STREAM_RECEIVE_WINDOW)!!.isVisible =
+                    false
+                findPreference<EditTextPreference>(Key.SERVER_CONNECTION_RECEIVE_WINDOW)!!.isVisible =
+                    false
+                findPreference<MaterialSwitchPreference>(Key.SERVER_DISABLE_MTU_DISCOVERY)!!.isVisible =
+                    false
+                //
+                authPayload.title = resources.getString(R.string.password)
+            } else {
+                authType.isVisible = true
+                authPayload.isVisible = true
+                protocol.isVisible = true
+                alpn.isVisible = true
+                //
+                findPreference<EditTextPreference>(Key.SERVER_STREAM_RECEIVE_WINDOW)!!.isVisible =
+                    true
+                findPreference<EditTextPreference>(Key.SERVER_CONNECTION_RECEIVE_WINDOW)!!.isVisible =
+                    true
+                findPreference<MaterialSwitchPreference>(Key.SERVER_DISABLE_MTU_DISCOVERY)!!.isVisible =
+                    true
+                //
+                authPayload.title = resources.getString(R.string.hysteria_auth_payload)
+            }
+        }
+        findPreference<SimpleMenuPreference>(Key.PROTOCOL_VERSION)!!.setOnPreferenceChangeListener { _, newValue ->
+            updateVersion(newValue.toString().toIntOrNull() ?: 1)
+            true
+        }
+        updateVersion(DataStore.protocolVersion)
+
+        findPreference<EditTextPreference>(Key.SERVER_UPLOAD_SPEED)!!.apply {
+            setOnBindEditTextListener(EditTextPreferenceModifiers.Number)
+        }
+        findPreference<EditTextPreference>(Key.SERVER_DOWNLOAD_SPEED)!!.apply {
+            setOnBindEditTextListener(EditTextPreferenceModifiers.Number)
+        }
+        findPreference<EditTextPreference>(Key.SERVER_STREAM_RECEIVE_WINDOW)!!.apply {
+            setOnBindEditTextListener(EditTextPreferenceModifiers.Number)
+        }
+        findPreference<EditTextPreference>(Key.SERVER_CONNECTION_RECEIVE_WINDOW)!!.apply {
+            setOnBindEditTextListener(EditTextPreferenceModifiers.Number)
+        }
+
+        findPreference<EditTextPreference>(Key.SERVER_PASSWORD)!!.apply {
+            summaryProvider = PasswordSummaryProvider
+        }
+        findPreference<EditTextPreference>(Key.SERVER_OBFS)!!.apply {
+            summaryProvider = PasswordSummaryProvider
+        }
+
+        findPreference<EditTextPreference>(Key.SERVER_HOP_INTERVAL)!!.apply {
+            setOnBindEditTextListener(EditTextPreferenceModifiers.Number)
+        }
+    }
 
 }

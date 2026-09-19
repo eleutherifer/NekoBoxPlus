@@ -43,16 +43,6 @@ public abstract class AbstractBean extends Serializable {
     public transient String tlsClientCertificate;
     public transient String tlsClientKey;
     public transient String echQueryServerName;
-    public transient String tlsHandshakeTimeout;
-
-    // sing-box 1.14 QUIC options shared by Hysteria and TUIC.
-    public transient String quicIdleTimeout;
-    public transient String quicKeepAlivePeriod;
-    public transient Long quicStreamReceiveWindow;
-    public transient Long quicConnectionReceiveWindow;
-    public transient Integer quicMaxConcurrentStreams;
-    public transient Integer quicInitialPacketSize;
-    public transient Boolean quicDisablePathMtuDiscovery;
 
     //
     public transient String finalAddress;
@@ -114,14 +104,6 @@ public abstract class AbstractBean extends Serializable {
         if (tlsClientCertificate == null) tlsClientCertificate = "";
         if (tlsClientKey == null) tlsClientKey = "";
         if (echQueryServerName == null) echQueryServerName = "";
-        if (tlsHandshakeTimeout == null) tlsHandshakeTimeout = "";
-        if (quicIdleTimeout == null) quicIdleTimeout = "";
-        if (quicKeepAlivePeriod == null) quicKeepAlivePeriod = "";
-        if (quicStreamReceiveWindow == null) quicStreamReceiveWindow = 0L;
-        if (quicConnectionReceiveWindow == null) quicConnectionReceiveWindow = 0L;
-        if (quicMaxConcurrentStreams == null) quicMaxConcurrentStreams = 0;
-        if (quicInitialPacketSize == null) quicInitialPacketSize = 0;
-        if (quicDisablePathMtuDiscovery == null) quicDisablePathMtuDiscovery = false;
     }
 
 
@@ -141,14 +123,6 @@ public abstract class AbstractBean extends Serializable {
         output.writeString(tlsClientCertificate);
         output.writeString(tlsClientKey);
         output.writeString(echQueryServerName);
-        output.writeString(tlsHandshakeTimeout);
-        output.writeString(quicIdleTimeout);
-        output.writeString(quicKeepAlivePeriod);
-        output.writeLong(quicStreamReceiveWindow);
-        output.writeLong(quicConnectionReceiveWindow);
-        output.writeInt(quicMaxConcurrentStreams);
-        output.writeInt(quicInitialPacketSize);
-        output.writeBoolean(quicDisablePathMtuDiscovery);
         output.writeBoolean(tcpFastOpen);
         output.writeBoolean(tcpMultiPath);
         output.writeString(udpFragment == null ? "" : udpFragment.toString());
@@ -174,19 +148,7 @@ public abstract class AbstractBean extends Serializable {
             tlsClientKey = input.readString();
             echQueryServerName = input.readString();
         }
-        int remainingExtraBytes = input.limit() - input.position();
-        boolean legacyPlusVersion3 = extraVersion == 3 && remainingExtraBytes < 28;
-        if (extraVersion >= 3 && !legacyPlusVersion3) {
-            tlsHandshakeTimeout = input.readString();
-            quicIdleTimeout = input.readString();
-            quicKeepAlivePeriod = input.readString();
-            quicStreamReceiveWindow = input.readLong();
-            quicConnectionReceiveWindow = input.readLong();
-            quicMaxConcurrentStreams = input.readInt();
-            quicInitialPacketSize = input.readInt();
-            quicDisablePathMtuDiscovery = input.readBoolean();
-        }
-        if (extraVersion >= 4 || legacyPlusVersion3) {
+        if (extraVersion >= 3) {
             tcpFastOpen = input.readBoolean();
             tcpMultiPath = input.readBoolean();
             String udpFragmentValue = input.readString();

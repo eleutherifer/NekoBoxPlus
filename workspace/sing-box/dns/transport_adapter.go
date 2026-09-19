@@ -1,8 +1,14 @@
 package dns
 
 import (
+	"net/netip"
+
+	"github.com/sagernet/sing-box/adapter"
+	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/option"
 )
+
+var _ adapter.LegacyDNSTransport = (*TransportAdapter)(nil)
 
 type TransportAdapter struct {
 	transportType string
@@ -10,6 +16,8 @@ type TransportAdapter struct {
 	dependencies  []string
 	outbound      string
 	hasOutbound   bool
+	strategy      C.DomainStrategy
+	clientSubnet  netip.Prefix
 }
 
 func NewTransportAdapter(transportType string, transportTag string, dependencies []string) TransportAdapter {
@@ -31,6 +39,8 @@ func NewTransportAdapterWithLocalOptions(transportType string, transportTag stri
 		dependencies:  dependencies,
 		outbound:      localOptions.Detour,
 		hasOutbound:   true,
+		strategy:      C.DomainStrategy(localOptions.LegacyStrategy),
+		clientSubnet:  localOptions.LegacyClientSubnet,
 	}
 }
 
@@ -39,12 +49,17 @@ func NewTransportAdapterWithRemoteOptions(transportType string, transportTag str
 	if remoteOptions.DomainResolver != nil && remoteOptions.DomainResolver.Server != "" {
 		dependencies = append(dependencies, remoteOptions.DomainResolver.Server)
 	}
+	if remoteOptions.LegacyAddressResolver != "" {
+		dependencies = append(dependencies, remoteOptions.LegacyAddressResolver)
+	}
 	return TransportAdapter{
 		transportType: transportType,
 		transportTag:  transportTag,
 		dependencies:  dependencies,
 		outbound:      remoteOptions.Detour,
 		hasOutbound:   true,
+		strategy:      C.DomainStrategy(remoteOptions.LegacyStrategy),
+		clientSubnet:  remoteOptions.LegacyClientSubnet,
 	}
 }
 
@@ -58,4 +73,12 @@ func (a *TransportAdapter) Tag() string {
 
 func (a *TransportAdapter) Dependencies() []string {
 	return a.dependencies
+}
+
+func (a *TransportAdapter) LegacyStrategy() C.DomainStrategy {
+	return a.strategy
+}
+
+func (a *TransportAdapter) LegacyClientSubnet() netip.Prefix {
+	return a.clientSubnet
 }

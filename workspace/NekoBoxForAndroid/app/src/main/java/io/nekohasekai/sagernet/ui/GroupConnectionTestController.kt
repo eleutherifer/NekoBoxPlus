@@ -1,24 +1,23 @@
 package io.nekohasekai.sagernet.ui
 
+import android.content.DialogInterface
 import android.net.Network
 import android.net.NetworkCapabilities
-import androidx.activity.ComponentDialog
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import android.text.SpannableStringBuilder
+import android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+import android.text.style.ForegroundColorSpan
+import androidx.appcompat.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.SagerNet
-import io.nekohasekai.sagernet.bg.proto.PingFailureKind
 import io.nekohasekai.sagernet.bg.proto.ProfileStatusUpdater
-import io.nekohasekai.sagernet.bg.proto.TcpPingOutcome
-import io.nekohasekai.sagernet.bg.proto.TcpPingRequest
-import io.nekohasekai.sagernet.bg.proto.classifyPingFailure
-import io.nekohasekai.sagernet.database.AppData
 import io.nekohasekai.sagernet.bg.proto.UrlTest
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.GroupManager
 import io.nekohasekai.sagernet.database.ProfileManager
 import io.nekohasekai.sagernet.database.ProxyEntity
+import io.nekohasekai.sagernet.database.SagerDatabase
+import io.nekohasekai.sagernet.databinding.LayoutProgressListBinding
 import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ktx.app
 import io.nekohasekai.sagernet.ktx.getColorAttr
@@ -28,8 +27,6 @@ import io.nekohasekai.sagernet.ktx.readableMessage
 import io.nekohasekai.sagernet.ktx.runOnDefaultDispatcher
 import io.nekohasekai.sagernet.ktx.runOnMainDispatcher
 import io.nekohasekai.sagernet.plugin.PluginManager
-import io.nekohasekai.sagernet.ui.compose.ConnectionTestProgressUiState
-import io.nekohasekai.sagernet.ui.compose.showConnectionTestProgressDialog
 import io.nekohasekai.sagernet.utils.DefaultNetworkListener
 import io.nekohasekai.sagernet.utils.ProfileCountryResolver
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -45,6 +42,7 @@ import moe.matsuri.nb4a.Protocols.getProtocolColor
 import moe.matsuri.nb4a.net.LocalResolverImpl
 import moe.matsuri.nb4a.ui.ConnectionTestNotification
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import java.net.UnknownHostException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
@@ -70,8 +68,8 @@ object GroupConnectionTestController {
     private var testType: TestType? = null
     private var mainJob: Job? = null
     private var notification: ConnectionTestNotification? = null
-    private var dialog: ComponentDialog? = null
-    private var progressUiState by mutableStateOf(ConnectionTestProgressUiState())
+    private var dialog: AlertDialog? = null
+    private var binding: LayoutProgressListBinding? = null
     private var lastProfile: ProxyEntity? = null
     private var proxyN = 0
     private var groupId = 0L
@@ -177,6 +175,7 @@ object GroupConnectionTestController {
         dialog?.setOnDismissListener(null)
         dialog?.dismiss()
         dialog = null
+        binding = null
     }
 
     private fun start(
@@ -199,7 +198,6 @@ object GroupConnectionTestController {
         restorePending = false
         completing = false
         lastProfile = null
-        progressUiState = ConnectionTestProgressUiState()
         results.clear()
         finishedN.set(0)
         testJobs.clear()
@@ -268,7 +266,7 @@ object GroupConnectionTestController {
                                     app.getString(R.string.connection_test_domain_not_found)
                             }
 
-                            classifyPingFailure(message) == PingFailureKind.Unreachable -> {
+                            isAddressFamilyFailure(e) -> {
                                 profile.error =
                                     app.getString(R.string.connection_test_unreachable)
                             }
@@ -305,37 +303,130 @@ object GroupConnectionTestController {
                 while (GroupConnectionTestController.isActive(runId)) {
                     val profile = profiles.poll() ?: break
                     profile.status = 0
-                    profile.ping = 0
-                    profile.error = null
                     val bean = profile.requireBean()
-                    val outcome = libcoreTcpPingProbe { host ->
-                        network.getAllByName(host).mapNotNull { it.hostAddress }
-                    }.execute(
-                        TcpPingRequest(
-                            host = bean.serverAddress,
-                            port = bean.serverPort.toString(),
-                            timeoutMillis = 3_000,
-                            hardened = DataStore.connectionTestHardened,
-                            hostIsIpAddress = bean.serverAddress.isIpAddress(),
-                        ),
-                    )
-                    if (!GroupConnectionTestController.isActive(runId)) break
-                    when (outcome) {
-                        is TcpPingOutcome.Success -> {
-                            profile.status = 1
-                            profile.ping = outcome.latency
+                    if (DataStore.connectionTestHardened) {
+                        try {
+                            val pingResult = Libcore.tcpPingWithAddress(
+                                bean.serverAddress,
+                                bean.serverPort.toString(),
+                                3000,
+                                true,
+                                LocalResolverImpl,
+                            )
+                            profile.ping = pingResult.latency
                             ProfileCountryResolver.updateFromAddress(
                                 profile.id,
-                                outcome.address,
+                                pingResult.address,
+                                ProfileCountryResolver.SOURCE_ENDPOINT,
+                            )
+                            if (!GroupConnectionTestController.isActive(runId)) break
+                            profile.status = 1
+                        } catch (e: Exception) {
+                            if (!GroupConnectionTestController.isActive(runId)) break
+                            val message = e.readableMessage
+                            profile.status = 2
+                            when {
+                                message.contains("resolve TCP ping host", ignoreCase = true) -> {
+                                    profile.error =
+                                        app.getString(R.string.connection_test_domain_not_found)
+                                }
+
+                                message.contains("ECONNREFUSED") -> {
+                                    profile.error = app.getString(R.string.connection_test_refused)
+                                }
+
+                                isAddressFamilyFailure(e) -> {
+                                    profile.error =
+                                        app.getString(R.string.connection_test_unreachable)
+                                }
+
+                                message.contains("deadline exceeded", ignoreCase = true) ||
+                                        message.contains("timed out", ignoreCase = true) -> {
+                                    profile.error =
+                                        app.getString(R.string.connection_test_timeout_error)
+                                }
+
+                                else -> {
+                                    profile.status = 3
+                                    profile.error = message
+                                }
+                            }
+                        }
+                        update(runId, profile)
+                        continue
+                    }
+                    val addresses = if (bean.serverAddress.isIpAddress()) {
+                        listOf(bean.serverAddress)
+                    } else {
+                        try {
+                            network.getAllByName(bean.serverAddress).mapNotNull { it.hostAddress }
+                        } catch (_: UnknownHostException) {
+                            emptyList()
+                        }
+                    }
+                    if (addresses.isEmpty()) {
+                        profile.status = 2
+                        profile.error = app.getString(R.string.connection_test_domain_not_found)
+                        update(runId, profile)
+                        continue
+                    }
+                    try {
+                        var result: Int? = null
+                        var successfulAddress: String? = null
+                        var lastError: Exception? = null
+                        for ((index, address) in addresses.withIndex()) {
+                            try {
+                                result = Libcore.tcpPing(
+                                    address,
+                                    bean.serverPort.toString(),
+                                    3000,
+                                    false,
+                                    LocalResolverImpl,
+                                )
+                                successfulAddress = address
+                                break
+                            } catch (e: Exception) {
+                                lastError = e
+                                if (index == addresses.lastIndex || !isAddressFamilyFailure(e)) throw e
+                            }
+                        }
+                        if (result == null) throw lastError ?: error("TCP ping failed")
+                        if (!GroupConnectionTestController.isActive(runId)) break
+                        profile.status = 1
+                        profile.ping = result
+                        successfulAddress?.let {
+                            ProfileCountryResolver.updateFromAddress(
+                                profile.id,
+                                it,
                                 ProfileCountryResolver.SOURCE_ENDPOINT,
                             )
                         }
-                        is TcpPingOutcome.Failure -> {
-                            profile.status = if (outcome.kind == PingFailureKind.Other) 3 else 2
-                            profile.error = outcome.kind.localizedMessage(outcome.detail)
+                        update(runId, profile)
+                    } catch (e: Exception) {
+                        if (!GroupConnectionTestController.isActive(runId)) break
+                        val message = e.readableMessage
+                        profile.status = 2
+                        when {
+                            message.contains("ECONNREFUSED") -> {
+                                profile.error = app.getString(R.string.connection_test_refused)
+                            }
+
+                            isAddressFamilyFailure(e) -> {
+                                profile.error = app.getString(R.string.connection_test_unreachable)
+                            }
+
+                            message.contains("deadline exceeded", ignoreCase = true) ||
+                                    message.contains("timed out", ignoreCase = true) -> {
+                                profile.error = app.getString(R.string.connection_test_timeout_error)
+                            }
+
+                            else -> {
+                                profile.status = 3
+                                profile.error = message
+                            }
                         }
+                        update(runId, profile)
                     }
-                    update(runId, profile)
                 }
             })
         }
@@ -416,8 +507,8 @@ object GroupConnectionTestController {
     }
 
     private fun selectedProfilesOrGroup(): List<ProxyEntity> {
-        val ids = selectedProfileIds ?: return AppData.profiles.getByGroup(groupId)
-        val byId = AppData.profiles.getEntities(ids).associateBy { it.id }
+        val ids = selectedProfileIds ?: return SagerDatabase.proxyDao.getByGroup(groupId)
+        val byId = SagerDatabase.proxyDao.getEntities(ids).associateBy { it.id }
         return ids.mapNotNull(byId::get)
     }
 
@@ -428,6 +519,13 @@ object GroupConnectionTestController {
             profile.error = message
             update(runId, profile)
         }
+    }
+
+    private fun isAddressFamilyFailure(error: Exception): Boolean {
+        val message = error.readableMessage
+        return message.contains("ENETUNREACH") ||
+                message.contains("EHOSTUNREACH") ||
+                message.contains("EAFNOSUPPORT")
     }
 
     private fun update(runId: Long, profile: ProxyEntity) {
@@ -447,11 +545,22 @@ object GroupConnectionTestController {
     private fun showDialog(fragment: ConfigurationFragment, runId: Long = activeRunId): Boolean {
         if (!fragment.isAdded || fragment.view == null) return false
         if (dialog?.isShowing == true) return true
-        dialog = fragment.requireContext().showConnectionTestProgressDialog(
-            state = { progressUiState },
-            onMinimize = ::minimize,
-            onCancel = { complete(runId, cancelJobs = true) },
-        )
+        val newBinding = LayoutProgressListBinding.inflate(fragment.layoutInflater)
+        binding = newBinding
+        dialog = MaterialAlertDialogBuilder(fragment.requireContext())
+            .setView(newBinding.root)
+            .setPositiveButton(R.string.minimize, null)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setCancelable(false)
+            .show()
+            .apply {
+                getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener {
+                    minimize()
+                }
+                getButton(DialogInterface.BUTTON_NEGATIVE).setOnClickListener {
+                    complete(runId, cancelJobs = true)
+                }
+            }
         updateUi()
         return true
     }
@@ -510,11 +619,10 @@ object GroupConnectionTestController {
     }
 
     private fun updateUi() {
+        val activeBinding = binding ?: return
         val context = dialog?.context ?: return
         val profile = lastProfile
-        progressUiState = progressUiState.copy(
-            progress = "${finishedN.get().coerceAtMost(proxyN)} / $proxyN",
-        )
+        activeBinding.progress.text = "${finishedN.get().coerceAtMost(proxyN)} / $proxyN"
         if (profile == null) return
 
         var profileStatusText: String? = null
@@ -548,13 +656,20 @@ object GroupConnectionTestController {
             }
         }
 
-        progressUiState = progressUiState.copy(
-            profileName = profile.displayName(),
-            protocol = profile.displayType(),
-            protocolColor = context.getProtocolColor(profile.type),
-            status = profileStatusText.orEmpty(),
-            statusColor = profileStatusColor,
-        )
+        activeBinding.nowTesting.text = profile.displayName()
+        activeBinding.nowTestingStatus.text = SpannableStringBuilder().apply {
+            append(
+                profile.displayType(),
+                ForegroundColorSpan(context.getProtocolColor(profile.type)),
+                SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            append(" ")
+            append(
+                profileStatusText,
+                ForegroundColorSpan(profileStatusColor),
+                SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+        }
     }
 }
 

@@ -1,6 +1,7 @@
 package v2raywebsocket
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"io"
@@ -15,6 +16,7 @@ import (
 	"github.com/sagernet/sing/common/buf"
 	"github.com/sagernet/sing/common/debug"
 	E "github.com/sagernet/sing/common/exceptions"
+	M "github.com/sagernet/sing/common/metadata"
 	"github.com/sagernet/ws"
 	"github.com/sagernet/ws/wsutil"
 )
@@ -133,11 +135,11 @@ func (c *WebsocketConn) Upstream() any {
 
 type EarlyWebsocketConn struct {
 	*Client
-	rawConn net.Conn
-	conn    atomic.Pointer[WebsocketConn]
-	access  sync.Mutex
-	create  chan struct{}
-	err     error
+	ctx    context.Context
+	conn   atomic.Pointer[WebsocketConn]
+	access sync.Mutex
+	create chan struct{}
+	err    error
 }
 
 func (c *EarlyWebsocketConn) Read(b []byte) (n int, err error) {
@@ -170,14 +172,14 @@ func (c *EarlyWebsocketConn) writeRequest(content []byte) error {
 		if c.earlyDataHeaderName == "" {
 			requestURL := c.requestURL
 			requestURL.Path += earlyDataString
-			conn, err = c.upgrade(c.rawConn, &requestURL, c.headers)
+			conn, err = c.dialContext(c.ctx, &requestURL, c.headers)
 		} else {
 			headers := c.headers.Clone()
 			headers.Set(c.earlyDataHeaderName, earlyDataString)
-			conn, err = c.upgrade(c.rawConn, &c.requestURL, headers)
+			conn, err = c.dialContext(c.ctx, &c.requestURL, headers)
 		}
 	} else {
-		conn, err = c.upgrade(c.rawConn, &c.requestURL, c.headers)
+		conn, err = c.dialContext(c.ctx, &c.requestURL, c.headers)
 	}
 	if err != nil {
 		return err
@@ -238,26 +240,26 @@ func (c *EarlyWebsocketConn) WriteBuffer(buffer *buf.Buffer) error {
 
 func (c *EarlyWebsocketConn) Close() error {
 	conn := c.conn.Load()
-	if conn != nil {
-		return conn.Close()
-	}
-	c.rawConn.Close()
-	c.access.Lock()
-	defer c.access.Unlock()
-	if c.conn.Load() != nil || c.err != nil {
+	if conn == nil {
 		return nil
 	}
-	c.err = net.ErrClosed
-	close(c.create)
-	return nil
+	return conn.Close()
 }
 
 func (c *EarlyWebsocketConn) LocalAddr() net.Addr {
-	return c.rawConn.LocalAddr()
+	conn := c.conn.Load()
+	if conn == nil {
+		return M.Socksaddr{}
+	}
+	return conn.LocalAddr()
 }
 
 func (c *EarlyWebsocketConn) RemoteAddr() net.Addr {
-	return c.rawConn.RemoteAddr()
+	conn := c.conn.Load()
+	if conn == nil {
+		return M.Socksaddr{}
+	}
+	return conn.RemoteAddr()
 }
 
 func (c *EarlyWebsocketConn) SetDeadline(t time.Time) error {

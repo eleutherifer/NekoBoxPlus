@@ -1,7 +1,6 @@
 package libcore
 
 import (
-	"context"
 	"encoding/json"
 	"net"
 	"net/netip"
@@ -185,7 +184,7 @@ func ReplayPlatformNetworkState() {
 
 func UpdatePlatformWIFIState() {
 	if platformNetworkManager != nil {
-		platformNetworkManager.UpdateWIFIState(context.Background())
+		platformNetworkManager.UpdateWIFIState()
 	}
 }
 

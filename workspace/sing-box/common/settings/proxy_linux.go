@@ -16,31 +16,15 @@ import (
 )
 
 type LinuxSystemProxy struct {
-	execute         func(name string, args ...string) error
 	hasGSettings    bool
 	kWriteConfigCmd string
+	sudoUser        string
 	serverAddr      M.Socksaddr
 	supportSOCKS    bool
 	isEnabled       bool
 }
 
-func NewSystemProxy(ctx context.Context, serverAddr M.Socksaddr, supportSOCKS bool, bypassDomain []string) (*LinuxSystemProxy, error) {
-	var sudoUser string
-	if os.Getuid() == 0 {
-		sudoUser = os.Getenv("SUDO_USER")
-	}
-	return NewLinuxSystemProxy(serverAddr, supportSOCKS, func(name string, args ...string) error {
-		if os.Getuid() != 0 {
-			return shell.Exec(name, args...).Attach().Run()
-		} else if sudoUser != "" {
-			return shell.Exec("su", "-", sudoUser, "-c", F.ToString(name, " ", strings.Join(args, " "))).Attach().Run()
-		} else {
-			return E.New("set system proxy: unable to set as root")
-		}
-	})
-}
-
-func NewLinuxSystemProxy(serverAddr M.Socksaddr, supportSOCKS bool, execute func(name string, args ...string) error) (*LinuxSystemProxy, error) {
+func NewSystemProxy(ctx context.Context, serverAddr M.Socksaddr, supportSOCKS bool) (*LinuxSystemProxy, error) {
 	hasGSettings := common.Error(exec.LookPath("gsettings")) == nil
 	kWriteConfigCmds := []string{
 		"kwriteconfig5",
@@ -53,13 +37,17 @@ func NewLinuxSystemProxy(serverAddr M.Socksaddr, supportSOCKS bool, execute func
 			break
 		}
 	}
+	var sudoUser string
+	if os.Getuid() == 0 {
+		sudoUser = os.Getenv("SUDO_USER")
+	}
 	if !hasGSettings && kWriteConfigCmd == "" {
 		return nil, E.New("unsupported desktop environment")
 	}
 	return &LinuxSystemProxy{
-		execute:         execute,
 		hasGSettings:    hasGSettings,
 		kWriteConfigCmd: kWriteConfigCmd,
+		sudoUser:        sudoUser,
 		serverAddr:      serverAddr,
 		supportSOCKS:    supportSOCKS,
 	}, nil
@@ -71,7 +59,7 @@ func (p *LinuxSystemProxy) IsEnabled() bool {
 
 func (p *LinuxSystemProxy) Enable() error {
 	if p.hasGSettings {
-		err := p.execute("gsettings", "set", "org.gnome.system.proxy.http", "enabled", "true")
+		err := p.runAsUser("gsettings", "set", "org.gnome.system.proxy.http", "enabled", "true")
 		if err != nil {
 			return err
 		}
@@ -83,17 +71,17 @@ func (p *LinuxSystemProxy) Enable() error {
 		if err != nil {
 			return err
 		}
-		err = p.execute("gsettings", "set", "org.gnome.system.proxy", "use-same-proxy", F.ToString(p.supportSOCKS))
+		err = p.runAsUser("gsettings", "set", "org.gnome.system.proxy", "use-same-proxy", F.ToString(p.supportSOCKS))
 		if err != nil {
 			return err
 		}
-		err = p.execute("gsettings", "set", "org.gnome.system.proxy", "mode", "manual")
+		err = p.runAsUser("gsettings", "set", "org.gnome.system.proxy", "mode", "manual")
 		if err != nil {
 			return err
 		}
 	}
 	if p.kWriteConfigCmd != "" {
-		err := p.execute(p.kWriteConfigCmd, "--file", "kioslaverc", "--group", "Proxy Settings", "--key", "ProxyType", "1")
+		err := p.runAsUser(p.kWriteConfigCmd, "--file", "kioslaverc", "--group", "Proxy Settings", "--key", "ProxyType", "1")
 		if err != nil {
 			return err
 		}
@@ -105,11 +93,11 @@ func (p *LinuxSystemProxy) Enable() error {
 		if err != nil {
 			return err
 		}
-		err = p.execute(p.kWriteConfigCmd, "--file", "kioslaverc", "--group", "Proxy Settings", "--key", "Authmode", "0")
+		err = p.runAsUser(p.kWriteConfigCmd, "--file", "kioslaverc", "--group", "Proxy Settings", "--key", "Authmode", "0")
 		if err != nil {
 			return err
 		}
-		err = p.execute("dbus-send", "--type=signal", "/KIO/Scheduler", "org.kde.KIO.Scheduler.reparseSlaveConfiguration", "string:''")
+		err = p.runAsUser("dbus-send", "--type=signal", "/KIO/Scheduler", "org.kde.KIO.Scheduler.reparseSlaveConfiguration", "string:''")
 		if err != nil {
 			return err
 		}
@@ -118,23 +106,19 @@ func (p *LinuxSystemProxy) Enable() error {
 	return nil
 }
 
-func (p *LinuxSystemProxy) Close() error {
-	return nil
-}
-
 func (p *LinuxSystemProxy) Disable() error {
 	if p.hasGSettings {
-		err := p.execute("gsettings", "set", "org.gnome.system.proxy", "mode", "none")
+		err := p.runAsUser("gsettings", "set", "org.gnome.system.proxy", "mode", "none")
 		if err != nil {
 			return err
 		}
 	}
 	if p.kWriteConfigCmd != "" {
-		err := p.execute(p.kWriteConfigCmd, "--file", "kioslaverc", "--group", "Proxy Settings", "--key", "ProxyType", "0")
+		err := p.runAsUser(p.kWriteConfigCmd, "--file", "kioslaverc", "--group", "Proxy Settings", "--key", "ProxyType", "0")
 		if err != nil {
 			return err
 		}
-		err = p.execute("dbus-send", "--type=signal", "/KIO/Scheduler", "org.kde.KIO.Scheduler.reparseSlaveConfiguration", "string:''")
+		err = p.runAsUser("dbus-send", "--type=signal", "/KIO/Scheduler", "org.kde.KIO.Scheduler.reparseSlaveConfiguration", "string:''")
 		if err != nil {
 			return err
 		}
@@ -143,13 +127,23 @@ func (p *LinuxSystemProxy) Disable() error {
 	return nil
 }
 
+func (p *LinuxSystemProxy) runAsUser(name string, args ...string) error {
+	if os.Getuid() != 0 {
+		return shell.Exec(name, args...).Attach().Run()
+	} else if p.sudoUser != "" {
+		return shell.Exec("su", "-", p.sudoUser, "-c", F.ToString(name, " ", strings.Join(args, " "))).Attach().Run()
+	} else {
+		return E.New("set system proxy: unable to set as root")
+	}
+}
+
 func (p *LinuxSystemProxy) setGnomeProxy(proxyTypes ...string) error {
 	for _, proxyType := range proxyTypes {
-		err := p.execute("gsettings", "set", "org.gnome.system.proxy."+proxyType, "host", p.serverAddr.AddrString())
+		err := p.runAsUser("gsettings", "set", "org.gnome.system.proxy."+proxyType, "host", p.serverAddr.AddrString())
 		if err != nil {
 			return err
 		}
-		err = p.execute("gsettings", "set", "org.gnome.system.proxy."+proxyType, "port", F.ToString(p.serverAddr.Port))
+		err = p.runAsUser("gsettings", "set", "org.gnome.system.proxy."+proxyType, "port", F.ToString(p.serverAddr.Port))
 		if err != nil {
 			return err
 		}
@@ -165,7 +159,7 @@ func (p *LinuxSystemProxy) setKDEProxy(proxyTypes ...string) error {
 		} else {
 			proxyUrl = "http://" + p.serverAddr.String()
 		}
-		err := p.execute(
+		err := p.runAsUser(
 			p.kWriteConfigCmd,
 			"--file",
 			"kioslaverc",

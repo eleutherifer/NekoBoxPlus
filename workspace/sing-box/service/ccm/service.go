@@ -160,7 +160,6 @@ func NewService(ctx context.Context, logger log.ContextLogger, tag string, optio
 		usageTracker = &AggregatedUsage{
 			LastUpdated:  time.Now(),
 			Combinations: make([]CostCombination, 0),
-			ctx:          ctx,
 			filePath:     options.UsagesPath,
 			logger:       logger,
 		}
@@ -202,7 +201,7 @@ func (s *Service) Start(stage adapter.StartStage) error {
 
 	s.userManager.UpdateUsers(s.users)
 
-	credentials, err := platformReadCredentials(s.ctx, s.credentialPath)
+	credentials, err := platformReadCredentials(s.credentialPath)
 	if err != nil {
 		return E.Cause(err, "read credentials")
 	}
@@ -272,7 +271,7 @@ func (s *Service) getAccessToken() (string, error) {
 
 	s.credentials = newCredentials
 
-	err = platformWriteCredentials(s.ctx, newCredentials, s.credentialPath)
+	err = platformWriteCredentials(newCredentials, s.credentialPath)
 	if err != nil {
 		s.logger.Warn("persist refreshed token: ", err)
 	}

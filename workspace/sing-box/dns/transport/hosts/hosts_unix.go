@@ -2,6 +2,4 @@
 
 package hosts
 
-func defaultPath() (string, error) {
-	return "/etc/hosts", nil
-}
+var DefaultPath = "/etc/hosts"

@@ -28,9 +28,6 @@ func initWin32API() error {
 	return winiphlpapi.LoadExtendedTable()
 }
 
-func (s *windowsSearcher) ResetCache() {
-}
-
 func (s *windowsSearcher) Close() error {
 	return nil
 }

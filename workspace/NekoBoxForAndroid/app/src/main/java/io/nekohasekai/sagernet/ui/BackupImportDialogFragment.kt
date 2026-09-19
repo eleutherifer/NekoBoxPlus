@@ -1,78 +1,46 @@
 package io.nekohasekai.sagernet.ui
 
+import android.app.Dialog
 import android.content.DialogInterface
-import android.graphics.Color
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.ViewGroup
-import android.view.WindowManager
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.core.graphics.drawable.toDrawable
 import androidx.core.os.bundleOf
+import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
-import io.nekohasekai.sagernet.ui.compose.BackupImportDialog
-import io.nekohasekai.sagernet.ui.compose.BackupImportSelection
-import io.nekohasekai.sagernet.ui.compose.NekoComposeTheme
-import io.nekohasekai.sagernet.utils.Theme
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import io.nekohasekai.sagernet.R
+import io.nekohasekai.sagernet.databinding.LayoutImportBinding
 import java.io.File
 
 /** A restore-options dialog that is recreated by FragmentManager after configuration changes. */
 class BackupImportDialogFragment : DialogFragment() {
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setStyle(STYLE_NORMAL, Theme.getDialogTheme())
-    }
+    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        val binding = LayoutImportBinding.inflate(layoutInflater)
+        binding.backupConfigurations.isVisible = requireArguments().getBoolean(ARG_HAS_PROFILES)
+        binding.backupRules.isVisible = requireArguments().getBoolean(ARG_HAS_RULES)
+        binding.backupSettings.isVisible = requireArguments().getBoolean(ARG_HAS_SETTINGS)
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?,
-    ): ComposeView {
-        var selection by mutableStateOf(BackupImportSelection())
-        return ComposeView(requireContext()).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
-            setContent {
-                NekoComposeTheme {
-                    BackupImportDialog(
-                        selection = selection,
-                        hasProfiles = requireArguments().getBoolean(ARG_HAS_PROFILES),
-                        hasRules = requireArguments().getBoolean(ARG_HAS_RULES),
-                        hasSettings = requireArguments().getBoolean(ARG_HAS_SETTINGS),
-                        showGitWarning = requireArguments().getBoolean(ARG_SHOW_GIT_WARNING),
-                        onSelectionChanged = { selection = it },
-                        onImport = {
-                            parentFragmentManager.setFragmentResult(
-                                RESULT_KEY,
-                                bundleOf(
-                                    RESULT_FILE to requireArguments().getString(ARG_FILE),
-                                    RESULT_PROFILES to selection.profiles,
-                                    RESULT_RULES to selection.rules,
-                                    RESULT_SETTINGS to selection.settings,
-                                ),
-                            )
-                            dismiss()
-                        },
-                        onCancel = {
-                            deletePendingFile()
-                            dismiss()
-                        },
-                    )
+        return MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.backup_import)
+            .apply {
+                if (requireArguments().getBoolean(ARG_SHOW_GIT_WARNING)) {
+                    setMessage(R.string.git_destructive_restore_warning)
                 }
             }
-        }
-    }
-
-    override fun onStart() {
-        super.onStart()
-        dialog?.window?.apply {
-            setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
-            setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
-        }
+            .setView(binding.root)
+            .setPositiveButton(R.string.backup_import) { _, _ ->
+                parentFragmentManager.setFragmentResult(
+                    RESULT_KEY,
+                    bundleOf(
+                        RESULT_FILE to requireArguments().getString(ARG_FILE),
+                        RESULT_PROFILES to binding.backupConfigurations.isChecked,
+                        RESULT_RULES to binding.backupRules.isChecked,
+                        RESULT_SETTINGS to binding.backupSettings.isChecked,
+                    ),
+                )
+            }
+            .setNegativeButton(android.R.string.cancel) { _, _ -> deletePendingFile() }
+            .create()
     }
 
     override fun onCancel(dialog: DialogInterface) {

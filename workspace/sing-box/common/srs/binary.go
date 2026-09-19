@@ -46,7 +46,6 @@ const (
 	ruleItemNetworkIsConstrained
 	ruleItemNetworkInterfaceAddress
 	ruleItemDefaultInterfaceAddress
-	ruleItemPackageNameRegex
 	ruleItemFinal uint8 = 0xFF
 )
 
@@ -223,8 +222,6 @@ func readDefaultRule(reader varbin.Reader, recover bool) (rule option.DefaultHea
 			rule.ProcessPathRegex, err = readRuleItemString(reader)
 		case ruleItemPackageName:
 			rule.PackageName, err = readRuleItemString(reader)
-		case ruleItemPackageNameRegex:
-			rule.PackageNameRegex, err = readRuleItemString(reader)
 		case ruleItemWIFISSID:
 			rule.WIFISSID, err = readRuleItemString(reader)
 		case ruleItemWIFIBSSID:
@@ -400,15 +397,6 @@ func writeDefaultRule(writer varbin.Writer, rule option.DefaultHeadlessRule, gen
 	}
 	if len(rule.PackageName) > 0 {
 		err = writeRuleItemString(writer, ruleItemPackageName, rule.PackageName)
-		if err != nil {
-			return err
-		}
-	}
-	if len(rule.PackageNameRegex) > 0 {
-		if generateVersion < C.RuleSetVersion5 {
-			return E.New("`package_name_regex` rule item is only supported in version 5 or later")
-		}
-		err = writeRuleItemString(writer, ruleItemPackageNameRegex, rule.PackageNameRegex)
 		if err != nil {
 			return err
 		}

@@ -3,6 +3,7 @@ package adapter
 import (
 	"context"
 	"net/netip"
+	"time"
 
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
@@ -22,8 +23,8 @@ type Outbound interface {
 
 type OutboundWithPreferredRoutes interface {
 	Outbound
-	PreferredDomain(metadata *InboundContext, domain string) bool
-	PreferredAddress(metadata *InboundContext, address netip.Addr) bool
+	PreferredDomain(domain string) bool
+	PreferredAddress(address netip.Addr) bool
 }
 
 type OutboundWithMultiplex interface {
@@ -31,10 +32,9 @@ type OutboundWithMultiplex interface {
 	MultiplexEnabled() bool
 }
 
-type FlowOutbound interface {
+type DirectRouteOutbound interface {
 	Outbound
-	tun.Port
-	PreMatchFlow(network string, destination netip.Addr) PreMatchAction
+	NewDirectRouteConnection(metadata InboundContext, routeContext tun.DirectRouteContext, timeout time.Duration) (tun.DirectRouteDestination, error)
 }
 
 type OutboundRegistry interface {

@@ -16,7 +16,6 @@ import (
 	"github.com/sagernet/sing/common/logger"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
-	"github.com/sagernet/sing/service"
 
 	"github.com/vishvananda/netns"
 )
@@ -26,9 +25,9 @@ type Listener struct {
 	logger                   logger.ContextLogger
 	network                  []string
 	listenOptions            option.ListenOptions
-	connHandler              adapter.ConnectionHandler
-	packetHandler            adapter.PacketHandler
-	oobPacketHandler         adapter.OOBPacketHandler
+	connHandler              adapter.ConnectionHandlerEx
+	packetHandler            adapter.PacketHandlerEx
+	oobPacketHandler         adapter.OOBPacketHandlerEx
 	threadUnsafePacketWriter bool
 	disablePacketOutput      bool
 	setSystemProxy           bool
@@ -49,9 +48,9 @@ type Options struct {
 	Logger                   logger.ContextLogger
 	Network                  []string
 	Listen                   option.ListenOptions
-	ConnectionHandler        adapter.ConnectionHandler
-	PacketHandler            adapter.PacketHandler
-	OOBPacketHandler         adapter.OOBPacketHandler
+	ConnectionHandler        adapter.ConnectionHandlerEx
+	PacketHandler            adapter.PacketHandlerEx
+	OOBPacketHandler         adapter.OOBPacketHandlerEx
 	ThreadUnsafePacketWriter bool
 	DisablePacketOutput      bool
 	SetSystemProxy           bool
@@ -107,13 +106,13 @@ func (l *Listener) Start() error {
 		} else {
 			listenAddrString = listenAddr.String()
 		}
-		systemProxy, err := settings.NewSystemProxy(l.ctx, M.ParseSocksaddrHostPort(listenAddrString, listenPort), l.systemProxySOCKS, nil)
+		systemProxy, err := settings.NewSystemProxy(l.ctx, M.ParseSocksaddrHostPort(listenAddrString, listenPort), l.systemProxySOCKS)
 		if err != nil {
 			return E.Cause(err, "initialize system proxy")
 		}
 		err = systemProxy.Enable()
 		if err != nil {
-			return E.Errors(E.Cause(err, "set system proxy"), systemProxy.Close())
+			return E.Cause(err, "set system proxy")
 		}
 		l.systemProxy = systemProxy
 	}
@@ -123,11 +122,8 @@ func (l *Listener) Start() error {
 func (l *Listener) Close() error {
 	l.shutdown.Store(true)
 	var err error
-	if l.systemProxy != nil {
-		if l.systemProxy.IsEnabled() {
-			err = l.systemProxy.Disable()
-		}
-		err = E.Errors(err, l.systemProxy.Close())
+	if l.systemProxy != nil && l.systemProxy.IsEnabled() {
+		err = l.systemProxy.Disable()
 	}
 	return E.Errors(err, common.Close(
 		l.tcpListener,
@@ -147,45 +143,30 @@ func (l *Listener) ListenOptions() option.ListenOptions {
 	return l.listenOptions
 }
 
-func ListenNetworkNamespace[T any](ctx context.Context, nameOrPath string, block func() (T, error)) (T, error) {
-	if nameOrPath == "" {
-		return block()
-	}
-	manager := service.FromContext[adapter.NetworkNamespaceManager](ctx)
-	if manager != nil {
-		nameOrPath = manager.ResolvePath(nameOrPath)
-	}
-	type blockResult struct {
-		value T
-		err   error
-	}
-	resultChannel := make(chan blockResult, 1)
-	go func() {
+func ListenNetworkNamespace[T any](nameOrPath string, block func() (T, error)) (T, error) {
+	if nameOrPath != "" {
 		runtime.LockOSThread()
-		value, err := listenNetworkNamespaceThread(nameOrPath, block)
-		resultChannel <- blockResult{value, err}
-	}()
-	result := <-resultChannel
-	return result.value, result.err
-}
-
-func listenNetworkNamespaceThread[T any](nameOrPath string, block func() (T, error)) (T, error) {
-	var (
-		targetNs netns.NsHandle
-		err      error
-	)
-	if strings.HasPrefix(nameOrPath, "/") {
-		targetNs, err = netns.GetFromPath(nameOrPath)
-	} else {
-		targetNs, err = netns.GetFromName(nameOrPath)
-	}
-	if err != nil {
-		return common.DefaultValue[T](), E.Cause(err, "get netns ", nameOrPath)
-	}
-	defer targetNs.Close()
-	err = netns.Set(targetNs)
-	if err != nil {
-		return common.DefaultValue[T](), E.Cause(err, "set netns to ", nameOrPath)
+		defer runtime.UnlockOSThread()
+		currentNs, err := netns.Get()
+		if err != nil {
+			return common.DefaultValue[T](), E.Cause(err, "get current netns")
+		}
+		defer currentNs.Close()
+		defer netns.Set(currentNs)
+		var targetNs netns.NsHandle
+		if strings.HasPrefix(nameOrPath, "/") {
+			targetNs, err = netns.GetFromPath(nameOrPath)
+		} else {
+			targetNs, err = netns.GetFromName(nameOrPath)
+		}
+		if err != nil {
+			return common.DefaultValue[T](), E.Cause(err, "get netns ", nameOrPath)
+		}
+		defer targetNs.Close()
+		err = netns.Set(targetNs)
+		if err != nil {
+			return common.DefaultValue[T](), E.Cause(err, "set netns to ", nameOrPath)
+		}
 	}
 	return block()
 }

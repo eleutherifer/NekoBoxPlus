@@ -21,9 +21,6 @@ func (t *balancerOutboundTestTransport) Reset()                         {}
 func (t *balancerOutboundTestTransport) Exchange(context.Context, *mDNS.Msg) (*mDNS.Msg, error) {
 	return nil, nil
 }
-func (t *balancerOutboundTestTransport) ExchangeAsync(_ context.Context, _ *mDNS.Msg, callback func(*mDNS.Msg, error)) {
-	callback(nil, nil)
-}
 
 func TestBalancerDNSOutbound(t *testing.T) {
 	child := func(tag string, detour string) *balancerChild {

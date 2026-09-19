@@ -58,7 +58,7 @@ func NewOutbound(ctx context.Context, _ adapter.Router, logger log.ContextLogger
 		ctx:       ctx,
 		logger:    logger,
 		cli:       options.CLI,
-		queryOpts: queryOptions,
+		queryOpts: *queryOptions,
 	}, nil
 }
 

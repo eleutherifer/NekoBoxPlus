@@ -23,10 +23,9 @@ const (
 )
 
 type MyServerName struct {
-	Index                     int
-	Length                    int
-	ServerName                string
-	ExtensionsListLengthIndex int
+	Index      int
+	Length     int
+	ServerName string
 }
 
 func IndexTLSServerName(payload []byte) *MyServerName {
@@ -42,7 +41,6 @@ func IndexTLSServerName(payload []byte) *MyServerName {
 		return nil
 	}
 	serverName.Index += recordLayerHeaderLen
-	serverName.ExtensionsListLengthIndex += recordLayerHeaderLen
 	return serverName
 }
 
@@ -84,7 +82,6 @@ func indexTLSServerNameFromHandshake(handshake []byte) *MyServerName {
 		return nil
 	}
 	serverName.Index += currentIndex
-	serverName.ExtensionsListLengthIndex = currentIndex
 	return serverName
 }
 

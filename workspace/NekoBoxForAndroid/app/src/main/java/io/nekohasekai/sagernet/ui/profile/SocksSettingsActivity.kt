@@ -1,13 +1,16 @@
 package io.nekohasekai.sagernet.ui.profile
 
-import androidx.compose.runtime.Composable
+import android.os.Bundle
+import androidx.preference.EditTextPreference
+import androidx.preference.PreferenceFragmentCompat
+import io.nekohasekai.sagernet.Key
+import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.database.DataStore
+import io.nekohasekai.sagernet.database.preference.EditTextPreferenceModifiers
 import io.nekohasekai.sagernet.fmt.socks.SOCKSBean
-import io.nekohasekai.sagernet.ui.compose.SocksProfileSettingsScreen
+import moe.matsuri.nb4a.ui.SimpleMenuPreference
 
 class SocksSettingsActivity : ProfileSettingsActivity<SOCKSBean>() {
-    override val usesComposePreferences = true
-
     override fun createEntity() = SOCKSBean()
 
     override fun SOCKSBean.init() {
@@ -34,6 +37,27 @@ class SocksSettingsActivity : ProfileSettingsActivity<SOCKSBean>() {
         sUoT = DataStore.profileCacheStore.getBoolean("sUoT")
     }
 
-    @Composable
-    override fun ComposePreferences() = SocksProfileSettingsScreen()
+    override fun PreferenceFragmentCompat.createPreferences(
+        savedInstanceState: Bundle?,
+        rootKey: String?,
+    ) {
+        addPreferencesFromResource(R.xml.socks_preferences)
+        findPreference<EditTextPreference>(Key.SERVER_PORT)!!.apply {
+            setOnBindEditTextListener(EditTextPreferenceModifiers.Port)
+        }
+        val password = findPreference<EditTextPreference>(Key.SERVER_PASSWORD)!!.apply {
+            summaryProvider = PasswordSummaryProvider
+        }
+        val protocol = findPreference<SimpleMenuPreference>(Key.SERVER_PROTOCOL)!!
+
+        fun updateProtocol(version: Int) {
+            password.isVisible = version == SOCKSBean.PROTOCOL_SOCKS5
+        }
+
+        updateProtocol(DataStore.protocolVersion)
+        protocol.setOnPreferenceChangeListener { _, newValue ->
+            updateProtocol((newValue as String).toInt())
+            true
+        }
+    }
 }

@@ -40,34 +40,30 @@ func HandleStreamDNSRequest(ctx context.Context, router adapter.DNSRouter, conn 
 		return err
 	}
 	metadataInQuery := metadata
-	router.ExchangeAsync(adapter.WithContext(ctx, &metadataInQuery), &message, adapter.DNSQueryOptions{}, func(response *mDNS.Msg, err error) {
+	go func() error {
+		response, err := router.Exchange(adapter.WithContext(ctx, &metadataInQuery), &message, adapter.DNSQueryOptions{})
 		if err != nil {
 			conn.Close()
-			return
+			return err
 		}
-		go writeStreamResponse(conn, response)
-	})
+		responseLength := response.Len()
+		responseBuffer := buf.NewSize(3 + responseLength)
+		defer responseBuffer.Release()
+		responseBuffer.Resize(2, 0)
+		n, err := response.PackBuffer(responseBuffer.FreeBytes())
+		if err != nil {
+			return err
+		}
+		responseBuffer.Truncate(len(n))
+		binary.BigEndian.PutUint16(responseBuffer.ExtendHeader(2), uint16(len(n)))
+		_, err = conn.Write(responseBuffer.Bytes())
+		return err
+	}()
 	return nil
-}
-
-func writeStreamResponse(conn net.Conn, response *mDNS.Msg) {
-	responseLength := response.Len()
-	responseBuffer := buf.NewSize(3 + responseLength)
-	defer responseBuffer.Release()
-	responseBuffer.Resize(2, 0)
-	n, err := response.PackBuffer(responseBuffer.FreeBytes())
-	if err != nil {
-		return
-	}
-	responseBuffer.Truncate(len(n))
-	binary.BigEndian.PutUint16(responseBuffer.ExtendHeader(2), uint16(len(n)))
-	conn.Write(responseBuffer.Bytes())
 }
 
 func NewDNSPacketConnection(ctx context.Context, router adapter.DNSRouter, conn N.PacketConn, cachedPackets []*N.PacketBuffer, metadata adapter.InboundContext) error {
 	metadata.Destination = M.Socksaddr{}
-	frontHeadroom := N.CalculateFrontHeadroom(conn)
-	rearHeadroom := N.CalculateRearHeadroom(conn)
 	var reader N.PacketReader = conn
 	var counters []N.CountFunc
 	cachedPackets = common.Reverse(cachedPackets)
@@ -127,22 +123,24 @@ func NewDNSPacketConnection(ctx context.Context, router adapter.DNSRouter, conn 
 				timeout.Update()
 			}
 			metadataInQuery := metadata
-			router.ExchangeAsync(adapter.WithContext(ctx, &metadataInQuery), &message, adapter.DNSQueryOptions{}, func(response *mDNS.Msg, err error) {
+			go func() error {
+				response, err := router.Exchange(adapter.WithContext(ctx, &metadataInQuery), &message, adapter.DNSQueryOptions{})
 				if err != nil {
 					cancel(err)
-					return
+					return err
 				}
 				timeout.Update()
-				responseBuffer, truncateErr := dns.TruncateDNSMessage(&message, response, frontHeadroom, rearHeadroom)
-				if truncateErr != nil {
-					cancel(truncateErr)
-					return
+				responseBuffer, err := dns.TruncateDNSMessage(&message, response, 1024)
+				if err != nil {
+					cancel(err)
+					return err
 				}
-				writeErr := conn.WritePacket(responseBuffer, destination)
-				if writeErr != nil {
-					cancel(writeErr)
+				err = conn.WritePacket(responseBuffer, destination)
+				if err != nil {
+					cancel(err)
 				}
-			})
+				return err
+			}()
 		}
 	})
 	group.Cleanup(func() {
@@ -152,8 +150,6 @@ func NewDNSPacketConnection(ctx context.Context, router adapter.DNSRouter, conn 
 }
 
 func newDNSPacketConnection(ctx context.Context, router adapter.DNSRouter, conn N.PacketConn, readWaiter N.PacketReadWaiter, readCounters []N.CountFunc, cached []*N.PacketBuffer, metadata adapter.InboundContext) error {
-	frontHeadroom := N.CalculateFrontHeadroom(conn)
-	rearHeadroom := N.CalculateRearHeadroom(conn)
 	fastClose, cancel := context.WithCancelCause(ctx)
 	timeout := canceler.New(fastClose, cancel, C.DNSTimeout)
 	var group task.Group
@@ -197,22 +193,24 @@ func newDNSPacketConnection(ctx context.Context, router adapter.DNSRouter, conn 
 				timeout.Update()
 			}
 			metadataInQuery := metadata
-			router.ExchangeAsync(adapter.WithContext(ctx, &metadataInQuery), &message, adapter.DNSQueryOptions{}, func(response *mDNS.Msg, err error) {
+			go func() error {
+				response, err := router.Exchange(adapter.WithContext(ctx, &metadataInQuery), &message, adapter.DNSQueryOptions{})
 				if err != nil {
 					cancel(err)
-					return
+					return err
 				}
 				timeout.Update()
-				responseBuffer, truncateErr := dns.TruncateDNSMessage(&message, response, frontHeadroom, rearHeadroom)
-				if truncateErr != nil {
-					cancel(truncateErr)
-					return
+				responseBuffer, err := dns.TruncateDNSMessage(&message, response, 1024)
+				if err != nil {
+					cancel(err)
+					return err
 				}
-				writeErr := conn.WritePacket(responseBuffer, destination)
-				if writeErr != nil {
-					cancel(writeErr)
+				err = conn.WritePacket(responseBuffer, destination)
+				if err != nil {
+					cancel(err)
 				}
-			})
+				return err
+			}()
 		}
 	})
 	group.Cleanup(func() {

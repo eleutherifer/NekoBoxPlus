@@ -3,7 +3,6 @@
 package ccm
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"github.com/goccy/go-json"
@@ -34,9 +33,9 @@ func getKeychainServiceName() string {
 	return "Claude Code-credentials-" + hex.EncodeToString(hash[:])[:8]
 }
 
-func platformReadCredentials(ctx context.Context, customPath string) (*oauthCredentials, error) {
+func platformReadCredentials(customPath string) (*oauthCredentials, error) {
 	if customPath != "" {
-		return readCredentialsFromFile(ctx, customPath)
+		return readCredentialsFromFile(customPath)
 	}
 
 	userInfo, err := getRealUser()
@@ -67,12 +66,12 @@ func platformReadCredentials(ctx context.Context, customPath string) (*oauthCred
 	if err != nil {
 		return nil, err
 	}
-	return readCredentialsFromFile(ctx, defaultPath)
+	return readCredentialsFromFile(defaultPath)
 }
 
-func platformWriteCredentials(ctx context.Context, oauthCredentials *oauthCredentials, customPath string) error {
+func platformWriteCredentials(oauthCredentials *oauthCredentials, customPath string) error {
 	if customPath != "" {
-		return writeCredentialsToFile(ctx, oauthCredentials, customPath)
+		return writeCredentialsToFile(oauthCredentials, customPath)
 	}
 
 	userInfo, err := getRealUser()
@@ -113,5 +112,5 @@ func platformWriteCredentials(ctx context.Context, oauthCredentials *oauthCreden
 	if err != nil {
 		return err
 	}
-	return writeCredentialsToFile(ctx, oauthCredentials, defaultPath)
+	return writeCredentialsToFile(oauthCredentials, defaultPath)
 }

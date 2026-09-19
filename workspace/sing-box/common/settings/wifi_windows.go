@@ -45,7 +45,7 @@ func NewWIFIMonitor(callback func(adapter.WIFIState)) (WIFIMonitor, error) {
 	}, nil
 }
 
-func (m *windowsWIFIMonitor) ReadWIFIState(ctx context.Context) adapter.WIFIState {
+func (m *windowsWIFIMonitor) ReadWIFIState() adapter.WIFIState {
 	interfaces, err := winwlanapi.EnumInterfaces(m.handle)
 	if err != nil || len(interfaces) == 0 {
 		return adapter.WIFIState{}
@@ -92,7 +92,7 @@ func (m *windowsWIFIMonitor) Start() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	m.cancel = cancel
 
-	m.lastState = m.ReadWIFIState(ctx)
+	m.lastState = m.ReadWIFIState()
 
 	callbackFunc := func(data *winwlanapi.NotificationData, callbackContext uintptr) uintptr {
 		if data.NotificationSource != winwlanapi.NotificationSourceACM {
@@ -126,7 +126,7 @@ func (m *windowsWIFIMonitor) checkAndNotify() {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	state := m.ReadWIFIState(context.Background())
+	state := m.ReadWIFIState()
 	if state != m.lastState {
 		m.lastState = state
 		if m.callback != nil {

@@ -1,49 +1,46 @@
 package io.nekohasekai.sagernet.widget
 
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.w3c.dom.Element
 import java.io.File
+import javax.xml.parsers.DocumentBuilderFactory
 
 class ProfileCardMarqueeLayoutTest {
 
     @Test
-    fun composeCardsUseContinuousMarquee() {
-        val source = File(
-            "src/main/java/io/nekohasekai/sagernet/ui/compose/ProfileCard.kt"
-        ).readText()
-
-        assertTrue(source.contains(".basicMarquee("))
-        assertTrue(source.contains("iterations = Int.MAX_VALUE"))
-        assertTrue(source.contains("repeatDelayMillis = 1_200"))
+    fun normalCardStatusUsesFixedGapMarquee() {
+        assertStatusUsesFixedGapMarquee("layout_profile.xml")
     }
 
     @Test
-    fun migratedCardVisualsMatchLegacySizingAndOptionalBorders() {
-        val profileSource = File(
-            "src/main/java/io/nekohasekai/sagernet/ui/compose/ProfileCard.kt"
-        ).readText()
-        val routeSource = File(
-            "src/main/java/io/nekohasekai/sagernet/ui/compose/RouteItemCard.kt"
-        ).readText()
-        val menuSource = File("src/main/res/menu/add_profile_menu.xml").readText()
-
-        assertTrue(routeSource.contains("style = MaterialTheme.typography.bodyMedium"))
-        assertTrue(profileSource.contains("MaterialTheme.colorScheme.surface"))
-        assertTrue(profileSource.contains("MaterialTheme.colorScheme.outlineVariant"))
-        assertTrue(menuSource.contains("android:id=\"@+id/action_profile_card_borders\""))
-        assertTrue(
-            menuSource.indexOf("</group>") <
-                menuSource.indexOf("android:id=\"@+id/action_profile_card_borders\"")
-        )
+    fun doubleAndAlternateCardStatusUsesFixedGapMarquee() {
+        assertStatusUsesFixedGapMarquee("layout_profile_double.xml")
     }
 
     @Test
-    fun composeMarqueeUsesFixedGapAndSingleLineText() {
+    fun fixedGapMarqueeUsesCurrentMeasurementAndAggregatedVisibility() {
         val source = File(
-            "src/main/java/io/nekohasekai/sagernet/ui/compose/ProfileCard.kt"
+            "src/main/java/io/nekohasekai/sagernet/widget/EndAlignedMarqueeTextView.kt"
         ).readText()
 
-        assertTrue(source.contains("spacing = MarqueeSpacing(24.dp)"))
-        assertTrue(source.contains("maxLines = 1"))
+        assertTrue(source.contains("updateOverflowState(measuredWidth)"))
+        assertTrue(source.contains("override fun onVisibilityAggregated(isVisible: Boolean)"))
+        assertFalse(source.contains("val availableWidth = width - compoundPaddingStart"))
+    }
+
+    private fun assertStatusUsesFixedGapMarquee(layoutName: String) {
+        val layout = File("src/main/res/layout/$layoutName")
+        assertTrue("$layoutName not found at ${layout.absolutePath}", layout.isFile)
+
+        val document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(layout)
+        val elements = document.getElementsByTagName("*")
+        val profileStatus = (0 until elements.length)
+            .map { elements.item(it) as Element }
+            .single { it.getAttribute("android:id") == "@+id/profile_status" }
+
+        assertEquals(EndAlignedMarqueeTextView::class.java.name, profileStatus.tagName)
     }
 }

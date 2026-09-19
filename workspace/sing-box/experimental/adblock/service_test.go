@@ -1780,9 +1780,6 @@ func TestCheckDNSResponseBlocksOriginalDomainWhenUncloakingDisabled(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = logFactory.Start(); err != nil {
-		t.Fatal(err)
-	}
 	defer logFactory.Close()
 
 	service := &Service{

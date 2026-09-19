@@ -50,10 +50,13 @@ QUIC 拥塞控制算法。
 | 算法             | 描述                 |
 |----------------|--------------------|
 | `bbr`          | BBR                |
+| `bbr_standard` | BBR (标准版) |
+| `bbr2`         | BBRv2              |
+| `bbr2_variant` | BBRv2 (一种试验变体)     |
 | `cubic`        | CUBIC              |
 | `reno`         | New Reno           |
 
-默认使用 `bbr`。
+默认使用 `bbr`（NaiveProxy 基于的 Chromium 使用的 QUICHE 的默认值）。
 
 #### tls
 

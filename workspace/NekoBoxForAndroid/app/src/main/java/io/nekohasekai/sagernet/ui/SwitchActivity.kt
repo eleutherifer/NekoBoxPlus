@@ -3,15 +3,13 @@ package io.nekohasekai.sagernet.ui
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.fragment.app.Fragment
+import androidx.recyclerview.widget.RecyclerView
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.SagerNet
 import io.nekohasekai.sagernet.aidl.ISagerNetService
@@ -19,16 +17,14 @@ import io.nekohasekai.sagernet.bg.BaseService
 import io.nekohasekai.sagernet.bg.SagerConnection
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.ProfileManager
+import io.nekohasekai.sagernet.ktx.FixedLinearLayoutManager
 import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ktx.readableMessage
 import io.nekohasekai.sagernet.ktx.runOnDefaultDispatcher
 import io.nekohasekai.sagernet.ktx.runOnMainDispatcher
-import io.nekohasekai.sagernet.ui.compose.ClashModeItem
-import io.nekohasekai.sagernet.ui.compose.ClashModeScreen
-import io.nekohasekai.sagernet.ui.compose.NekoComposeTheme
 import org.json.JSONArray
 
-class SwitchActivity : ThemedActivity(),
+class SwitchActivity : ThemedActivity(R.layout.layout_empty),
     ConfigurationFragment.SelectCallback,
     SagerConnection.Callback {
 
@@ -48,7 +44,6 @@ class SwitchActivity : ThemedActivity(),
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        installFragmentHost()
         connection.connect(this, this)
 
         if (intent.getBooleanExtra(EXTRA_INITIAL_CLASH_MODE, false)) {
@@ -74,11 +69,10 @@ class SwitchActivity : ThemedActivity(),
     }
 
     private fun showServerChooser() {
-        val selectedProfile = ProfileManager.getProfile(DataStore.selectedProxy)
         supportFragmentManager.beginTransaction()
             .replace(
                 R.id.fragment_holder,
-                ConfigurationFragment(true, selectedProfile, R.string.action_switch)
+                ConfigurationFragment(true, null, R.string.action_switch)
             )
             .commitAllowingStateLoss()
     }
@@ -175,40 +169,103 @@ class SwitchActivity : ThemedActivity(),
         refreshServerChooserToolbar()
     }
 
-    class ClashModeSwitchFragment : Fragment() {
-        private var selectedMode by mutableStateOf("")
+    class ClashModeSwitchFragment : ToolbarFragment(R.layout.layout_clash_mode_switch) {
 
-        override fun onCreateView(
-            inflater: android.view.LayoutInflater,
-            container: ViewGroup?,
-            savedInstanceState: Bundle?,
-        ): View {
+        override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+            super.onViewCreated(view, savedInstanceState)
+
+            toolbar.setTitle(R.string.clash_mode)
+            toolbar.setNavigationIcon(R.drawable.ic_navigation_close)
+            toolbar.setNavigationOnClickListener {
+                requireActivity().finish()
+            }
+            toolbar.menu.clear()
+            toolbar.menu.add(R.string.action_switch).apply {
+                setIcon(R.drawable.ic_baseline_view_list_24)
+                setShowAsAction(android.view.MenuItem.SHOW_AS_ACTION_ALWAYS)
+                setOnMenuItemClickListener {
+                    (requireActivity() as SwitchActivity).showServerChooser()
+                    true
+                }
+            }
+
             val activity = requireActivity() as SwitchActivity
-            selectedMode = runCatching { activity.getCurrentClashMode() }.getOrDefault("")
+            val currentMode = runCatching { activity.getCurrentClashMode() }.getOrDefault("")
             val modes = runCatching { activity.getClashModeList() }.getOrDefault(emptyList())
             if (modes.isEmpty()) {
                 Toast.makeText(requireContext(), R.string.clash_mode_unavailable, Toast.LENGTH_SHORT).show()
-                activity.finish()
+                requireActivity().finish()
+                return
             }
-            val items = modes.map { ClashModeItem(it, activity.displayClashMode(it)) }
-            return ComposeView(requireContext()).apply {
-                setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-                setContent {
-                    NekoComposeTheme {
-                        ClashModeScreen(
-                            modes = items,
-                            selectedMode = selectedMode,
-                            onClose = activity::finish,
-                            onShowServers = activity::showServerChooser,
-                            onSelect = {
-                                if (!it.equals(selectedMode, ignoreCase = true)) {
-                                    selectedMode = it
-                                    activity.selectClashMode(it)
-                                }
-                            },
-                        )
-                    }
-                }
+
+            view.findViewById<RecyclerView>(R.id.clash_mode_list).apply {
+                layoutManager = FixedLinearLayoutManager(this)
+                adapter = ClashModeAdapter(activity, modes, currentMode)
+            }
+        }
+    }
+
+    private class ClashModeAdapter(
+        private val activity: SwitchActivity,
+        private val modes: List<String>,
+        currentMode: String,
+    ) : RecyclerView.Adapter<ClashModeAdapter.Holder>() {
+
+        private var selectedMode = currentMode
+        private var recyclerView: RecyclerView? = null
+
+        override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
+            this.recyclerView = recyclerView
+        }
+
+        override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
+            if (this.recyclerView === recyclerView) {
+                this.recyclerView = null
+            }
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.layout_clash_mode_item, parent, false)
+            return Holder(view)
+        }
+
+        override fun onBindViewHolder(holder: Holder, position: Int) {
+            val mode = modes[position]
+            val selected = mode.equals(selectedMode, ignoreCase = true)
+            holder.setSelected(selected)
+            holder.title.text = activity.displayClashMode(mode)
+            holder.itemView.setOnClickListener {
+                selectVisualMode(mode, holder)
+                activity.selectClashMode(mode)
+            }
+        }
+
+        override fun getItemCount(): Int = modes.size
+
+        private fun selectVisualMode(mode: String, holder: Holder) {
+            if (mode.equals(selectedMode, ignoreCase = true)) return
+
+            val previousIndex = modes.indexOfFirst { it.equals(selectedMode, ignoreCase = true) }
+            selectedMode = mode
+            val selectedIndex = modes.indexOfFirst { it.equals(selectedMode, ignoreCase = true) }
+
+            if (previousIndex != -1) {
+                (recyclerView?.findViewHolderForAdapterPosition(previousIndex) as? Holder)
+                    ?.setSelected(false)
+            }
+            holder.setSelected(true)
+            if (previousIndex != -1) notifyItemChanged(previousIndex)
+            if (selectedIndex != -1) notifyItemChanged(selectedIndex)
+        }
+
+        class Holder(view: View) : RecyclerView.ViewHolder(view) {
+            val selectedView: LinearLayout = view.findViewById(R.id.selected_view)
+            val title: TextView = view.findViewById(R.id.clash_mode_name)
+
+            fun setSelected(selected: Boolean) {
+                selectedView.visibility = if (selected) View.VISIBLE else View.INVISIBLE
+                itemView.isSelected = selected
             }
         }
     }

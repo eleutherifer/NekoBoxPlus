@@ -19,10 +19,7 @@ func RegisterTransport(registry *dns.TransportRegistry) {
 	dns.RegisterTransport[option.HostsDNSServerOptions](registry, C.DNSTypeHosts, NewTransport)
 }
 
-var (
-	_ adapter.DNSTransport                    = (*Transport)(nil)
-	_ adapter.DNSTransportWithPreferredDomain = (*Transport)(nil)
-)
+var _ adapter.DNSTransport = (*Transport)(nil)
 
 type Transport struct {
 	dns.TransportAdapter
@@ -36,14 +33,10 @@ func NewTransport(ctx context.Context, logger log.ContextLogger, tag string, opt
 		predefined = make(map[string][]netip.Addr)
 	)
 	if len(options.Path) == 0 {
-		defaultFile, err := NewDefault()
-		if err != nil {
-			return nil, err
-		}
-		files = append(files, defaultFile)
+		files = append(files, NewFile(DefaultPath))
 	} else {
 		for _, path := range options.Path {
-			files = append(files, NewFile(ctx, filemanager.BasePath(ctx, os.ExpandEnv(path))))
+			files = append(files, NewFile(filemanager.BasePath(ctx, os.ExpandEnv(path))))
 		}
 	}
 	if options.Predefined != nil {
@@ -69,18 +62,6 @@ func (t *Transport) Close() error {
 func (t *Transport) Reset() {
 }
 
-func (t *Transport) PreferredDomain(domain string) bool {
-	if _, loaded := t.predefined[domain]; loaded {
-		return true
-	}
-	for _, file := range t.files {
-		if len(file.Lookup(domain)) > 0 {
-			return true
-		}
-	}
-	return false
-}
-
 func (t *Transport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, error) {
 	question := message.Question[0]
 	domain := mDNS.CanonicalName(question.Name)
@@ -103,8 +84,4 @@ func (t *Transport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg,
 		},
 		Question: []mDNS.Question{question},
 	}, nil
-}
-
-func (t *Transport) ExchangeAsync(ctx context.Context, message *mDNS.Msg, callback func(response *mDNS.Msg, err error)) {
-	callback(t.Exchange(ctx, message))
 }

@@ -3,8 +3,6 @@ package io.nekohasekai.sagernet.fmt
 import io.nekohasekai.sagernet.fmt.masque.MasqueBean
 import io.nekohasekai.sagernet.fmt.mieru.MieruBean
 import io.nekohasekai.sagernet.fmt.naive.NaiveBean
-import io.nekohasekai.sagernet.fmt.openconnect.OpenConnectBean
-import io.nekohasekai.sagernet.fmt.openvpn.OpenVPNBean
 import io.nekohasekai.sagernet.fmt.trusttunnel.TrustTunnelBean
 import moe.matsuri.nb4a.SingBoxOptions.OutboundTLSOptions
 import moe.matsuri.nb4a.SingBoxOptions.OutboundECHOptions
@@ -32,22 +30,17 @@ fun AbstractBean.supportsSharedTLSFieldInjection(): Boolean {
 internal data class DialOptionCapabilities(
     val tcp: Boolean,
     val udpFragment: Boolean,
-    val tcpFastOpen: Boolean = tcp,
 ) {
     companion object {
         val NONE = DialOptionCapabilities(tcp = false, udpFragment = false)
         val TCP = DialOptionCapabilities(tcp = true, udpFragment = false)
-        val TCP_WITHOUT_FAST_OPEN = DialOptionCapabilities(
-            tcp = true,
-            udpFragment = false,
-            tcpFastOpen = false,
-        )
         val UDP = DialOptionCapabilities(tcp = false, udpFragment = true)
         val TCP_AND_UDP = DialOptionCapabilities(tcp = true, udpFragment = true)
     }
 }
 
 private val TCP_ONLY_DIAL_OPTION_TYPES = setOf(
+    "anytls",
     "byedpi",
     "http",
     "shadowtls",
@@ -74,40 +67,8 @@ private val TCP_AND_UDP_DIAL_OPTION_TYPES = setOf(
     "tailscale",
 )
 
-private fun String?.isTcpTransport(): Boolean = this?.lowercase()?.startsWith("tcp") == true
-
-private fun String?.isUdpTransport(): Boolean = this.isNullOrBlank() || this.lowercase().startsWith("udp")
-
-private fun OpenVPNBean.dialOptionCapabilities(): DialOptionCapabilities {
-    val transports = buildList {
-        add(network)
-        additionalRemotes.lineSequence().map(String::trim).filter(String::isNotEmpty).forEach { remote ->
-            add(remote.substringBefore("://", missingDelimiterValue = "udp"))
-        }
-    }
-    return DialOptionCapabilities(
-        tcp = transports.any(String?::isTcpTransport),
-        udpFragment = transports.any(String?::isUdpTransport),
-    )
-}
-
-private fun SingBoxOption.customOpenVPNCapabilities(): DialOptionCapabilities {
-    val options = asMap()
-    val transports = buildList {
-        add(options["network"] as? String)
-        (options["servers"] as? List<*>)?.forEach { server ->
-            add((server as? Map<*, *>)?.get("network") as? String)
-        }
-    }
-    return DialOptionCapabilities(
-        tcp = transports.any(String?::isTcpTransport),
-        udpFragment = transports.any(String?::isUdpTransport),
-    )
-}
-
 internal fun SingBoxOption.resolveDialOptionCapabilities(bean: AbstractBean): DialOptionCapabilities =
     when (optionType()) {
-        "anytls" -> DialOptionCapabilities.TCP_WITHOUT_FAST_OPEN
         in TCP_ONLY_DIAL_OPTION_TYPES -> DialOptionCapabilities.TCP
         in UDP_ONLY_DIAL_OPTION_TYPES -> DialOptionCapabilities.UDP
         in TCP_AND_UDP_DIAL_OPTION_TYPES -> DialOptionCapabilities.TCP_AND_UDP
@@ -139,11 +100,6 @@ internal fun SingBoxOption.resolveDialOptionCapabilities(bean: AbstractBean): Di
             val usesHttp2 = if (bean is MasqueBean) bean.useHTTP2 == true else asMap()["transport"] == "h2"
             if (usesHttp2) DialOptionCapabilities.TCP else DialOptionCapabilities.UDP
         }
-        "openvpn-client" -> if (bean is OpenVPNBean) bean.dialOptionCapabilities() else customOpenVPNCapabilities()
-        "openconnect" -> {
-            val noUdp = if (bean is OpenConnectBean) bean.noUDP == true else asMap()["no_udp"] == true
-            if (noUdp) DialOptionCapabilities.TCP else DialOptionCapabilities.TCP_AND_UDP
-        }
         // These options do not establish a compatible upstream transport themselves.
         "awg", "masterdnsvpn", "selector", "urltest" -> DialOptionCapabilities.NONE
         // Raw custom outbounds are only modified when their type is recognized above.
@@ -154,7 +110,7 @@ internal fun SingBoxOption.applySharedDialOptions(
     bean: AbstractBean,
     capabilities: DialOptionCapabilities,
 ) {
-    if (capabilities.tcpFastOpen && bean.tcpFastOpen == true) {
+    if (capabilities.tcp && optionType() != "anytls" && bean.tcpFastOpen == true) {
         _hack_config_map["tcp_fast_open"] = true
     }
     if (capabilities.tcp && bean.tcpMultiPath == true) {
@@ -168,7 +124,7 @@ internal fun SingBoxOption.applySharedDialOptions(
     if (capabilities.tcp && bean.disableTcpKeepAlive == true) {
         _hack_config_map["disable_tcp_keep_alive"] = true
     }
-    if (capabilities.tcp && !(bean is OpenConnectBean && bean.disableTcpKeepAlive == true)) {
+    if (capabilities.tcp) {
         bean.tcpKeepAlive?.takeIf { it.isNotBlank() }?.let {
             _hack_config_map["tcp_keep_alive"] = it.trim()
         }
@@ -184,7 +140,7 @@ internal fun SingBoxOption.applyGlobalDialOverrides(
     udpFragment: String,
     capabilities: DialOptionCapabilities,
 ) {
-    if (capabilities.tcpFastOpen && tcpFastOpen) {
+    if (capabilities.tcp && optionType() != "anytls" && tcpFastOpen) {
         _hack_config_map["tcp_fast_open"] = true
     }
     if (capabilities.tcp && tcpMultiPath) {
@@ -243,18 +199,5 @@ fun OutboundTLSOptions.applySharedTLSOptions(bean: AbstractBean) {
             ech = OutboundECHOptions().apply { enabled = true }
         }
         ech?.query_server_name = queryName
-    }
-    handshake_timeout = bean.tlsHandshakeTimeout?.trim()?.takeIf { it.isNotEmpty() }
-}
-
-fun SingBoxOption.applySharedQUICOptions(bean: AbstractBean) {
-    bean.quicIdleTimeout?.trim()?.takeIf { it.isNotEmpty() }?.let { _hack_config_map["idle_timeout"] = it }
-    bean.quicKeepAlivePeriod?.trim()?.takeIf { it.isNotEmpty() }?.let { _hack_config_map["keep_alive_period"] = it }
-    bean.quicStreamReceiveWindow?.takeIf { it > 0 }?.let { _hack_config_map["stream_receive_window"] = it }
-    bean.quicConnectionReceiveWindow?.takeIf { it > 0 }?.let { _hack_config_map["connection_receive_window"] = it }
-    bean.quicMaxConcurrentStreams?.takeIf { it > 0 }?.let { _hack_config_map["max_concurrent_streams"] = it }
-    bean.quicInitialPacketSize?.takeIf { it > 0 }?.let { _hack_config_map["initial_packet_size"] = it }
-    if (bean.quicDisablePathMtuDiscovery == true) {
-        _hack_config_map["disable_path_mtu_discovery"] = true
     }
 }

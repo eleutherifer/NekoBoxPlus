@@ -132,8 +132,6 @@
 
     <style name="ThemeOverlay.Material3.MaterialAlertDialog.SagerNet" parent="ThemeOverlay.Material3.MaterialAlertDialog">
         <item name="alertDialogStyle">@style/MaterialAlertDialog.Material3.SagerNet</item>
-        <item name="materialAlertDialogTitleTextStyle">@style/TextAppearance.SagerNet.Material3.AlertDialog.Title</item>
-        <item name="materialAlertDialogBodyTextStyle">@style/TextAppearance.SagerNet.Material3.AlertDialog.Body</item>
         <item name="buttonBarPositiveButtonStyle">@style/Widget.Material3.Button.TextButton.Dialog.Primary</item>
         <item name="buttonBarNegativeButtonStyle">@style/Widget.Material3.Button.TextButton.Dialog.Primary</item>
         <item name="buttonBarNeutralButtonStyle">@style/Widget.Material3.Button.TextButton.Dialog.Primary</item>
@@ -144,14 +142,6 @@
         <item name="backgroundTint">?attr/colorSurfaceContainerHigh</item>
         <item name="shapeAppearance">@style/ShapeAppearance.SagerNet.Material3.Large</item>
         <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.SagerNet.Material3.Dialog</item>
-    </style>
-
-    <style name="TextAppearance.SagerNet.Material3.AlertDialog.Title" parent="MaterialAlertDialog.Material3.Title.Text">
-        <item name="android:textColor">?attr/colorOnSurface</item>
-    </style>
-
-    <style name="TextAppearance.SagerNet.Material3.AlertDialog.Body" parent="MaterialAlertDialog.Material3.Body.Text">
-        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
     </style>
 
     <style name="Widget.Material3.CheckedTextView.SagerNet" parent="Widget.Material3.CheckedTextView">

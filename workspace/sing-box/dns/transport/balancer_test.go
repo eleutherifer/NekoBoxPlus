@@ -110,12 +110,6 @@ func (t *balancerTestTransport) Exchange(ctx context.Context, message *mDNS.Msg)
 	return response, nil
 }
 
-func (t *balancerTestTransport) ExchangeAsync(ctx context.Context, message *mDNS.Msg, callback func(response *mDNS.Msg, err error)) {
-	go func() {
-		callback(t.Exchange(ctx, message))
-	}()
-}
-
 func (t *balancerTestTransport) observedDeadline() time.Duration {
 	return time.Duration(t.lastDeadline.Load())
 }

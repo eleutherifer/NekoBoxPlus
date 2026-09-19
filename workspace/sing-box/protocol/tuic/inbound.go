@@ -13,7 +13,6 @@ import (
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-	qtls "github.com/sagernet/sing-quic"
 	"github.com/sagernet/sing-quic/tuic"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/auth"
@@ -65,18 +64,9 @@ func NewInbound(ctx context.Context, router adapter.Router, logger log.ContextLo
 		udpTimeout = C.UDPTimeout
 	}
 	service, err := tuic.NewService[int](tuic.ServiceOptions{
-		Context:   ctx,
-		Logger:    logger,
-		TLSConfig: tlsConfig,
-		QUICOptions: qtls.QUICOptions{
-			IdleTimeout:             options.IdleTimeout.Build(),
-			KeepAlivePeriod:         options.KeepAlivePeriod.Build(),
-			StreamReceiveWindow:     options.StreamReceiveWindow.Value(),
-			ConnectionReceiveWindow: options.ConnectionReceiveWindow.Value(),
-			MaxConcurrentStreams:    options.MaxConcurrentStreams,
-			InitialPacketSize:       options.InitialPacketSize,
-			DisablePathMTUDiscovery: options.DisablePathMTUDiscovery,
-		},
+		Context:           ctx,
+		Logger:            logger,
+		TLSConfig:         tlsConfig,
 		CongestionControl: options.CongestionControl,
 		AuthTimeout:       time.Duration(options.AuthTimeout),
 		ZeroRTTHandshake:  options.ZeroRTTHandshake,

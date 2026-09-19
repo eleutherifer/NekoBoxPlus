@@ -15,7 +15,6 @@ import (
 	"github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing-tun/ping"
 	"github.com/sagernet/sing/common"
-	"github.com/sagernet/sing/common/control"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/logger"
 	M "github.com/sagernet/sing/common/metadata"
@@ -26,8 +25,6 @@ func RegisterOutbound(registry *outbound.Registry) {
 	outbound.Register[option.FragmentExclaveOutboundOptions](registry, C.TypeFragmentExclave, NewOutbound)
 }
 
-var _ adapter.FlowOutbound = (*Outbound)(nil)
-
 type Outbound struct {
 	outbound.Adapter
 	ctx           context.Context
@@ -36,7 +33,6 @@ type Outbound struct {
 	fallbackDelay time.Duration
 	splitRecord   bool
 	splitPacket   bool
-	icmpPort      *ping.Port
 }
 
 func NewOutbound(ctx context.Context, _ adapter.Router, logger log.ContextLogger, tag string, options option.FragmentExclaveOutboundOptions) (adapter.Outbound, error) {
@@ -53,7 +49,7 @@ func NewOutbound(ctx context.Context, _ adapter.Router, logger log.ContextLogger
 	if err != nil {
 		return nil, err
 	}
-	fragmentOutbound := &Outbound{
+	return &Outbound{
 		Adapter:       outbound.NewAdapterWithDialerOptions(C.TypeFragmentExclave, tag, []string{N.NetworkTCP, N.NetworkUDP, N.NetworkICMP}, options.DialerOptions),
 		ctx:           ctx,
 		logger:        logger,
@@ -61,13 +57,7 @@ func NewOutbound(ctx context.Context, _ adapter.Router, logger log.ContextLogger
 		fallbackDelay: time.Duration(options.FallbackDelay),
 		splitRecord:   options.TLSRecordFragmentation,
 		splitPacket:   options.TCPSegmentation,
-	}
-	if defaultDialer, isDefaultDialer := common.Cast[*dialer.DefaultDialer](fragmentOutbound.dialer); isDefaultDialer {
-		fragmentOutbound.icmpPort = ping.NewPort(ctx, logger, func(destination netip.Addr) control.Func {
-			return defaultDialer.DialerForICMPDestination(destination).Control
-		}, 0)
-	}
-	return fragmentOutbound, nil
+	}, nil
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
@@ -138,38 +128,14 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 	return h.dialer.ListenPacket(ctx, destination)
 }
 
-func (h *Outbound) PreMatchFlow(network string, destination netip.Addr) adapter.PreMatchAction {
-	if network == N.NetworkICMP && h.icmpPort != nil {
-		return adapter.PreMatchFlow
+func (h *Outbound) NewDirectRouteConnection(metadata adapter.InboundContext, routeContext tun.DirectRouteContext, timeout time.Duration) (tun.DirectRouteDestination, error) {
+	ctx := log.ContextWithNewID(h.ctx)
+	destination, err := ping.ConnectDestination(ctx, h.logger, common.MustCast[*dialer.DefaultDialer](h.dialer).DialerForICMPDestination(metadata.Destination.Addr).Control, metadata.Destination.Addr, routeContext, timeout)
+	if err != nil {
+		return nil, err
 	}
-	return adapter.PreMatchContinue
-}
-
-func (h *Outbound) PortAddresses() (netip.Addr, netip.Addr) {
-	return h.icmpPort.PortAddresses()
-}
-
-func (h *Outbound) PortMTU() uint32 {
-	return h.icmpPort.PortMTU()
-}
-
-func (h *Outbound) AttachReturn(returnPath tun.Return) error {
-	return h.icmpPort.AttachReturn(returnPath)
-}
-
-func (h *Outbound) DetachReturn(returnPath tun.Return) error {
-	return h.icmpPort.DetachReturn(returnPath)
-}
-
-func (h *Outbound) WritePackets(packets [][]byte) error {
-	return h.icmpPort.WritePackets(packets)
-}
-
-func (h *Outbound) Close() error {
-	if h.icmpPort != nil {
-		return h.icmpPort.Close()
-	}
-	return nil
+	h.logger.InfoContext(ctx, "linked ", metadata.Network, " connection from ", metadata.Source.AddrString(), " to ", metadata.Destination.AddrString())
+	return destination, nil
 }
 
 func (h *Outbound) ListenSerialNetworkPacket(ctx context.Context, destination M.Socksaddr, destinationAddresses []netip.Addr, networkStrategy *C.NetworkStrategy, networkType []C.InterfaceType, fallbackNetworkType []C.InterfaceType, fallbackDelay time.Duration) (net.PacketConn, netip.Addr, error) {

@@ -5,11 +5,12 @@ package derp
 import (
 	"bufio"
 	"context"
+	stdTLS "crypto/tls"
 	"fmt"
+	"github.com/goccy/go-json"
 	"io"
 	"net"
 	"net/http"
-
 	"net/netip"
 	"os"
 	"path/filepath"
@@ -17,7 +18,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/goccy/go-json"
 	"github.com/sagernet/sing-box/adapter"
 	boxService "github.com/sagernet/sing-box/adapter/service"
 	"github.com/sagernet/sing-box/common/dialer"
@@ -34,6 +34,7 @@ import (
 	"github.com/sagernet/sing/common/logger"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
+	"github.com/sagernet/sing/common/ntp"
 	aTLS "github.com/sagernet/sing/common/tls"
 	"github.com/sagernet/sing/service"
 	"github.com/sagernet/sing/service/filemanager"
@@ -50,7 +51,7 @@ import (
 	"github.com/coder/websocket"
 	"github.com/go-chi/render"
 	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c" //nolint:staticcheck
+	"golang.org/x/net/http2/h2c"
 )
 
 func Register(registry *boxService.Registry) {
@@ -138,7 +139,7 @@ func NewService(ctx context.Context, logger log.ContextLogger, tag string, optio
 func (d *Service) Start(stage adapter.StartStage) error {
 	switch stage {
 	case adapter.StartStateStart:
-		config, err := readDERPConfig(d.ctx, filemanager.BasePath(d.ctx, d.configPath))
+		config, err := readDERPConfig(filemanager.BasePath(d.ctx, d.configPath))
 		if err != nil {
 			return err
 		}
@@ -150,14 +151,29 @@ func (d *Service) Start(stage adapter.StartStage) error {
 		if len(d.verifyClientURL) > 0 {
 			var httpClients []*http.Client
 			var urls []string
-			httpClientManager := service.FromContext[adapter.HTTPClientManager](d.ctx)
-			for index, verifyOptions := range d.verifyClientURL {
-				transport, createErr := httpClientManager.ResolveTransport(d.ctx, d.logger, verifyOptions.HTTPClientOptions)
+			for index, options := range d.verifyClientURL {
+				verifyDialer, createErr := dialer.NewWithOptions(dialer.Options{
+					Context:        d.ctx,
+					Options:        options.DialerOptions,
+					RemoteIsDomain: options.ServerIsDomain(),
+					NewDialer:      true,
+				})
 				if createErr != nil {
 					return E.Cause(createErr, "verify_client_url[", index, "]")
 				}
-				httpClients = append(httpClients, &http.Client{Transport: transport})
-				urls = append(urls, verifyOptions.URL)
+				httpClients = append(httpClients, &http.Client{
+					Transport: &http.Transport{
+						ForceAttemptHTTP2: true,
+						TLSClientConfig: &stdTLS.Config{
+							RootCAs: adapter.RootPoolFromContext(d.ctx),
+							Time:    ntp.TimeFuncFromContext(d.ctx),
+						},
+						DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+							return verifyDialer.DialContext(ctx, network, M.ParseSocksaddr(addr))
+						},
+					},
+				})
+				urls = append(urls, options.URL)
 			}
 			server.SetVerifyClientHTTPClient(httpClients)
 			server.SetVerifyClientURL(urls)
@@ -167,7 +183,7 @@ func (d *Service) Start(stage adapter.StartStage) error {
 			server.SetMeshKey(d.meshKey)
 		} else if d.meshKeyPath != "" {
 			var meshKeyContent []byte
-			meshKeyContent, err = filemanager.ReadFile(d.ctx, d.meshKeyPath)
+			meshKeyContent, err = os.ReadFile(d.meshKeyPath)
 			if err != nil {
 				return err
 			}
@@ -218,7 +234,6 @@ func (d *Service) Start(stage adapter.StartStage) error {
 		}
 		tcpListener = aTLS.NewListener(tcpListener, d.tlsConfig)
 		httpServer := &http.Server{
-			//nolint:staticcheck
 			Handler: h2c.NewHandler(derpMux, &http2.Server{}),
 		}
 		go httpServer.Serve(tcpListener)
@@ -295,7 +310,7 @@ func (d *Service) startMeshWithHost(derpServer *derpserver.Server, server *optio
 	}
 	var stdConfig *tls.STDConfig
 	if server.TLS != nil && server.TLS.Enabled {
-		tlsConfig, err := tls.NewClient(d.ctx, d.logger, hostname, *server.TLS)
+		tlsConfig, err := tls.NewClient(d.ctx, d.logger, hostname, common.PtrValueOrDefault(server.TLS))
 		if err != nil {
 			return err
 		}
@@ -337,11 +352,10 @@ func (d *Service) startMeshWithHost(derpServer *derpserver.Server, server *optio
 }
 
 func (d *Service) Close() error {
-	err := common.Close(
+	return common.Close(
 		common.PtrOrNil(d.listener),
 		d.tlsConfig,
 	)
-	return err
 }
 
 var homePage = `
@@ -449,11 +463,11 @@ type derpConfig struct {
 	PrivateKey key.NodePrivate
 }
 
-func readDERPConfig(ctx context.Context, path string) (*derpConfig, error) {
-	content, err := filemanager.ReadFile(ctx, path)
+func readDERPConfig(path string) (*derpConfig, error) {
+	content, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return writeNewDERPConfig(ctx, path)
+			return writeNewDERPConfig(path)
 		}
 		return nil, err
 	}
@@ -465,9 +479,9 @@ func readDERPConfig(ctx context.Context, path string) (*derpConfig, error) {
 	return &config, nil
 }
 
-func writeNewDERPConfig(ctx context.Context, path string) (*derpConfig, error) {
+func writeNewDERPConfig(path string) (*derpConfig, error) {
 	newKey := key.NewNode()
-	err := filemanager.MkdirAll(ctx, filepath.Dir(path), 0o777)
+	err := os.MkdirAll(filepath.Dir(path), 0o777)
 	if err != nil {
 		return nil, err
 	}
@@ -478,7 +492,7 @@ func writeNewDERPConfig(ctx context.Context, path string) (*derpConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = filemanager.WriteFile(ctx, path, content, 0o644)
+	err = os.WriteFile(path, content, 0o644)
 	if err != nil {
 		return nil, err
 	}

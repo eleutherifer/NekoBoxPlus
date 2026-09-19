@@ -75,9 +75,6 @@ func (s *Service) httpServer(ctx *ctx.Conn, forwarder httpconn.ClosableRoundTrip
 	}
 	item.Value.ErrorLog = stdlog.New(adblockHTTPErrorLogWriter{logger: s.logger}, "", 0)
 	item.Value.Handler = http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		if s.handleTLSExclusionRequest(writer, request) {
-			return
-		}
 		if s.handleWebAccessibleResourceRequest(writer, request) {
 			return
 		}

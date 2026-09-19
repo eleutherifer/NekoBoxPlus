@@ -44,8 +44,8 @@ type tlsCertificateAuthority struct {
 	// The adblock CA key remains the single trust boundary for this MITM flow.
 	leafKeyECDSA     crypto.Signer
 	leafKeyRSA       crypto.Signer
-	certificates     *freelru.Cache[string, *tls.Certificate]
-	peerCertificates *freelru.Cache[string, peerCertEntry]
+	certificates     *freelru.ShardedLRU[string, *tls.Certificate]
+	peerCertificates *freelru.ShardedLRU[string, peerCertEntry]
 	peerCertGroup    singleflight.Group
 	peerCertNow      func() time.Time
 }

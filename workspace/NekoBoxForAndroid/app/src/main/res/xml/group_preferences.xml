@@ -1,0 +1,244 @@
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <EditTextPreference
+        app:icon="@drawable/ic_social_emoji_symbols"
+        app:key="groupName"
+        app:title="@string/group_name"
+        app:useSimpleSummaryProvider="true" />
+
+    <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        app:defaultValue="0"
+        app:entries="@array/group_types"
+        app:entryValues="@array/int_array_2"
+        app:icon="@drawable/ic_baseline_layers_24"
+        app:key="groupType"
+        app:title="@string/group_type"
+        app:useSimpleSummaryProvider="true" />
+
+    <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        app:defaultValue="0"
+        app:entries="@array/group_orders"
+        app:entryValues="@array/int_array_4"
+        app:icon="@drawable/ic_baseline_low_priority_24"
+        app:key="groupOrder"
+        app:title="@string/group_order"
+        app:useSimpleSummaryProvider="true" />
+
+    <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+        app:icon="@drawable/ic_baseline_manage_search_24"
+        app:key="groupIsSelector"
+        app:title="@string/use_selector" />
+
+    <io.nekohasekai.sagernet.widget.OutboundPreference
+        app:icon="@drawable/ic_hardware_router"
+        app:key="groupFrontProxy"
+        app:title="@string/front_proxy"
+        app:useSimpleSummaryProvider="true" />
+
+    <io.nekohasekai.sagernet.widget.OutboundPreference
+        app:icon="@drawable/baseline_public_24"
+        app:key="groupLandingProxy"
+        app:title="@string/landing_proxy"
+        app:useSimpleSummaryProvider="true" />
+
+    <PreferenceCategory app:title="@string/overrides">
+
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue=""
+            app:entries="@array/utls_fingerprint_entry"
+            app:entryValues="@array/utls_fingerprint_value"
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="groupForceUTLS"
+            app:title="@string/utls_fingerprint"
+            app:useSimpleSummaryProvider="true" />
+
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_baseline_compare_arrows_24"
+            app:key="groupEnableMux"
+            app:summary="@string/mux_sum"
+            app:title="@string/enable_mux" />
+
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="0"
+            app:entries="@array/mux_type"
+            app:entryValues="@array/int_array_4"
+            app:icon="@drawable/ic_baseline_stream_24"
+            app:key="groupMuxType"
+            app:title="@string/mux_type"
+            app:useSimpleSummaryProvider="true" />
+
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="0"
+            app:entries="@array/mux_mode"
+            app:entryValues="@array/int_array_2"
+            app:icon="@drawable/ic_baseline_tune_24"
+            app:key="groupMuxMode"
+            app:title="@string/mux_mode"
+            app:useSimpleSummaryProvider="true" />
+
+        <EditTextPreference
+            app:defaultValue="8"
+            app:icon="@drawable/ic_baseline_low_priority_24"
+            app:key="groupMuxConcurrency"
+            app:title="@string/mux_concurrency"
+            app:useSimpleSummaryProvider="true" />
+
+        <EditTextPreference
+            app:defaultValue="4"
+            app:icon="@drawable/ic_baseline_low_priority_24"
+            app:key="groupMuxMaxConnections"
+            app:title="@string/mux_max_connections"
+            app:useSimpleSummaryProvider="true" />
+
+        <EditTextPreference
+            app:defaultValue="4"
+            app:icon="@drawable/ic_baseline_low_priority_24"
+            app:key="groupMuxMinStreams"
+            app:title="@string/mux_min_streams"
+            app:useSimpleSummaryProvider="true" />
+
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/baseline_developer_board_24"
+            app:key="groupMuxPadding"
+            app:title="@string/padding" />
+
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_baseline_speed_24"
+            app:key="groupMuxBrutal"
+            app:title="@string/mux_brutal" />
+
+        <EditTextPreference
+            app:defaultValue="100"
+            app:icon="@drawable/ic_baseline_upload_24"
+            app:key="groupMuxBrutalUpMbps"
+            app:title="@string/mux_brutal_up_mbps"
+            app:useSimpleSummaryProvider="true" />
+
+        <EditTextPreference
+            app:defaultValue="100"
+            app:icon="@drawable/ic_baseline_download_24"
+            app:key="groupMuxBrutalDownMbps"
+            app:title="@string/mux_brutal_down_mbps"
+            app:useSimpleSummaryProvider="true" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        app:key="groupSubscription"
+        app:title="@string/subscription_settings">
+
+        <io.nekohasekai.sagernet.widget.LinkOrContentPreference
+            app:icon="@drawable/ic_baseline_link_24"
+            app:key="subscriptionLink"
+            app:title="@string/group_subscription_link"
+            app:useSimpleSummaryProvider="true" />
+
+        <moe.matsuri.nb4a.ui.MaterialMultiSelectListPreference
+            app:defaultValue="@array/subscription_banner_layout_value"
+            app:entries="@array/subscription_banner_layout_entry"
+            app:entryValues="@array/subscription_banner_layout_value"
+            app:icon="@drawable/baseline_widgets_24"
+            app:key="subscriptionBannerLayout"
+            app:title="@string/subscription_banner_layout"
+            app:useSimpleSummaryProvider="true" />
+
+        <EditTextPreference
+            app:icon="@drawable/ic_action_dns"
+            app:key="subscriptionServerDns"
+            app:summary="@string/server_dns_subscription_sum"
+            app:title="@string/server_dns"
+            app:useSimpleSummaryProvider="true" />
+
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_baseline_manage_search_24"
+            app:key="subscriptionForceResolve"
+            app:summary="@string/force_resolve_sum"
+            app:title="@string/force_resolve" />
+
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_baseline_import_contacts_24"
+            app:key="subscriptionDeduplication"
+            app:summary="@string/deduplication_sum"
+            app:title="@string/deduplication" />
+
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_hardware_router"
+            app:key="subscriptionRoutingEnabled"
+            app:summary="@string/subscription_routing_enabled_summary"
+            app:title="@string/subscription_routing_enabled" />
+
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="86400"
+            app:entries="@array/subscription_routing_interval_entries"
+            app:entryValues="@array/subscription_routing_interval_values"
+            app:icon="@drawable/ic_baseline_timelapse_24"
+            app:key="subscriptionRoutingInterval"
+            app:title="@string/subscription_routing_interval"
+            app:useSimpleSummaryProvider="true" />
+
+        <Preference
+            app:icon="@drawable/ic_baseline_download_24"
+            app:key="subscriptionImportRouting"
+            app:summary="@string/subscription_import_routing_summary"
+            app:title="@string/subscription_import_routing" />
+
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="0"
+            app:entries="@array/filter_modes"
+            app:entryValues="@array/int_array_3"
+            app:icon="@drawable/ic_baseline_filter_list_24"
+            app:key="subscriptionFilterMode"
+            app:title="@string/filter"
+            app:useSimpleSummaryProvider="true" />
+
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_filter_list_24"
+            app:key="subscriptionFilterRegex"
+            app:title="@string/filter_regex"
+            app:useSimpleSummaryProvider="true" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        app:key="subscriptionUpdate"
+        app:title="@string/update_settings">
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_baseline_security_24"
+            app:key="subscriptionUpdateWhenConnectedOnly"
+            app:summary="@string/update_when_connected_only_sum"
+            app:title="@string/update_when_connected_only" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="subscriptionHwidEnabled"
+            app:summary="@string/hwid_support_sum"
+            app:title="@string/hwid_support" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="0"
+            app:entries="@array/spoof_app_modes"
+            app:entryValues="@array/int_array_4"
+            app:icon="@drawable/ic_baseline_android_24"
+            app:key="subscriptionSpoofApp"
+            app:summary="@string/spoof_app_sum"
+            app:title="@string/spoof_app"
+            app:useSimpleSummaryProvider="true" />
+        <io.nekohasekai.sagernet.widget.UserAgentPreference
+            app:icon="@drawable/ic_baseline_grid_3x3_24"
+            app:key="subscriptionUserAgent"
+            app:title="@string/subscription_user_agent"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_baseline_flip_camera_android_24"
+            app:key="subscriptionAutoUpdate"
+            app:title="@string/auto_update" />
+        <EditTextPreference
+            app:defaultValue="1440"
+            app:icon="@drawable/ic_baseline_timelapse_24"
+            app:key="subscriptionAutoUpdateDelay"
+            app:title="@string/auto_update_delay"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

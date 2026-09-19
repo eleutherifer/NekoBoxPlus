@@ -31,7 +31,6 @@ object RoutingProfileCodec {
         val root = gson.toJsonTree(profile).asJsonObject
         root.getAsJsonArray("Rules")?.forEach { element ->
             val rule = element.asJsonObject
-            legacyRuleFields.forEach(rule::remove)
             val isDnsRule = rule.get("Type")?.asString == "dns"
             val fieldsToRemove = if (isDnsRule) normalOnlyRuleFields else dnsOnlyRuleFields
             fieldsToRemove.forEach(rule::remove)
@@ -42,10 +41,10 @@ object RoutingProfileCodec {
     }
 
     private val normalOnlyRuleFields = setOf("Outbound", "OutboundHash", "CreateDnsRule")
-    private val legacyRuleFields = setOf("DnsStrategy")
     private val dnsOnlyRuleFields = setOf(
         "DnsAction",
         "DnsServer",
+        "DnsStrategy",
         "DnsDisableCache",
         "DnsRewriteTtl",
         "DnsClientSubnet",

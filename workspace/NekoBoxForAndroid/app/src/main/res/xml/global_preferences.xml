@@ -1,0 +1,773 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <PreferenceCategory app:title="@string/settings_group_interface">
+        <moe.matsuri.nb4a.ui.ColorPickerPreference
+            android:title="@string/theme"
+            app:icon="@drawable/ic_baseline_color_lens_24"
+            app:key="appTheme" />
+        <Preference
+            app:icon="@drawable/ic_action_settings"
+            app:key="configureCustomTheme"
+            app:title="@string/configure_custom_theme" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="0"
+            app:entries="@array/night_mode"
+            app:entryValues="@array/int_array_4"
+            app:icon="@drawable/ic_baseline_wb_sunny_24"
+            app:key="nightTheme"
+            app:title="@string/night_mode"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue=""
+            app:entries="@array/language_entries"
+            app:entryValues="@array/language_values"
+            app:icon="@drawable/baseline_translate_24"
+            app:key="appLanguage"
+            app:title="@string/language"
+            app:useSimpleSummaryProvider="true" />
+        <io.nekohasekai.sagernet.widget.AppIconPreference
+            app:key="changeIcon"
+            app:title="@string/change_icon" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_baseline_view_list_24"
+            app:key="useToolbar"
+            app:summary="@string/use_toolbar_summary"
+            app:title="@string/use_toolbar" />
+        <Preference
+            app:icon="@drawable/ic_baseline_tune_24"
+            app:key="configureToolbarLayout"
+            app:title="@string/toolbar_layout" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/baseline_keyboard_tab_24"
+            app:key="showProfileCountOnTabs"
+            app:summary="@string/show_profile_count_on_tabs_summary"
+            app:title="@string/show_profile_count_on_tabs" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="true"
+            app:icon="@drawable/baseline_public_24"
+            app:key="profileCountryIndicator"
+            app:summary="@string/profile_country_indicator_summary"
+            app:title="@string/profile_country_indicator" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="true"
+            app:icon="@drawable/baseline_public_24"
+            app:key="notificationCountryIndicator"
+            app:summary="@string/notification_country_indicator_summary"
+            app:title="@string/notification_country_indicator" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="true"
+            app:icon="@drawable/baseline_keyboard_tab_24"
+            app:key="tabDoubleTapToNavigate"
+            app:summary="@string/tab_double_tap_to_navigate_summary"
+            app:title="@string/tab_double_tap_to_navigate" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_baseline_info_24"
+            app:key="shortProfileProtocolInfo"
+            app:summary="@string/short_profile_protocol_info_summary"
+            app:title="@string/short_profile_protocol_info" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_baseline_visibility_off_24"
+            app:key="dontHighlightInsecureProfiles"
+            app:summary="@string/dont_highlight_insecure_profiles_summary"
+            app:title="@string/dont_highlight_insecure_profiles" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_baseline_bottom_bar_24"
+            app:key="showBottomBarInSettings"
+            app:summary="@string/show_bottom_bar_in_settings_summary"
+            app:title="@string/show_bottom_bar_in_settings" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_baseline_bottom_bar_24"
+            app:key="compactStatsBar"
+            app:summary="@string/compact_stats_bar_summary"
+            app:title="@string/compact_stats_bar" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="@bool/default_legacy_main_view"
+            app:icon="@drawable/ic_baseline_view_list_24"
+            app:key="legacyMainView"
+            app:summary="@string/legacy_main_view_summary"
+            app:title="@string/legacy_main_view" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="true"
+            app:icon="@drawable/ic_baseline_speed_24"
+            app:key="automaticConnectionCheck"
+            app:summary="@string/automatic_connection_check_summary"
+            app:title="@string/automatic_connection_check" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="true"
+            app:icon="@drawable/ic_baseline_update_24"
+            app:key="enableGroupUpdateDialog"
+            app:summary="@string/enable_group_update_dialog_summary"
+            app:title="@string/enable_group_update_dialog" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="true"
+            app:icon="@drawable/baseline_keyboard_tab_24"
+            app:key="openGroupSettingsOnLongPress"
+            app:summary="@string/open_group_settings_on_long_press_summary"
+            app:title="@string/open_group_settings_on_long_press" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="0"
+            app:entries="@array/notification_entry"
+            app:entryValues="@array/notification_value"
+            app:icon="@drawable/ic_baseline_shutter_speed_24"
+            app:key="speedInterval"
+            app:title="@string/speed_interval"
+            app:summary="@string/notification_summary" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="0"
+            app:entries="@array/notification_entry"
+            app:entryValues="@array/notification_value"
+            app:icon="@drawable/ic_baseline_update_24"
+            app:key="profileTrafficUpdateInterval"
+            app:title="@string/profile_traffic_update_interval"
+            app:summary="@string/traffic_update_summary" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_baseline_multiline_chart_24"
+            app:key="profileTrafficStatistics"
+            app:summary="@string/profile_traffic_statistics_summary"
+            app:title="@string/profile_traffic_statistics" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="0"
+            app:entries="@array/subscription_traffic_unit_entries"
+            app:entryValues="@array/int_array_2"
+            app:icon="@drawable/ic_device_data_usage"
+            app:key="subscriptionTrafficUnit"
+            app:summary="@string/subscription_traffic_unit_summary"
+            app:title="@string/subscription_traffic_unit"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_baseline_speed_24"
+            app:key="showDirectSpeed"
+            app:summary="@string/show_direct_speed_sum"
+            app:title="@string/show_direct_speed" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_baseline_notifications_24"
+            app:key="showGroupInNotification"
+            app:title="@string/show_group_in_notification" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_baseline_notifications_active_24"
+            app:key="persistentStatusNotification"
+            app:summary="@string/persistent_status_notification_summary"
+            app:title="@string/persistent_status_notification" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="true"
+            app:icon="@drawable/ic_action_delete"
+            app:key="confirmProfileDelete"
+            app:title="@string/confirm_profile_delete" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_baseline_center_focus_weak_24"
+            app:key="alwaysShowAddress"
+            app:summary="@string/always_show_address_sum"
+            app:title="@string/always_show_address" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_baseline_visibility_off_24"
+            app:key="hideFromRecentApps"
+            app:summary="@string/hide_from_recent_apps_summary"
+            app:title="@string/hide_from_recent_apps" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/settings_group_connection">
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_communication_phonelink_ring"
+            app:key="isAutoConnect"
+            app:summary="@string/auto_connect_summary"
+            app:title="@string/auto_connect" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="vpn"
+            app:entries="@array/service_modes"
+            app:entryValues="@array/service_mode_values"
+            app:icon="@drawable/ic_device_developer_mode"
+            app:key="serviceMode"
+            app:title="@string/service_mode"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="0"
+            app:entries="@array/tun_implementation"
+            app:entryValues="@array/int_array_3"
+            app:icon="@drawable/ic_baseline_flip_camera_android_24"
+            app:key="tunImplementation"
+            app:title="@string/tun_implementation"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="9000"
+            app:icon="@drawable/baseline_public_24"
+            app:key="mtu"
+            app:title="@string/mtu"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_device_data_usage"
+            app:key="meteredNetwork"
+            app:summary="@string/metered_summary"
+            app:title="@string/metered" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/baseline_developer_board_24"
+            app:key="acquireWakeLock"
+            app:summary="@string/acquire_wake_lock_summary"
+            app:title="@string/acquire_wake_lock" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="none"
+            app:entries="@array/traffic_fragmentation_entry"
+            app:entryValues="@array/traffic_fragmentation_value"
+            app:icon="@drawable/ic_baseline_call_split_24"
+            app:key="trafficFragmentation"
+            app:title="@string/traffic_fragmentation"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="100-200"
+            app:icon="@drawable/ic_baseline_format_align_left_24"
+            app:key="fragmentLength"
+            app:title="@string/fragment_length"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="10-20"
+            app:icon="@drawable/ic_baseline_timelapse_24"
+            app:key="fragmentInterval"
+            app:title="@string/fragment_interval"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="0"
+            app:entries="@array/exclave_fragmentation_method_entry"
+            app:entryValues="@array/exclave_fragmentation_method_value"
+            app:icon="@drawable/ic_baseline_call_split_24"
+            app:key="exclaveFragmentMethod"
+            app:title="@string/fragment_method"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_baseline_call_split_24"
+            app:key="exclaveFragmentForDirect"
+            app:title="@string/enable_fragment_for_direct" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_tune_24"
+            app:key="byedpiFragmentCli"
+            app:title="@string/byedpi_cli_strategy"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_baseline_speed_24"
+            app:key="globalTcpFastOpen"
+            app:title="@string/tcp_fast_open" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_baseline_multiple_stop_24"
+            app:key="globalTcpMultiPath"
+            app:title="@string/multipath_tcp" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue=""
+            app:entries="@array/connection_option_entries"
+            app:entryValues="@array/connection_option_values"
+            app:icon="@drawable/ic_baseline_call_split_24"
+            app:key="globalUdpFragment"
+            app:title="@string/udp_fragmentation"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_baseline_flip_camera_android_24"
+            app:key="networkChangeReconnect"
+            app:title="@string/network_change_reconnect"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="true"
+            app:icon="@drawable/ic_baseline_flip_camera_android_24"
+            app:key="networkChangeResetConnections"
+            app:title="@string/network_change_reset_connections"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_baseline_refresh_24"
+            app:key="wakeReconnect"
+            app:title="@string/wake_reconnect"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_baseline_flip_camera_android_24"
+            app:key="wakeResetConnections"
+            app:title="@string/wake_reset_connections"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/settings_group_core">
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_baseline_security_24"
+            app:key="connectionGuard"
+            app:summary="@string/connection_guard_summary"
+            app:title="@string/connection_guard" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_baseline_bug_report_24"
+            app:key="overloadWatchdog"
+            app:summary="@string/overload_watchdog_summary"
+            app:title="@string/overload_watchdog" />
+        <EditTextPreference
+            app:defaultValue="0"
+            app:icon="@drawable/ic_baseline_compress_24"
+            app:key="memoryLimit"
+            app:summary="@string/memory_limit_summary"
+            app:title="@string/memory_limit"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.LongClickListPreference
+            app:defaultValue="0"
+            app:entries="@array/log_level_entry"
+            app:entryValues="@array/log_level_value"
+            app:icon="@drawable/ic_baseline_bug_report_24"
+            app:key="logLevel"
+            app:title="@string/log_level"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="250kb"
+            app:dialogMessage="@string/logcat_retention_size_summary"
+            app:icon="@drawable/ic_baseline_save_24"
+            app:key="logBufSize"
+            app:title="@string/logcat_retention_size"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="1"
+            app:entries="@array/certificate_authority"
+            app:entryValues="@array/int_array_4"
+            app:icon="@drawable/ic_baseline_push_pin_24"
+            app:key="certProvider"
+            app:title="@string/certificate_authority"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.EditConfigPreference
+            app:icon="@drawable/ic_baseline_layers_24"
+            app:key="globalCustomConfig"
+            app:title="@string/custom_config"
+            app:useSimpleSummaryProvider="true" />
+        <Preference
+            app:icon="@drawable/ic_action_description"
+            app:key="previewSingBoxConfig"
+            app:summary="@string/preview_sing_box_config_summary"
+            app:title="@string/preview_sing_box_config" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/settings_group_inbound">
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_baseline_vpn_key_24"
+            app:key="requireProxyInVPN"
+            app:summary="@string/require_proxy_in_vpn_sum"
+            app:title="@string/require_proxy_in_vpn" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_baseline_security_24"
+            app:key="disableUdpForLocalProxy"
+            app:summary="@string/disable_udp_for_local_proxy_sum"
+            app:title="@string/disable_udp_for_local_proxy" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_link_24"
+            app:key="mixedListener"
+            app:title="@string/listener_proxy"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_maps_directions_boat"
+            app:key="mixedPort"
+            app:title="@string/port_proxy"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="User"
+            app:icon="@drawable/ic_baseline_person_24"
+            app:key="mixedUsername"
+            app:title="@string/username_proxy"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_settings_password"
+            app:key="mixedPassword"
+            app:title="@string/password_proxy"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_baseline_http_24"
+            app:key="appendHttpProxy"
+            app:summary="@string/append_http_proxy_sum"
+            app:title="@string/append_http_proxy" />
+        <EditTextPreference
+            app:defaultValue=""
+            app:dependency="appendHttpProxy"
+            app:dialogMessage="@string/http_proxy_bypass_dialog_message"
+            app:icon="@drawable/ic_baseline_domain_24"
+            app:key="httpProxyBypass"
+            app:title="@string/http_proxy_bypass"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="true"
+            app:icon="@drawable/ic_baseline_add_road_24"
+            app:key="strictRoute"
+            app:title="@string/strict_route" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_baseline_nat_24"
+            app:key="allowAccess"
+            app:summary="@string/allow_access_sum"
+            app:title="@string/allow_access" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/settings_group_routing">
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_navigation_apps"
+            app:key="proxyApps"
+            app:summary="@string/proxied_apps_summary"
+            app:title="@string/proxied_apps" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="block"
+            app:entries="@array/tun_unrecognized_traffic_mode"
+            app:entryValues="@array/tun_unrecognized_traffic_mode_values"
+            app:icon="@drawable/ic_baseline_add_road_24"
+            app:key="tunUnrecognizedTraffic"
+            app:summary="@string/summary_tun_unrecognized_traffic"
+            app:title="@string/title_tun_unrecognized_traffic"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="normal-proxy-bypass-direct"
+            app:entries="@array/tun_system_dns_traffic_mode"
+            app:entryValues="@array/tun_system_dns_traffic_mode_values"
+            app:icon="@drawable/ic_baseline_add_road_24"
+            app:key="tunSystemDnsTraffic"
+            app:summary="@string/summary_tun_system_dns_traffic"
+            app:title="@string/title_tun_system_dns_traffic"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="@string/default_tun_dns_whitelist"
+            app:icon="@drawable/ic_action_dns"
+            app:key="tunDnsWhitelist"
+            app:summary="@string/summary_tun_dns_whitelist"
+            app:title="@string/title_tun_dns_whitelist" />
+        <EditTextPreference
+            app:defaultValue="@string/default_tun_dot_whitelist"
+            app:icon="@drawable/ic_baseline_lock_24"
+            app:key="tunDotWhitelist"
+            app:summary="@string/summary_tun_dot_whitelist"
+            app:title="@string/title_tun_dot_whitelist" />
+        <EditTextPreference
+            app:defaultValue="@string/default_tun_doh_whitelist"
+            app:icon="@drawable/ic_baseline_http_24"
+            app:key="tunDohWhitelist"
+            app:summary="@string/summary_tun_doh_whitelist"
+            app:title="@string/title_tun_doh_whitelist" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_baseline_legend_toggle_24"
+            app:key="bypassLan"
+            app:title="@string/route_opt_bypass_lan" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_baseline_legend_toggle_24"
+            app:key="bypassLanInCore"
+            app:title="@string/bypass_lan_in_core" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="1"
+            app:entries="@array/traffic_sniffing_values"
+            app:entryValues="@array/int_array_2"
+            app:icon="@drawable/ic_baseline_manage_search_24"
+            app:key="trafficSniffing"
+            app:title="@string/traffic_sniffing"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/baseline_wrap_text_24"
+            app:key="resolveDestination"
+            app:summary="@string/resolve_destination_summary"
+            app:title="@string/resolve_destination" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="0"
+            app:entries="@array/ipv6_mode"
+            app:entryValues="@array/int_array_4"
+            app:icon="@drawable/ic_image_looks_6"
+            app:key="ipv6Mode"
+            app:title="@string/ipv6"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="1"
+            app:entries="@array/rules_dat_provider"
+            app:entryValues="@array/rules_provider_values"
+            app:icon="@drawable/ic_baseline_rule_folder_24"
+            app:key="rulesProvider"
+            app:title="@string/route_rules_provider"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="https://github.com/SagerNet/sing-geosite/releases/latest/download/geosite.db"
+            app:icon="@drawable/ic_baseline_link_24"
+            app:key="rulesGeositeUrl"
+            app:title="@string/rules_geosite_url"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="https://github.com/SagerNet/sing-geoip/releases/latest/download/geoip.db"
+            app:icon="@drawable/ic_baseline_location_on_24"
+            app:key="rulesGeoipUrl"
+            app:title="@string/rules_geoip_url"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="0"
+            app:key="rulesUpdateInterval"
+            app:icon="@drawable/ic_baseline_shutter_speed_24"
+            app:title="@string/ruleset_update_interval"
+            app:summary="@string/ruleset_update_interval_summary" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/settings_group_dns">
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="true"
+            app:icon="@drawable/ic_baseline_camera_24"
+            app:key="enableDnsRouting"
+            app:summary="@string/dns_routing_message"
+            app:title="@string/enable_dns_routing" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="true"
+            app:icon="@drawable/ic_action_lock"
+            app:key="enableFakeDns"
+            app:summary="@string/fakedns_message"
+            app:title="@string/enable_fakedns" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_action_lock"
+            app:key="dnsDisableCache"
+            app:summary="@string/dns_disable_cache_summary"
+            app:title="@string/dns_disable_cache" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="dnsDisableExpire"
+            app:summary="@string/dns_disable_expire_summary"
+            app:title="@string/dns_disable_expire" />
+        <EditTextPreference
+            app:defaultValue=""
+            app:icon="@drawable/ic_baseline_dns_24"
+            app:key="dnsCacheCapacity"
+            app:summary="@string/dns_cache_capacity_summary"
+            app:title="@string/dns_cache_capacity" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_maps_360"
+            app:key="dnsReverseMapping"
+            app:summary="@string/dns_reverse_mapping_summary"
+            app:title="@string/dns_reverse_mapping" />
+        <EditTextPreference
+            app:defaultValue="https://1.1.1.1/dns-query"
+            app:icon="@drawable/ic_action_dns"
+            app:key="remoteDns"
+            app:title="@string/remote_dns"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="5000ms"
+            app:icon="@drawable/ic_baseline_shutter_speed_24"
+            app:key="remoteDnsDeadline"
+            app:title="@string/remote_dns_deadline"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="auto"
+            app:entries="@array/dns_network_entry"
+            app:entryValues="@array/dns_network_select"
+            app:icon="@drawable/ic_action_dns"
+            app:key="domain_strategy_for_remote"
+            app:title="@string/domain_strategy_for_remote"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="local"
+            app:icon="@drawable/ic_action_dns"
+            app:key="directDns"
+            app:title="@string/direct_dns"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="5000ms"
+            app:icon="@drawable/ic_baseline_shutter_speed_24"
+            app:key="directDnsDeadline"
+            app:title="@string/direct_dns_deadline"
+            app:useSimpleSummaryProvider="true" />
+        <Preference
+            app:icon="@drawable/ic_baseline_dns_24"
+            app:key="customDnsServers"
+            app:title="@string/custom_dns_servers" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="auto"
+            app:entries="@array/dns_network_entry"
+            app:entryValues="@array/dns_network_select"
+            app:icon="@drawable/ic_action_dns"
+            app:key="domain_strategy_for_direct"
+            app:title="@string/domain_strategy_for_direct"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="auto"
+            app:entries="@array/dns_network_entry"
+            app:entryValues="@array/dns_network_select"
+            app:icon="@drawable/ic_action_dns"
+            app:key="domain_strategy_for_server"
+            app:title="@string/domain_strategy_for_server"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue=""
+            app:icon="@drawable/ic_baseline_domain_24"
+            app:key="dnsDomainOverrides"
+            app:title="@string/dns_domain_overrides"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/settings_group_connection_testing">
+        <EditTextPreference
+            app:defaultValue="https://www.gstatic.com/generate_204"
+            app:icon="@drawable/ic_baseline_cast_connected_24"
+            app:key="connectionTestURL"
+            app:title="@string/connection_test_url"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="http://64.233.161.94/generate_204"
+            app:icon="@drawable/ic_baseline_cast_connected_24"
+            app:key="connectionGroupTestURL"
+            app:title="@string/connection_group_test_url"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="0"
+            app:entries="@array/urltest_standard_entry"
+            app:entryValues="@array/int_array_3"
+            app:icon="@drawable/ic_baseline_speed_24"
+            app:key="profileTestType"
+            app:title="@string/profile_test_type"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="5"
+            app:icon="@drawable/ic_baseline_stream_24"
+            app:key="connectionTestConcurrent"
+            app:title="@string/test_concurrency"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="10000"
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="connectionTestTimeout"
+            app:title="@string/connection_test_timeout"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="1"
+            app:entries="@array/connection_test_attempt_entries"
+            app:entryValues="@array/connection_test_attempt_entries"
+            app:icon="@drawable/ic_baseline_refresh_24"
+            app:key="connectionTestAttempts"
+            app:title="@string/connection_test_attempts"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="50"
+            app:icon="@drawable/ic_baseline_pause_24"
+            app:key="connectionTestPause"
+            app:title="@string/connection_test_pause"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_baseline_security_24"
+            app:key="connectionTestHardened"
+            app:summary="@string/connection_test_hardened_summary"
+            app:title="@string/connection_test_hardened" />
+        <EditTextPreference
+            app:defaultValue="2000"
+            app:icon="@drawable/ic_baseline_timelapse_24"
+            app:key="connectionGroupTestTimeout"
+            app:title="@string/connection_group_test_timeout"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="https://api.ip2location.io"
+            app:icon="@drawable/ic_baseline_cast_connected_24"
+            app:key="connectionIPResolveURL"
+            app:title="@string/connection_ip_resolve_url"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/settings_group_developers">
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_baseline_bug_report_24"
+            app:key="enableCoreProfiling"
+            app:summary="@string/enable_core_profiling_summary"
+            app:title="@string/enable_core_profiling" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="0"
+            app:entries="@array/core_profiler_mode_entries"
+            app:entryValues="@array/int_array_2"
+            app:icon="@drawable/ic_baseline_bug_report_24"
+            app:key="coreProfilerMode"
+            app:title="@string/core_profiler_mode"
+            app:useSimpleSummaryProvider="true" />
+        <Preference
+            app:icon="@drawable/ic_baseline_save_24"
+            app:key="saveCoreProfilerSnapshot"
+            app:title="@string/save_core_profiler_snapshot" />
+        <Preference
+            app:icon="@drawable/ic_baseline_delete_24"
+            app:key="deleteCoreProfilerSnapshot"
+            app:title="@string/delete_core_profiler_snapshot" />
+        <Preference
+            app:icon="@drawable/ic_baseline_delete_24"
+            app:key="performLibcoreGcSweep"
+            app:summary="@string/perform_libcore_gc_sweep_summary"
+            app:title="@string/perform_libcore_gc_sweep" />
+        <Preference
+            app:icon="@drawable/ic_baseline_running_with_errors_24"
+            app:key="performLibcoreManualCrash"
+            app:summary="@string/perform_libcore_fake_crash_summary"
+            app:title="@string/perform_libcore_fake_crash" />
+        <Preference
+            app:icon="@drawable/ic_baseline_running_with_errors_24"
+            app:key="killBackgroundProcess"
+            app:summary="@string/kill_background_process_summary"
+            app:title="@string/kill_background_process" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="true"
+            app:icon="@drawable/baseline_construction_24"
+            app:key="enableClashAPI"
+            app:summary="@string/enable_clash_api_summary"
+            app:title="@string/enable_clash_api" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:defaultValue="true"
+            app:icon="@drawable/baseline_construction_24"
+            app:dependency="enableClashAPI"
+            app:key="hideClashAPI"
+            app:summary="@string/hide_clash_api_summary"
+            app:title="@string/hide_clash_api" />
+        <Preference
+            app:icon="@drawable/ic_settings_password"
+            app:key="resetClashApiSecret"
+            app:title="@string/reset_clash_api_secret"
+            app:summary="@string/reset_clash_api_secret_summary" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/settings_group_others">
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_action_lock_open"
+            app:key="globalAllowInsecure"
+            app:title="@string/global_allow_insecure" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_action_lock_open"
+            app:key="allowInsecureOnRequest"
+            app:title="@string/allow_insecure_on_request_sum" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="1.2"
+            app:entries="@array/app_tls_version"
+            app:entryValues="@array/app_tls_version"
+            app:icon="@drawable/ic_baseline_lock_24"
+            app:key="appTLSVersion"
+            app:title="@string/app_tls_version"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue=""
+            app:entries="@array/utls_fingerprint_entry"
+            app:entryValues="@array/utls_fingerprint_value"
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="appUTLSFingerprint"
+            app:title="@string/app_utls_fingerprint"
+            app:useSimpleSummaryProvider="true" />
+        <Preference
+            app:icon="@drawable/baseline_undo_24"
+            app:key="resetSettings"
+            app:title="@string/reset_settings" />
+        <Preference
+            app:icon="@drawable/ic_baseline_delete_24"
+            app:key="clearCache"
+            app:title="@string/clear_cache"
+            app:summary="@string/clear_cache_summary" />
+        <Preference
+            app:icon="@drawable/ic_device_data_usage"
+            app:key="runStorageMaintenance"
+            app:title="@string/run_storage_maintenance"
+            app:summary="@string/run_storage_maintenance_summary" />
+    </PreferenceCategory>
+</PreferenceScreen>

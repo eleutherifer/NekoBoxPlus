@@ -1,14 +1,16 @@
 package moe.matsuri.nb4a.proxy.shadowtls
 
-import androidx.compose.runtime.Composable
-import io.nekohasekai.sagernet.ui.compose.ShadowTLSProfileSettingsScreen
+import android.os.Bundle
+import androidx.preference.EditTextPreference
+import androidx.preference.PreferenceFragmentCompat
+import io.nekohasekai.sagernet.R
+import io.nekohasekai.sagernet.database.preference.EditTextPreferenceModifiers
 import io.nekohasekai.sagernet.ui.profile.ProfileSettingsActivity
 import moe.matsuri.nb4a.proxy.PreferenceBinding
 import moe.matsuri.nb4a.proxy.PreferenceBindingManager
 import moe.matsuri.nb4a.proxy.Type
 
 class ShadowTLSSettingsActivity : ProfileSettingsActivity<ShadowTLSBean>() {
-    override val usesComposePreferences = true
 
     override fun createEntity() = ShadowTLSBean()
 
@@ -34,7 +36,21 @@ class ShadowTLSSettingsActivity : ProfileSettingsActivity<ShadowTLSBean>() {
         pbm.fromCacheAll(this)
     }
 
-    @Composable
-    override fun ComposePreferences() = ShadowTLSProfileSettingsScreen()
+    override fun PreferenceFragmentCompat.createPreferences(
+        savedInstanceState: Bundle?,
+        rootKey: String?,
+    ) {
+        addPreferencesFromResource(R.xml.shadowtls_preferences)
+        pbm.setPreferenceFragment(this)
+
+        serverPort.preference.apply {
+            this as EditTextPreference
+            setOnBindEditTextListener(EditTextPreferenceModifiers.Port)
+        }
+        password.preference.apply {
+            this as EditTextPreference
+            summaryProvider = PasswordSummaryProvider
+        }
+    }
 
 }

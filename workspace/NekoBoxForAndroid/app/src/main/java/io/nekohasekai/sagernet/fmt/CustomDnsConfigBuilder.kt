@@ -168,6 +168,7 @@ fun buildStandaloneDnsRule(
 private val builtinDnsServerTags = setOf("dns-direct", "dns-remote", "dns-local", "dns-fake")
 
 private fun DNSRule_DefaultOptions.applyDnsRouteOptions(rule: RuleEntity) {
+    if (rule.dnsStrategy.isNotBlank() && rule.dnsStrategy != "auto") strategy = rule.dnsStrategy
     if (rule.dnsDisableCache) disable_cache = true
     if (rule.dnsRewriteTtl > 0) rewrite_ttl = rule.dnsRewriteTtl
     if (rule.dnsClientSubnet.isNotBlank()) client_subnet = rule.dnsClientSubnet

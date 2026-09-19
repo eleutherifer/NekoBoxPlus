@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <EditTextPreference
+        app:icon="@drawable/ic_social_emoji_symbols"
+        app:key="routeName"
+        app:title="@string/route_name"
+        app:useSimpleSummaryProvider="true" />
+    <moe.matsuri.nb4a.ui.EditConfigPreference
+        app:icon="@drawable/ic_baseline_layers_24"
+        app:key="serverConfig"
+        app:title="@string/custom_config"
+        app:useSimpleSummaryProvider="true" />
+    <PreferenceCategory app:title="@string/cag_route">
+        <io.nekohasekai.sagernet.widget.AppListPreference
+            app:icon="@drawable/ic_baseline_legend_toggle_24"
+            app:key="routePackages"
+            app:title="@string/apps" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_domain_24"
+            app:key="routeDomain"
+            app:title="@string/domain"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_add_road_24"
+            app:key="routeIP"
+            app:title="@string/destination_ip"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:icon="@drawable/ic_maps_directions_boat"
+            app:key="routePort"
+            app:title="@string/destination_port"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_local_bar_24"
+            app:key="routeSource"
+            app:title="@string/source_ip"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_home_24"
+            app:key="routeSourcePort"
+            app:title="@string/source_port"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_rule_folder_24"
+            app:key="routeRuleset"
+            app:title="RuleSet(.srs)"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.MaterialMultiSelectListPreference
+            app:entries="@array/route_network_type_entry"
+            app:entryValues="@array/route_network_type_value"
+            app:icon="@drawable/baseline_public_24"
+            app:key="routeNetworkType"
+            app:title="@string/network_type"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_home_24"
+            app:key="routeWifiSsid"
+            app:title="@string/wifi_ssid"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_home_24"
+            app:key="routeWifiBssid"
+            app:title="@string/wifi_bssid"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:entries="@array/route_protocol_entry"
+            app:entryValues="@array/route_protocol_value"
+            app:icon="@drawable/ic_baseline_compare_arrows_24"
+            app:key="routeNetwork"
+            app:title="@string/network"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:entries="@array/route_sniff_protocol_entry"
+            app:entryValues="@array/route_sniff_protocol_value"
+            app:icon="@drawable/ic_baseline_layers_24"
+            app:key="routeProtocolSelector"
+            app:title="@string/protocol"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_tune_24"
+            app:key="routeClashMode"
+            app:title="@string/clash_mode"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:entries="@array/yes_no_entry"
+            app:entryValues="@array/yes_no_value"
+            app:icon="@drawable/ic_baseline_dns_24"
+            app:key="routeCreateDnsRule"
+            app:title="@string/create_dns_rule"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:entries="@array/dns_rule_action_entry"
+            app:entryValues="@array/dns_rule_action_value"
+            app:icon="@drawable/ic_baseline_dns_24"
+            app:key="routeDnsAction"
+            app:title="@string/dns_rule_action"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:entries="@array/dns_rule_server_entry"
+            app:entryValues="@array/dns_rule_server_value"
+            app:icon="@drawable/ic_action_dns"
+            app:key="routeDnsServer"
+            app:title="@string/dns_rule_server"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:entries="@array/dns_network_entry"
+            app:entryValues="@array/dns_network_select"
+            app:icon="@drawable/ic_baseline_tune_24"
+            app:key="routeDnsStrategy"
+            app:title="@string/domain_strategy"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_action_lock"
+            app:key="routeDnsDisableCache"
+            app:title="@string/dns_disable_cache" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_shutter_speed_24"
+            app:key="routeDnsRewriteTtl"
+            app:title="@string/dns_rewrite_ttl"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_add_road_24"
+            app:key="routeDnsClientSubnet"
+            app:title="@string/dns_client_subnet"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:entries="@array/dns_rcode_entry"
+            app:entryValues="@array/dns_rcode_value"
+            app:icon="@drawable/ic_baseline_tune_24"
+            app:key="routeDnsRcode"
+            app:title="@string/dns_rcode"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:entries="@array/dns_reject_method_entry"
+            app:entryValues="@array/dns_reject_method_value"
+            app:icon="@drawable/ic_baseline_tune_24"
+            app:key="routeDnsRejectMethod"
+            app:title="@string/dns_reject_method"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_dns_24"
+            app:key="routeDnsPredefinedAnswer"
+            app:title="@string/dns_predefined_answer"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_dns_24"
+            app:key="routeDnsPredefinedNs"
+            app:title="@string/dns_predefined_ns"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_dns_24"
+            app:key="routeDnsPredefinedExtra"
+            app:title="@string/dns_predefined_extra"
+            app:useSimpleSummaryProvider="true" />
+        <io.nekohasekai.sagernet.widget.OutboundPreference
+            app:icon="@drawable/ic_hardware_router"
+            app:key="routeOutbound"
+            app:title="@string/outbound"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+</PreferenceScreen>

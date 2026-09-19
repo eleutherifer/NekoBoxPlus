@@ -3,28 +3,23 @@ package io.nekohasekai.sagernet.group
 import io.nekohasekai.sagernet.fmt.AbstractBean
 import io.nekohasekai.sagernet.fmt.http.HttpBean
 import io.nekohasekai.sagernet.fmt.hysteria.HysteriaBean
-import io.nekohasekai.sagernet.fmt.hysteria.parseClashHysteria
 import io.nekohasekai.sagernet.fmt.masque.MasqueBean
 import io.nekohasekai.sagernet.fmt.mieru.MieruBean
-import io.nekohasekai.sagernet.fmt.openvpn.OpenVPNBean
 import io.nekohasekai.sagernet.fmt.shadowsocks.ShadowsocksBean
 import io.nekohasekai.sagernet.fmt.shadowsocksr.ShadowsocksRBean
 import io.nekohasekai.sagernet.fmt.snell.parseClashSnell
 import io.nekohasekai.sagernet.fmt.socks.SOCKSBean
 import io.nekohasekai.sagernet.fmt.ssh.SSHBean
-import io.nekohasekai.sagernet.fmt.ssh.parseClashSSH
 import io.nekohasekai.sagernet.fmt.tailscale.TailscaleBean
 import io.nekohasekai.sagernet.fmt.trojan.TrojanBean
 import io.nekohasekai.sagernet.fmt.trusttunnel.TrustTunnelBean
 import io.nekohasekai.sagernet.fmt.tuic.TuicBean
-import io.nekohasekai.sagernet.fmt.tuic.parseClashTuic
 import io.nekohasekai.sagernet.fmt.v2ray.StandardV2RayBean
 import io.nekohasekai.sagernet.fmt.v2ray.VMessBean
 import io.nekohasekai.sagernet.fmt.v2ray.applyClashXhttpOptions
 import io.nekohasekai.sagernet.fmt.wireguard.AmneziaWGBean
 import io.nekohasekai.sagernet.fmt.wireguard.WireGuardBean
 import io.nekohasekai.sagernet.ktx.Logs
-import io.nekohasekai.sagernet.ktx.applyDefaultValues
 import io.nekohasekai.sagernet.ktx.isIpAddress
 import io.nekohasekai.sagernet.ktx.isIpAddressV6
 import moe.matsuri.nb4a.proxy.anytls.AnyTLSBean
@@ -59,7 +54,6 @@ internal object ClashParser {
             "masque",
             "trusttunnel",
             "tailscale",
-            "openvpn",
         )
 
     fun parse(text: String): List<AbstractBean>? {
@@ -96,17 +90,16 @@ internal object ClashParser {
                 "ssr" -> parseShadowsocksR(proxy)
                 "vmess", "vless", "trojan" -> parseV2Ray(type, proxy, globalFingerprint)
                 "snell" -> parseClashSnell(proxy)
-                "hysteria" -> parseClashHysteria(proxy, 1)
-                "hysteria2" -> parseClashHysteria(proxy, 2)
+                "hysteria" -> parseHysteria(proxy, 1)
+                "hysteria2" -> parseHysteria(proxy, 2)
                 "wireguard" -> parseWireGuard(proxy)
-                "tuic" -> parseClashTuic(proxy)
-                "ssh" -> parseClashSSH(proxy)
+                "tuic" -> parseTUIC(proxy)
+                "ssh" -> parseSSH(proxy)
                 "mieru" -> parseMieru(proxy)
                 "anytls" -> parseAnyTLS(proxy, globalFingerprint)
                 "masque" -> parseMasque(proxy)
                 "trusttunnel" -> parseTrustTunnel(proxy, globalFingerprint)
                 "tailscale" -> parseTailscale(proxy)
-                "openvpn" -> parseOpenVPN(proxy)
                 else -> error("unsupported type")
             }
         bean.name = proxy.requiredValue("name")
@@ -197,7 +190,7 @@ internal object ClashParser {
                     alterId = -1
                     packetEncoding = StandardV2RayBean.PACKET_ENCODING_NOT_SPECIFIED
                     uuid = proxy.requiredValue("uuid")
-                    encryption = proxy.value("flow").removeSuffix("-udp443")
+                    encryption = proxy.value("flow")
                     vlessEncryption = proxy.value("encryption").ifBlank { "none" }
                 }
                 else -> TrojanBean().apply {
@@ -419,6 +412,7 @@ internal object ClashParser {
             copy(proxy, custom, "idle-session-check-interval", "idle_session_check_interval")
             copy(proxy, custom, "idle-session-timeout", "idle_session_timeout")
             copy(proxy, custom, "min-idle-session", "min_idle_session")
+            copy(proxy, custom, "disable-reuse", "disable_reuse")
             if (custom.length() > 0) mergeCustom(this, custom)
         }
 
@@ -605,28 +599,6 @@ internal object ClashParser {
             disableTcpKeepAlive = proxy.boolean("disable-tcp-keep-alive")
             tcpKeepAlive = proxy.value("tcp-keep-alive")
             tcpKeepAliveInterval = proxy.value("tcp-keep-alive-interval")
-        }
-
-    private fun parseOpenVPN(proxy: Map<String, Any?>) =
-        OpenVPNBean().applyDefaultValues().apply {
-            serverAddress = proxy.requiredValue("server")
-            serverPort = proxy.int("port", 1194)
-            network = if (proxy.value("proto").startsWith("tcp")) "tcp" else "udp"
-            username = proxy.value("username")
-            password = proxy.value("password")
-            caCertificates = proxy.value("ca")
-            clientCertificate = proxy.value("cert")
-            clientKey = proxy.value("key")
-            proxy.value("tls-crypt").takeIf(String::isNotBlank)?.let {
-                controlWrapType = "tls-crypt"
-                controlWrapKey = it
-            }
-            proxy.valueOrNull("ping")?.let { pingInterval = "${it}s" }
-            proxy.valueOrNull("ping-restart")?.let { pingRestart = "${it}s" }
-            mtu = proxy.int("mtu")
-            dataCiphersFallback = proxy.value("cipher")
-            auth = proxy.value("auth")
-            compressionLZO = proxy.value("comp-lzo")
         }
 
     private fun applyCommonOptions(bean: AbstractBean, proxy: Map<String, Any?>) {

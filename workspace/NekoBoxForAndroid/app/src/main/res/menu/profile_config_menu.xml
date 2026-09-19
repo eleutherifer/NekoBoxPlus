@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_delete"
+        android:alphabeticShortcut="d"
+        android:icon="@drawable/ic_action_delete"
+        android:title="@string/delete"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_apply"
+        android:alphabeticShortcut="s"
+        android:icon="@drawable/ic_action_done"
+        android:title="@string/apply"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_share_server"
+        android:icon="@drawable/ic_social_share"
+        android:title="@string/share_server"
+        android:visible="false"
+        app:showAsAction="never">
+        <menu>
+            <item
+                android:id="@+id/action_group_qr"
+                android:title="@string/share_qr_nfc">
+                <menu>
+                    <item
+                        android:id="@+id/action_standard_qr"
+                        android:title="@string/standard" />
+                    <item
+                        android:id="@+id/action_universal_qr"
+                        android:title="SN Link" />
+                </menu>
+            </item>
+            <item
+                android:id="@+id/action_group_clipboard"
+                android:title="@string/action_export_clipboard">
+                <menu>
+                    <item
+                        android:id="@+id/action_standard_clipboard"
+                        android:title="@string/standard" />
+                    <item
+                        android:id="@+id/action_universal_clipboard"
+                        android:title="SN Link" />
+                </menu>
+            </item>
+            <item
+                android:id="@+id/action_group_configuration"
+                android:title="@string/menu_configuration">
+                <menu>
+                    <item
+                        android:id="@+id/action_config_export_clipboard"
+                        android:title="@string/action_export_clipboard" />
+                    <item
+                        android:id="@+id/action_config_export_file"
+                        android:title="@string/action_export_file" />
+                </menu>
+            </item>
+        </menu>
+    </item>
+    <item
+        android:id="@+id/action_create_shortcut"
+        android:title="@string/create_shortcut"
+        android:visible="false" />
+    <item
+        android:id="@+id/action_move"
+        android:title="@string/move"
+        android:visible="false" />
+    <item
+        android:id="@+id/action_custom_outbound_json"
+        android:title="@string/custom_outbound_json"
+        android:visible="false" />
+    <item
+        android:id="@+id/action_custom_config_json"
+        android:title="@string/custom_config_json"
+        android:visible="false" />
+</menu>

@@ -5,7 +5,6 @@ import (
 	"github.com/goccy/go-json"
 	"strings"
 
-	"github.com/sagernet/sing-box/schema"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/json/badoption"
 )
@@ -14,9 +13,9 @@ type InboundTLSOptions struct {
 	Enabled                          bool                                `json:"enabled,omitempty"`
 	ServerName                       string                              `json:"server_name,omitempty"`
 	Insecure                         bool                                `json:"insecure,omitempty"`
-	ALPN                             badoption.Listable[string]          `json:"alpn,omitempty" examples:"http/1.1,h2,h3"`
-	MinVersion                       string                              `json:"min_version,omitempty" enum:"1.0,1.1,1.2,1.3"`
-	MaxVersion                       string                              `json:"max_version,omitempty" enum:"1.0,1.1,1.2,1.3"`
+	ALPN                             badoption.Listable[string]          `json:"alpn,omitempty"`
+	MinVersion                       string                              `json:"min_version,omitempty"`
+	MaxVersion                       string                              `json:"max_version,omitempty"`
 	CipherSuites                     badoption.Listable[string]          `json:"cipher_suites,omitempty"`
 	CurvePreferences                 badoption.Listable[CurvePreference] `json:"curve_preferences,omitempty"`
 	Certificate                      badoption.Listable[string]          `json:"certificate,omitempty"`
@@ -29,14 +28,9 @@ type InboundTLSOptions struct {
 	KeyPath                          string                              `json:"key_path,omitempty"`
 	KernelTx                         bool                                `json:"kernel_tx,omitempty"`
 	KernelRx                         bool                                `json:"kernel_rx,omitempty"`
-	HandshakeTimeout                 badoption.Duration                  `json:"handshake_timeout,omitempty"`
-	CertificateProvider              *CertificateProviderOptions         `json:"certificate_provider,omitempty"`
-
-	// Deprecated: use certificate_provider
-	ACME *InboundACMEOptions `json:"acme,omitempty" schema:"omit"`
-
-	ECH     *InboundECHOptions     `json:"ech,omitempty"`
-	Reality *InboundRealityOptions `json:"reality,omitempty"`
+	ACME                             *InboundACMEOptions                 `json:"acme,omitempty"`
+	ECH                              *InboundECHOptions                  `json:"ech,omitempty"`
+	Reality                          *InboundRealityOptions              `json:"reality,omitempty"`
 }
 
 type ClientAuthType tls.ClientAuthType
@@ -83,10 +77,6 @@ func (t *ClientAuthType) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (t ClientAuthType) DescribeSchema(builder schema.Builder) (*schema.Node, error) {
-	return schema.StringEnum("no", "request", "require-any", "verify-if-given", "require-and-verify"), nil
-}
-
 type InboundTLSOptionsContainer struct {
 	TLS *InboundTLSOptions `json:"tls,omitempty"`
 }
@@ -106,13 +96,12 @@ func (o *InboundTLSOptionsContainer) ReplaceInboundTLSOptions(options *InboundTL
 
 type OutboundTLSOptions struct {
 	Enabled                    bool                                `json:"enabled,omitempty"`
-	Engine                     string                              `json:"engine,omitempty" enum:"go,apple,windows"`
 	DisableSNI                 bool                                `json:"disable_sni,omitempty"`
 	ServerName                 string                              `json:"server_name,omitempty"`
 	Insecure                   bool                                `json:"insecure,omitempty"`
-	ALPN                       badoption.Listable[string]          `json:"alpn,omitempty" examples:"http/1.1,h2,h3"`
-	MinVersion                 string                              `json:"min_version,omitempty" enum:"1.0,1.1,1.2,1.3"`
-	MaxVersion                 string                              `json:"max_version,omitempty" enum:"1.0,1.1,1.2,1.3"`
+	ALPN                       badoption.Listable[string]          `json:"alpn,omitempty"`
+	MinVersion                 string                              `json:"min_version,omitempty"`
+	MaxVersion                 string                              `json:"max_version,omitempty"`
 	CipherSuites               badoption.Listable[string]          `json:"cipher_suites,omitempty"`
 	CurvePreferences           badoption.Listable[CurvePreference] `json:"curve_preferences,omitempty"`
 	Certificate                badoption.Listable[string]          `json:"certificate,omitempty"`
@@ -126,11 +115,8 @@ type OutboundTLSOptions struct {
 	Fragment                   bool                                `json:"fragment,omitempty"`
 	FragmentFallbackDelay      badoption.Duration                  `json:"fragment_fallback_delay,omitempty"`
 	RecordFragment             bool                                `json:"record_fragment,omitempty"`
-	Spoof                      string                              `json:"spoof,omitempty"`
-	SpoofMethod                string                              `json:"spoof_method,omitempty" enum:"wrong-sequence,wrong-checksum,wrong-ack,wrong-md5,wrong-timestamp"`
 	KernelTx                   bool                                `json:"kernel_tx,omitempty"`
 	KernelRx                   bool                                `json:"kernel_rx,omitempty"`
-	HandshakeTimeout           badoption.Duration                  `json:"handshake_timeout,omitempty"`
 	ECH                        *OutboundECHOptions                 `json:"ech,omitempty"`
 	UTLS                       *OutboundUTLSOptions                `json:"utls,omitempty"`
 	Reality                    *OutboundRealityOptions             `json:"reality,omitempty"`
@@ -205,10 +191,6 @@ func (c *CurvePreference) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (c CurvePreference) DescribeSchema(builder schema.Builder) (*schema.Node, error) {
-	return schema.StringEnum("P256", "P384", "P521", "X25519", "X25519MLKEM768"), nil
-}
-
 type InboundRealityOptions struct {
 	Enabled           bool                           `json:"enabled,omitempty"`
 	Handshake         InboundRealityHandshakeOptions `json:"handshake,omitempty"`
@@ -228,9 +210,9 @@ type InboundECHOptions struct {
 	KeyPath string                     `json:"key_path,omitempty"`
 
 	// Deprecated: not supported by stdlib
-	PQSignatureSchemesEnabled bool `json:"pq_signature_schemes_enabled,omitempty" schema:"omit"`
+	PQSignatureSchemesEnabled bool `json:"pq_signature_schemes_enabled,omitempty"`
 	// Deprecated: added by fault
-	DynamicRecordSizingDisabled bool `json:"dynamic_record_sizing_disabled,omitempty" schema:"omit"`
+	DynamicRecordSizingDisabled bool `json:"dynamic_record_sizing_disabled,omitempty"`
 }
 
 type OutboundECHOptions struct {
@@ -240,14 +222,14 @@ type OutboundECHOptions struct {
 	QueryServerName string                     `json:"query_server_name,omitempty"`
 
 	// Deprecated: not supported by stdlib
-	PQSignatureSchemesEnabled bool `json:"pq_signature_schemes_enabled,omitempty" schema:"omit"`
+	PQSignatureSchemesEnabled bool `json:"pq_signature_schemes_enabled,omitempty"`
 	// Deprecated: added by fault
-	DynamicRecordSizingDisabled bool `json:"dynamic_record_sizing_disabled,omitempty" schema:"omit"`
+	DynamicRecordSizingDisabled bool `json:"dynamic_record_sizing_disabled,omitempty"`
 }
 
 type OutboundUTLSOptions struct {
 	Enabled     bool   `json:"enabled,omitempty"`
-	Fingerprint string `json:"fingerprint,omitempty" enum:"chrome_psk,chrome_psk_shuffle,chrome_padding_psk_shuffle,chrome_pq,chrome_pq_psk,chrome,firefox,edge,safari,360,qq,ios,android,random,randomized"`
+	Fingerprint string `json:"fingerprint,omitempty"`
 }
 
 type OutboundRealityOptions struct {

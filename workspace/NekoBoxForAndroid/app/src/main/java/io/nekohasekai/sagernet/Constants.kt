@@ -57,10 +57,6 @@ object Key {
     const val DNS_DISABLE_CACHE = "dnsDisableCache"
     const val DNS_DISABLE_EXPIRE = "dnsDisableExpire"
     const val DNS_CACHE_CAPACITY = "dnsCacheCapacity"
-    const val DNS_TIMEOUT = "dnsTimeout"
-    const val DNS_OPTIMISTIC_CACHE = "dnsOptimisticCache"
-    const val DNS_OPTIMISTIC_TIMEOUT = "dnsOptimisticTimeout"
-    const val DNS_STORE_CACHE = "dnsStoreCache"
     const val DNS_REVERSE_MAPPING = "dnsReverseMapping"
     const val DNS_DOMAIN_OVERRIDES = "dnsDomainOverrides"
     const val CUSTOM_DNS_SERVERS = "customDnsServers"
@@ -168,13 +164,11 @@ object Key {
 
     // Protocol Settings
     const val GLOBAL_ALLOW_INSECURE = "globalAllowInsecure"
-    const val HYSTERIA2_DISABLE_CHROME_PARROT = "hysteria2DisableChromeParrot"
 
     const val ACQUIRE_WAKE_LOCK = "acquireWakeLock"
     const val HIDE_FROM_RECENT_APPS = "hideFromRecentApps"
     const val CONFIRM_PROFILE_DELETE = "confirmProfileDelete"
     const val GROUP_LAYOUT_MODE = "groupLayoutMode"
-    const val PROFILE_CARD_BORDERS = "profileCardBorders"
     const val GROUP_ORDER_MODE_ALWAYS = "groupOrderModeAlways"
     const val GROUP_ORDER_MODE_URL_TEST = "groupOrderModeUrlTest"
     const val GROUP_ORDER_MODE_UPDATE = "groupOrderModeUpdate"
@@ -182,9 +176,6 @@ object Key {
     const val ALLOW_INSECURE_ON_REQUEST = "allowInsecureOnRequest"
 
     const val TUN_IMPLEMENTATION = "tunImplementation"
-    const val UDP_NAT_MAPPING = "udpNatMapping"
-    const val UDP_NAT_FILTERING = "udpNatFiltering"
-    const val UDP_NAT_MAX = "udpNatMax"
     const val PROFILE_TRAFFIC_STATISTICS = "profileTrafficStatistics"
 
     const val PROFILE_DIRTY = "profileDirty"
@@ -271,6 +262,7 @@ object Key {
     const val ROUTE_CREATE_DNS_RULE = "routeCreateDnsRule"
     const val ROUTE_DNS_ACTION = "routeDnsAction"
     const val ROUTE_DNS_SERVER = "routeDnsServer"
+    const val ROUTE_DNS_STRATEGY = "routeDnsStrategy"
     const val ROUTE_DNS_DISABLE_CACHE = "routeDnsDisableCache"
     const val ROUTE_DNS_REWRITE_TTL = "routeDnsRewriteTtl"
     const val ROUTE_DNS_CLIENT_SUBNET = "routeDnsClientSubnet"

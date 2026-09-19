@@ -10,14 +10,13 @@ import (
 	"github.com/sagernet/bbolt"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing/common/logger"
 )
 
 // newStartedCache opens a read-write cache file at path, starts it and returns
 // the started instance. The caller is responsible for closing it.
 func newStartedCache(t *testing.T, path string) *CacheFile {
 	t.Helper()
-	cacheFile := New(context.Background(), logger.NOP(), option.CacheFileOptions{
+	cacheFile := New(context.Background(), option.CacheFileOptions{
 		Enabled: true,
 		Path:    path,
 	})

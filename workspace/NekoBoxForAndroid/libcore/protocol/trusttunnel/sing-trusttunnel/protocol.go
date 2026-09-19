@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/netip"
 	"os"
+	"runtime"
 	"sync"
 	"time"
 
@@ -20,13 +21,11 @@ import (
 )
 
 const (
-	Version = "v0.3.0-beta.6"
+	Version = "v0.2.3"
 
 	UDPMagicAddress         = "_udp2"
 	ICMPMagicAddress        = "_icmp"
 	HealthCheckMagicAddress = "_check"
-
-	AppName = "sing-trusttunnel"
 
 	DefaultQuicStreamReceiveWindow  = 131072 // Chrome's default
 	DefaultQuicConnectionWindow     = 100 * 1024 * 1024
@@ -38,6 +37,24 @@ const (
 	DefaultHealthCheckTimeout       = 7 * time.Second
 	DefaultQuicMaxIdleTimeout       = 2 * (DefaultConnectionTimeout + DefaultHealthCheckTimeout)
 	DefaultSessionTimeout           = 30 * time.Second
+)
+
+var (
+	AppName = "sing-trusttunnel"
+
+	// TCPUserAgent is user-agent for TCP connections.
+	// Format: <platform> <app_name>
+	TCPUserAgent = runtime.GOOS + " " + AppName + "/" + Version
+
+	// UDPUserAgent is user-agent for UDP multiplexing.
+	// Format: <platform> _udp2
+	UDPUserAgent = runtime.GOOS + " " + UDPMagicAddress
+
+	// ICMPUserAgent is user-agent for ICMP multiplexing.
+	// Format: <platform> _icmp
+	ICMPUserAgent = runtime.GOOS + " " + ICMPMagicAddress
+
+	HealthCheckUserAgent = runtime.GOOS
 )
 
 var ErrQUICNotIncluded = E.New("QUIC is not included")

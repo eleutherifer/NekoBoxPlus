@@ -2,6 +2,7 @@ package rule
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -39,11 +40,11 @@ type LocalRuleSet struct {
 	refs       atomic.Int32
 }
 
-func NewLocalRuleSet(ctx context.Context, logger logger.Logger, tag string, options option.RuleSet) (*LocalRuleSet, error) {
+func NewLocalRuleSet(ctx context.Context, logger logger.Logger, options option.RuleSet) (*LocalRuleSet, error) {
 	ruleSet := &LocalRuleSet{
 		ctx:        ctx,
 		logger:     logger,
-		tag:        tag,
+		tag:        options.Tag,
 		fileFormat: options.Format,
 	}
 	if options.Type == C.RuleSetTypeInline {
@@ -77,7 +78,7 @@ func NewLocalRuleSet(ctx context.Context, logger logger.Logger, tag string, opti
 			}
 			return ruleSet, nil
 		}
-		filePath := filemanager.BasePath(ctx, strings.ReplaceAll(options.LocalOptions.Path, C.RuleSetTagPlaceholder, tag))
+		filePath := filemanager.BasePath(ctx, options.LocalOptions.Path)
 		filePath, _ = filepath.Abs(filePath)
 		err := ruleSet.reloadFile(filePath)
 		if err != nil {
@@ -88,7 +89,7 @@ func NewLocalRuleSet(ctx context.Context, logger logger.Logger, tag string, opti
 			Callback: func(path string) {
 				uErr := ruleSet.reloadFile(path)
 				if uErr != nil {
-					logger.Error(E.Cause(uErr, "reload rule-set ", tag))
+					logger.Error(E.Cause(uErr, "reload rule-set ", options.Tag))
 				}
 			},
 		})
@@ -122,7 +123,7 @@ func (s *LocalRuleSet) reloadFile(path string) error {
 	var ruleSet option.PlainRuleSetCompat
 	switch s.fileFormat {
 	case C.RuleSetFormatSource, "":
-		content, err := filemanager.ReadFile(s.ctx, path)
+		content, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}
@@ -132,7 +133,7 @@ func (s *LocalRuleSet) reloadFile(path string) error {
 		}
 
 	case C.RuleSetFormatBinary:
-		setFile, err := filemanager.Open(s.ctx, path)
+		setFile, err := os.Open(path)
 		if err != nil {
 			return err
 		}
@@ -160,11 +161,10 @@ func (s *LocalRuleSet) reloadRules(headlessRules []option.HeadlessRule) error {
 			return E.Cause(err, "parse rule_set.rules.[", i, "]")
 		}
 	}
-	metadata := buildRuleSetMetadata(headlessRules)
-	err = validateRuleSetMetadataUpdate(s.ctx, s.tag, metadata)
-	if err != nil {
-		return err
-	}
+	var metadata adapter.RuleSetMetadata
+	metadata.ContainsProcessRule = HasHeadlessRule(headlessRules, isProcessHeadlessRule)
+	metadata.ContainsWIFIRule = HasHeadlessRule(headlessRules, isWIFIHeadlessRule)
+	metadata.ContainsIPCIDRRule = HasHeadlessRule(headlessRules, isIPCIDRHeadlessRule)
 	s.access.Lock()
 	s.rules = rules
 	s.metadata = metadata
@@ -173,6 +173,10 @@ func (s *LocalRuleSet) reloadRules(headlessRules []option.HeadlessRule) error {
 	for _, callback := range callbacks {
 		callback(s)
 	}
+	return nil
+}
+
+func (s *LocalRuleSet) PostStart() error {
 	return nil
 }
 
@@ -222,9 +226,19 @@ func (s *LocalRuleSet) Close() error {
 }
 
 func (s *LocalRuleSet) Match(metadata *adapter.InboundContext) bool {
-	return matchAnyHeadlessRule(s.rules, metadata)
+	return !s.matchStates(metadata).isEmpty()
 }
 
-func (s *LocalRuleSet) mergeableRule() *DefaultHeadlessRule {
-	return mergeableRuleIn(s.rules)
+func (s *LocalRuleSet) matchStates(metadata *adapter.InboundContext) ruleMatchStateSet {
+	return s.matchStatesWithBase(metadata, 0)
+}
+
+func (s *LocalRuleSet) matchStatesWithBase(metadata *adapter.InboundContext, base ruleMatchState) ruleMatchStateSet {
+	var stateSet ruleMatchStateSet
+	for _, rule := range s.rules {
+		nestedMetadata := *metadata
+		nestedMetadata.ResetRuleMatchCache()
+		stateSet = stateSet.merge(matchHeadlessRuleStatesWithBase(rule, &nestedMetadata, base))
+	}
+	return stateSet
 }

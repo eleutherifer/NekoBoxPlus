@@ -168,7 +168,7 @@ func (h *Inbound) Close() error {
 	return listenerErr
 }
 
-func (h *Inbound) NewConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) {
+func (h *Inbound) NewConnectionEx(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) {
 	if h.obfsMode == "http" {
 		conn = obfs.NewHTTPObfsServer(conn)
 	}
@@ -216,7 +216,7 @@ func (h *Inbound) newConnection(ctx context.Context, conn net.Conn, metadata ada
 	metadata.InboundType = h.Type()
 	if len(h.users) > 0 {
 		userIndex, loaded := auth.UserFromContext[int](ctx)
-		if !loaded || userIndex < 0 || userIndex >= len(h.users) {
+		if !loaded {
 			N.CloseOnHandshakeFailure(conn, onClose, os.ErrInvalid)
 			return
 		}
@@ -236,11 +236,9 @@ func (h *Inbound) newConnection(ctx context.Context, conn net.Conn, metadata ada
 func (h *Inbound) newPacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) {
 	metadata.Inbound = h.Tag()
 	metadata.InboundType = h.Type()
-	// The snell client in Surge rejects UDP responses with domain addresses.
-	metadata.UDPDisableDomainUnmapping = true
 	if len(h.users) > 0 {
 		userIndex, loaded := auth.UserFromContext[int](ctx)
-		if !loaded || userIndex < 0 || userIndex >= len(h.users) {
+		if !loaded {
 			N.CloseOnHandshakeFailure(conn, onClose, os.ErrInvalid)
 			return
 		}
@@ -297,7 +295,7 @@ type quicProxyInitParser interface {
 	ParseQUICProxyInit(data []byte) (*snellprotocol.QUICProxySession, []byte, error)
 }
 
-func (h *inboundPacketHandler) NewPacket(buffer *buf.Buffer, source M.Socksaddr) {
+func (h *inboundPacketHandler) NewPacketEx(buffer *buf.Buffer, source M.Socksaddr) {
 	defer buffer.Release()
 	data := buffer.Bytes()
 	if len(data) == 0 || h.udpNat == nil {

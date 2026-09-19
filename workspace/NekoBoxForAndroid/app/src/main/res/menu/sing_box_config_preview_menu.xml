@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_copy_config"
+        android:icon="@drawable/ic_baseline_content_copy_24"
+        android:title="@string/action_copy"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_toggle_word_wrap"
+        android:icon="@drawable/baseline_wrap_text_24"
+        android:title="@string/enable_word_wrap"
+        app:showAsAction="always" />
+</menu>

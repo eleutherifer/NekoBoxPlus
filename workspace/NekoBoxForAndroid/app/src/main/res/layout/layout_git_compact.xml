@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.textfield.TextInputLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="24dp"
+    android:layout_marginEnd="24dp"
+    android:hint="@string/git_compact_versions"
+    android:paddingTop="8dp">
+
+    <com.google.android.material.textfield.TextInputEditText
+        android:id="@+id/versions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="number"
+        android:maxLength="5"
+        android:singleLine="true"
+        android:text="10" />
+</com.google.android.material.textfield.TextInputLayout>

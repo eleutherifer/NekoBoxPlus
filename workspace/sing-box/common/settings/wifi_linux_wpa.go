@@ -52,7 +52,7 @@ func newWpaSupplicantMonitor(callback func(adapter.WIFIState)) (WIFIMonitor, err
 	return nil, os.ErrNotExist
 }
 
-func (m *wpaSupplicantMonitor) ReadWIFIState(ctx context.Context) adapter.WIFIState {
+func (m *wpaSupplicantMonitor) ReadWIFIState() adapter.WIFIState {
 	id := wpaSocketCounter.Add(1)
 	localAddr := &net.UnixAddr{Name: fmt.Sprintf("@sing-box-wpa-%d-%d", os.Getpid(), id), Net: "unixgram"}
 	remoteAddr := &net.UnixAddr{Name: m.socketPath, Net: "unixgram"}
@@ -63,15 +63,6 @@ func (m *wpaSupplicantMonitor) ReadWIFIState(ctx context.Context) adapter.WIFISt
 	defer conn.Close()
 
 	conn.SetDeadline(time.Now().Add(3 * time.Second))
-	done := make(chan struct{})
-	defer close(done)
-	go func() {
-		select {
-		case <-ctx.Done():
-			conn.SetDeadline(time.Now())
-		case <-done:
-		}
-	}()
 
 	status, err := m.sendCommand(conn, "STATUS")
 	if err != nil {
@@ -133,7 +124,7 @@ func (m *wpaSupplicantMonitor) Start() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	m.cancel = cancel
 
-	state := m.ReadWIFIState(ctx)
+	state := m.ReadWIFIState()
 	go m.monitorEvents(ctx, state)
 	m.callback(state)
 
@@ -211,7 +202,7 @@ func (m *wpaSupplicantMonitor) monitorEvents(ctx context.Context, lastState adap
 				debounceTimer.Stop()
 			}
 			debounceTimer = time.AfterFunc(500*time.Millisecond, func() {
-				state := m.ReadWIFIState(ctx)
+				state := m.ReadWIFIState()
 				if state != lastState {
 					lastState = state
 					m.callback(state)

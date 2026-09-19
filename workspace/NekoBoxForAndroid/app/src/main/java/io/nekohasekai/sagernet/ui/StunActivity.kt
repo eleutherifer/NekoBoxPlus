@@ -1,54 +1,55 @@
 package io.nekohasekai.sagernet.ui
 
 import android.os.Bundle
-import androidx.activity.compose.setContent
+import android.widget.ArrayAdapter
 import androidx.activity.viewModels
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.appcompat.widget.Toolbar
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.isVisible
+import androidx.core.view.updatePadding
+import androidx.core.widget.doOnTextChanged
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.database.DataStore
-import io.nekohasekai.sagernet.ui.compose.NekoComposeTheme
-import io.nekohasekai.sagernet.ui.compose.StunResultPresentation
-import io.nekohasekai.sagernet.ui.compose.StunScreen
-import io.nekohasekai.sagernet.ui.compose.StunServerPresentation
+import io.nekohasekai.sagernet.databinding.LayoutStunBinding
+import io.nekohasekai.sagernet.databinding.LayoutStunServerResultBinding
+import kotlinx.coroutines.launch
 
 class StunActivity : ThemedActivity() {
+
+    private lateinit var binding: LayoutStunBinding
     private val viewModel: StunTestViewModel by viewModels()
-    private var selectedPreset by mutableStateOf(StunPreset.BALANCED)
-    private var customServers by mutableStateOf("")
-    private var customServersError by mutableStateOf<String?>(null)
-    private var detailsExpanded by mutableStateOf(false)
+    private var selectedPreset = StunPreset.BALANCED
+    private var detailsExpanded = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        selectedPreset = StunPreset.fromValue(DataStore.stunTestPreset)
-        customServers = DataStore.stunTestCustomServers
-        setContent {
-            NekoComposeTheme {
-                val state = viewModel.uiState.collectAsStateWithLifecycle().value
-                StunScreen(
-                    selectedPreset = selectedPreset,
-                    customServers = customServers,
-                    customServersError = customServersError,
-                    isRunning = state.isRunning,
-                    progressText = progressText(state),
-                    result = resultPresentation(state),
-                    detailsExpanded = detailsExpanded,
-                    onClose = ::finish,
-                    onPresetSelected = ::selectPreset,
-                    onCustomServersChanged = {
-                        customServers = it
-                        customServersError = null
-                    },
-                    onAction = {
-                        if (state.isRunning) viewModel.cancel() else startTest()
-                    },
-                    onToggleDetails = { detailsExpanded = !detailsExpanded },
-                )
-            }
+        binding = LayoutStunBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        setSupportActionBar(findViewById<Toolbar>(R.id.toolbar))
+        supportActionBar?.apply {
+            setTitle(R.string.stun_test)
+            setDisplayHomeAsUpEnabled(true)
+            setHomeAsUpIndicator(R.drawable.baseline_arrow_back_24)
         }
+
+        configureInsets()
+        configurePresets()
+        binding.customServers.setText(DataStore.stunTestCustomServers)
+        binding.customServers.doOnTextChanged { _, _, _, _ ->
+            binding.customServersLayout.error = null
+        }
+        binding.stunTestAction.setOnClickListener {
+            if (viewModel.uiState.value.isRunning) viewModel.cancel() else startTest()
+        }
+        binding.toggleDetails.setOnClickListener {
+            detailsExpanded = !detailsExpanded
+            renderDetailsVisibility(viewModel.uiState.value)
+        }
+        observeState()
     }
 
     override fun onPause() {
@@ -56,20 +57,59 @@ class StunActivity : ThemedActivity() {
         super.onPause()
     }
 
+    override fun onSupportNavigateUp(): Boolean {
+        finish()
+        return true
+    }
+
+    private fun configureInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(binding.stunScroll) { view, insets ->
+            val bars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout(),
+            )
+            view.updatePadding(bottom = bars.bottom)
+            insets
+        }
+    }
+
+    private fun configurePresets() {
+        val presets = StunPreset.entries
+        val labels = presets.map { getString(it.titleRes) }
+        binding.stunPreset.setAdapter(
+            ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, labels),
+        )
+        selectedPreset = StunPreset.fromValue(DataStore.stunTestPreset)
+        binding.stunPreset.setText(getString(selectedPreset.titleRes), false)
+        binding.stunPreset.setOnItemClickListener { _, _, position, _ ->
+            selectPreset(presets[position])
+        }
+        selectPreset(selectedPreset)
+    }
+
     private fun selectPreset(preset: StunPreset) {
         selectedPreset = preset
         DataStore.stunTestPreset = preset.value
+        binding.customServersLayout.isVisible = preset == StunPreset.CUSTOM
+        binding.stunPresetDescription.setText(
+            when (preset) {
+                StunPreset.BALANCED -> R.string.stun_preset_balanced_description
+                StunPreset.FULL -> R.string.stun_preset_full_description
+                StunPreset.FAST -> R.string.stun_preset_fast_description
+                StunPreset.CUSTOM -> R.string.stun_preset_custom_description
+            },
+        )
     }
 
     private fun startTest() {
         val servers = if (selectedPreset == StunPreset.CUSTOM) {
-            when (val parsed = StunServerListParser.parse(customServers)) {
+            when (val parsed = StunServerListParser.parse(binding.customServers.text?.toString().orEmpty())) {
                 is StunServerParseResult.Valid -> {
                     DataStore.stunTestCustomServers = parsed.servers.joinToString("\n")
                     parsed.servers
                 }
                 is StunServerParseResult.Invalid -> {
-                    customServersError = customServerError(parsed)
+                    binding.customServersLayout.error = customServerError(parsed)
+                    binding.customServers.requestFocus()
                     return
                 }
             }
@@ -80,7 +120,7 @@ class StunActivity : ThemedActivity() {
     }
 
     private fun persistValidCustomServers() {
-        val parsed = StunServerListParser.parse(customServers)
+        val parsed = StunServerListParser.parse(binding.customServers.text?.toString().orEmpty())
         if (parsed is StunServerParseResult.Valid) {
             DataStore.stunTestCustomServers = parsed.servers.joinToString("\n")
         }
@@ -96,37 +136,73 @@ class StunActivity : ThemedActivity() {
             getString(R.string.stun_custom_error_too_many, StunServerListParser.MAX_SERVERS)
     }
 
-    private fun progressText(state: StunUiState): String = if (state.isRunning) {
-        resources.getQuantityString(
-            R.plurals.stun_testing_servers,
-            activeServerCount(),
-            activeServerCount(),
-        )
-    } else {
-        ""
+    private fun observeState() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect(::render)
+            }
+        }
     }
 
-    private fun resultPresentation(state: StunUiState): StunResultPresentation? {
-        val assessment = state.assessment ?: return null
-        return StunResultPresentation(
-            assessmentTitle = getString(assessmentTitle(assessment.kind)),
-            assessmentImpact = getString(assessmentImpact(assessment.kind)),
-            technicalSummary = technicalSummary(state.results, assessment),
-            servers = state.results.map { result ->
-                StunServerPresentation(
-                    name = result.server.ifBlank { getString(R.string.stun_unknown_server) },
-                    status = getString(
-                        when {
-                            result.behaviorComplete -> R.string.stun_server_status_complete
-                            result.bindingSuccess -> R.string.stun_server_status_partial
-                            result.errorCode == "cancelled" -> R.string.stun_server_status_cancelled
-                            else -> R.string.stun_server_status_failed
-                        },
-                    ),
-                    details = serverDetails(result),
-                )
-            },
-        )
+    private fun render(state: StunUiState) {
+        binding.progressContainer.isVisible = state.isRunning
+        binding.progressText.text = if (state.isRunning) {
+            resources.getQuantityString(
+                R.plurals.stun_testing_servers,
+                activeServerCount(),
+                activeServerCount(),
+            )
+        } else {
+            ""
+        }
+        binding.stunPresetLayout.isEnabled = !state.isRunning
+        binding.customServersLayout.isEnabled = !state.isRunning
+        binding.stunTestAction.apply {
+            setText(if (state.isRunning) R.string.cancel else R.string.start)
+            setIconResource(
+                if (state.isRunning) R.drawable.ic_navigation_close
+                else R.drawable.ic_baseline_play_arrow_24,
+            )
+        }
+
+        val assessment = state.assessment
+        binding.summaryCard.isVisible = assessment != null
+        if (assessment != null) {
+            binding.summaryTitle.setText(assessmentTitle(assessment.kind))
+            binding.summaryImpact.setText(assessmentImpact(assessment.kind))
+            binding.technicalResult.text = technicalSummary(state.results, assessment)
+            renderServerResults(state.results)
+        }
+        renderDetailsVisibility(state)
+    }
+
+    private fun renderDetailsVisibility(state: StunUiState) {
+        binding.detailsContainer.isVisible = detailsExpanded && state.assessment != null
+        binding.toggleDetails.apply {
+            setText(if (detailsExpanded) R.string.stun_hide_details else R.string.stun_show_details)
+        }
+    }
+
+    private fun renderServerResults(results: List<StunServerUiResult>) {
+        binding.serverResults.removeAllViews()
+        results.forEach { result ->
+            val item = LayoutStunServerResultBinding.inflate(
+                layoutInflater,
+                binding.serverResults,
+                false,
+            )
+            item.serverName.text = result.server.ifBlank { getString(R.string.stun_unknown_server) }
+            item.serverStatus.setText(
+                when {
+                    result.behaviorComplete -> R.string.stun_server_status_complete
+                    result.bindingSuccess -> R.string.stun_server_status_partial
+                    result.errorCode == "cancelled" -> R.string.stun_server_status_cancelled
+                    else -> R.string.stun_server_status_failed
+                },
+            )
+            item.serverDetails.text = serverDetails(result)
+            binding.serverResults.addView(item.root)
+        }
     }
 
     private fun technicalSummary(
@@ -201,7 +277,7 @@ class StunActivity : ThemedActivity() {
 
     private fun activeServerCount(): Int =
         if (selectedPreset == StunPreset.CUSTOM) {
-            (StunServerListParser.parse(customServers)
+            (StunServerListParser.parse(binding.customServers.text?.toString().orEmpty())
                 as? StunServerParseResult.Valid)?.servers?.size ?: 0
         } else {
             selectedPreset.servers.size

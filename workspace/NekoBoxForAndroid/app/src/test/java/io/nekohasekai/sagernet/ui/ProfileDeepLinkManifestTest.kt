@@ -40,7 +40,6 @@ class ProfileDeepLinkManifestTest {
                 "anytls",
                 "stormdns",
                 "vpn",
-                "openvpn",
             ),
             schemes,
         )

@@ -71,9 +71,6 @@ func (b *BoxInstance) urlTest(tag, link string, timeout int32, attempts int32, p
 		return -1, err
 	}
 	return runURLTestAttempts(b.ctx, timeout, attempts, pause, func(ctx context.Context) (int32, error) {
-		if err = waitURLTestOutboundReady(ctx, b.Outbound(), detour); err != nil {
-			return -1, err
-		}
 		testDialer := N.Dialer(&fallbackURLTestDialer{
 			Dialer:         detour,
 			localTransport: b.localDNS,
@@ -118,11 +115,6 @@ func urlTest(i *BoxInstance, link string, timeout int32, standard int32, attempt
 		parentCtx = instance.ctx
 	}
 	return runURLTestAttempts(parentCtx, timeout, attempts, pause, func(ctx context.Context) (int32, error) {
-		if instance != nil {
-			if err = waitURLTestOutboundReady(ctx, instance.Outbound(), instance.Outbound().Default()); err != nil {
-				return -1, err
-			}
-		}
 		connections := newURLTestConnectionSet()
 		result, err := runURLTestAsync(ctx, "HTTP URLTest", func() (int32, error) {
 			return runHTTPURLTest(ctx, instance, connections, link, time.Duration(timeout)*time.Millisecond, urlTestStandard(standard), hardened)

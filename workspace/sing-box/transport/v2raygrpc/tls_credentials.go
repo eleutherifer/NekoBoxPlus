@@ -22,6 +22,8 @@ func NewTLSTransportCredentials(config tls.Config) credentials.TransportCredenti
 func (c *TLSTransportCredentials) Info() credentials.ProtocolInfo {
 	return credentials.ProtocolInfo{
 		SecurityProtocol: "tls",
+		SecurityVersion:  "1.2",
+		ServerName:       c.config.ServerName(),
 	}
 }
 

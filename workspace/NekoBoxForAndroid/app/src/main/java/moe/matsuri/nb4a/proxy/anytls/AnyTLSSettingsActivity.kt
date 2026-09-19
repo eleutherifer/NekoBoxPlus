@@ -1,16 +1,18 @@
 package moe.matsuri.nb4a.proxy.anytls
 
-import androidx.compose.runtime.Composable
+import android.os.Bundle
+import androidx.preference.EditTextPreference
+import androidx.preference.PreferenceFragmentCompat
+import io.nekohasekai.sagernet.Key
+import io.nekohasekai.sagernet.R
+import io.nekohasekai.sagernet.database.preference.EditTextPreferenceModifiers
 import io.nekohasekai.sagernet.ktx.applyDefaultValues
-import io.nekohasekai.sagernet.ui.compose.AnyTLSProfileSettingsScreen
 import io.nekohasekai.sagernet.ui.profile.ProfileSettingsActivity
 import moe.matsuri.nb4a.proxy.PreferenceBinding
 import moe.matsuri.nb4a.proxy.PreferenceBindingManager
 import moe.matsuri.nb4a.proxy.Type
 
 class AnyTLSSettingsActivity : ProfileSettingsActivity<AnyTLSBean>() {
-    override val usesComposePreferences = true
-
     override fun createEntity() = AnyTLSBean().applyDefaultValues()
 
     private val pbm = PreferenceBindingManager()
@@ -36,6 +38,17 @@ class AnyTLSSettingsActivity : ProfileSettingsActivity<AnyTLSBean>() {
         pbm.fromCacheAll(this)
     }
 
-    @Composable
-    override fun ComposePreferences() = AnyTLSProfileSettingsScreen()
+    override fun PreferenceFragmentCompat.createPreferences(
+        savedInstanceState: Bundle?,
+        rootKey: String?
+    ) {
+        addPreferencesFromResource(R.xml.anytls_preferences)
+
+        findPreference<EditTextPreference>(Key.SERVER_PORT)!!.apply {
+            setOnBindEditTextListener(EditTextPreferenceModifiers.Port)
+        }
+        findPreference<EditTextPreference>("password")!!.apply {
+            summaryProvider = PasswordSummaryProvider
+        }
+    }
 }

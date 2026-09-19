@@ -89,8 +89,6 @@ class RoutingRuleConvertersTest {
         assertEquals(0L, restored.outbound)
         assertTrue(restored.createDnsRule)
         assertEquals("reject", restored.dnsAction)
-        assertEquals("", stable.dnsStrategy)
-        assertEquals("", restored.dnsStrategy)
         assertEquals("extra", restored.dnsPredefinedExtra)
         assertEquals("dns-direct", stable.dnsServer.tag)
         assertNull(stable.outboundHash)
@@ -120,15 +118,6 @@ class RoutingRuleConvertersTest {
         assertFalse(restored.dnsDisableCache)
         assertEquals(0, restored.dnsRewriteTtl)
         assertEquals("", restored.dnsPredefinedAnswer)
-    }
-
-    @Test
-    fun clashModeRoundTripsThroughStableRule() {
-        val stable = StableRoutingRuleMapper.export(RuleEntity(clashMode = "Streaming")).rule
-        val restored = StableRoutingRuleMapper.import(stable, 0L)
-
-        assertEquals("Streaming", stable.clashMode)
-        assertEquals("Streaming", restored.clashMode)
     }
 
     @Test

@@ -10,7 +10,6 @@ import (
 type CertificateStore interface {
 	LifecycleService
 	Pool() *x509.CertPool
-	ExclusiveAnchors() bool
 }
 
 func RootPoolFromContext(ctx context.Context) *x509.CertPool {

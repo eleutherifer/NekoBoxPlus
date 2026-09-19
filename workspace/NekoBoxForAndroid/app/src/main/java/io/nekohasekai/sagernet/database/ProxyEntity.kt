@@ -19,8 +19,6 @@ import io.nekohasekai.sagernet.fmt.masque.MasqueBean
 import io.nekohasekai.sagernet.fmt.mieru.MieruBean
 import io.nekohasekai.sagernet.fmt.mieru.toUri
 import io.nekohasekai.sagernet.fmt.naive.NaiveBean
-import io.nekohasekai.sagernet.fmt.openconnect.OpenConnectBean
-import io.nekohasekai.sagernet.fmt.openvpn.OpenVPNBean
 import io.nekohasekai.sagernet.fmt.naive.buildNaiveConfig
 import io.nekohasekai.sagernet.fmt.naive.toUri
 import io.nekohasekai.sagernet.fmt.shadowsocks.*
@@ -108,8 +106,6 @@ data class ProxyEntity(
     var masqueBean: MasqueBean? = null,
     var directBean: DirectBean? = null,
     var tailscaleBean: TailscaleBean? = null,
-    var openVPNBean: OpenVPNBean? = null,
-    var openConnectBean: OpenConnectBean? = null,
     var proxySetBean: ProxySetBean? = null,
     var chainBean: ChainBean? = null,
     var nekoBean: NekoBean? = null,
@@ -144,8 +140,6 @@ data class ProxyEntity(
         const val TYPE_MASQUE = 30
         const val TYPE_DIRECT = 31
         const val TYPE_TAILSCALE = 32
-        const val TYPE_OPENVPN = 33
-        const val TYPE_OPENCONNECT = 34
 
         const val TYPE_CONFIG = 998
         const val TYPE_NEKO = 999
@@ -246,8 +240,6 @@ data class ProxyEntity(
             TYPE_MASQUE -> masqueBean = KryoConverters.masqueDeserialize(byteArray)
             TYPE_DIRECT -> directBean = KryoConverters.directDeserialize(byteArray)
             TYPE_TAILSCALE -> tailscaleBean = KryoConverters.tailscaleDeserialize(byteArray)
-            TYPE_OPENVPN -> openVPNBean = KryoConverters.openVPNDeserialize(byteArray)
-            TYPE_OPENCONNECT -> openConnectBean = KryoConverters.openConnectDeserialize(byteArray)
             TYPE_PROXY_SET -> proxySetBean = KryoConverters.proxySetDeserialize(byteArray)
             TYPE_CHAIN -> chainBean = KryoConverters.chainDeserialize(byteArray)
             TYPE_NEKO -> nekoBean = KryoConverters.nekoDeserialize(byteArray)
@@ -280,8 +272,6 @@ data class ProxyEntity(
         TYPE_MASQUE -> "MASQUE"
         TYPE_DIRECT -> "Direct"
         TYPE_TAILSCALE -> "Tailscale"
-        TYPE_OPENVPN -> "OpenVPN"
-        TYPE_OPENCONNECT -> "OpenConnect"
         TYPE_PROXY_SET -> proxySetBean!!.displayType()
         TYPE_CHAIN -> chainName
         TYPE_NEKO -> nekoBean!!.displayType()
@@ -318,8 +308,6 @@ data class ProxyEntity(
             TYPE_MASQUE -> masqueBean
             TYPE_DIRECT -> directBean
             TYPE_TAILSCALE -> tailscaleBean
-            TYPE_OPENVPN -> openVPNBean
-            TYPE_OPENCONNECT -> openConnectBean
             TYPE_PROXY_SET -> proxySetBean
             TYPE_CHAIN -> chainBean
             TYPE_NEKO -> nekoBean
@@ -347,8 +335,6 @@ data class ProxyEntity(
             is ConfigBean -> false
             is DirectBean -> false
             is TailscaleBean -> false
-            is OpenVPNBean -> false
-            is OpenConnectBean -> false
             is ProxySetBean -> false
             is ChainBean -> false
             is ByeDPIBean -> false
@@ -387,7 +373,7 @@ data class ProxyEntity(
     }
 
     fun usesUniversalLinkForGroupExport(): Boolean = when (requireBean()) {
-        is TailscaleBean, is OpenVPNBean, is OpenConnectBean -> true
+        is TailscaleBean -> true
         else -> false
     }
 
@@ -615,8 +601,6 @@ data class ProxyEntity(
         masqueBean = null
         directBean = null
         tailscaleBean = null
-        openVPNBean = null
-        openConnectBean = null
         proxySetBean = null
         chainBean = null
         configBean = null
@@ -743,16 +727,6 @@ data class ProxyEntity(
                 tailscaleBean = bean
             }
 
-            is OpenVPNBean -> {
-                type = TYPE_OPENVPN
-                openVPNBean = bean
-            }
-
-            is OpenConnectBean -> {
-                type = TYPE_OPENCONNECT
-                openConnectBean = bean
-            }
-
             is ProxySetBean -> {
                 type = TYPE_PROXY_SET
                 proxySetBean = bean
@@ -805,8 +779,6 @@ data class ProxyEntity(
                 TYPE_MASQUE -> MasqueSettingsActivity::class.java
                 TYPE_DIRECT -> DirectSettingsActivity::class.java
                 TYPE_TAILSCALE -> TailscaleSettingsActivity::class.java
-                TYPE_OPENVPN -> OpenVPNSettingsActivity::class.java
-                TYPE_OPENCONNECT -> OpenConnectSettingsActivity::class.java
                 TYPE_PROXY_SET -> ProxySetSettingsActivity::class.java
                 TYPE_CHAIN -> ChainSettingsActivity::class.java
                 TYPE_CONFIG -> ConfigSettingActivity::class.java

@@ -62,7 +62,7 @@ func (c *Client) DialContext(ctx context.Context, network string, destination M.
 		if err != nil {
 			return nil, err
 		}
-		streamCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
+		streamCtx, cancel := context.WithCancel(ctx)
 		return &sessionConn{session: s, ctx: streamCtx, cancel: cancel}, nil
 	default:
 		return nil, E.Extend(N.ErrUnknownNetwork, network)
@@ -75,7 +75,7 @@ func (c *Client) ListenPacket(ctx context.Context, destination M.Socksaddr) (net
 	if err != nil {
 		return nil, err
 	}
-	streamCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
+	streamCtx, cancel := context.WithCancel(ctx)
 	return &sessionPacketConn{session: s, ctx: streamCtx, cancel: cancel}, nil
 }
 

@@ -243,12 +243,6 @@ func (t *BalancerTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*m
 	}
 }
 
-func (t *BalancerTransport) ExchangeAsync(ctx context.Context, message *mDNS.Msg, callback func(response *mDNS.Msg, err error)) {
-	go func() {
-		callback(t.Exchange(ctx, message))
-	}()
-}
-
 func (t *BalancerTransport) measure(ctx context.Context, message *mDNS.Msg, children []*balancerChild) (*mDNS.Msg, error) {
 	results := make([]balancerMeasureResult, len(children))
 	var wg sync.WaitGroup
@@ -546,13 +540,4 @@ func (t *balancerPlaceholderTransport) Exchange(ctx context.Context, message *mD
 		return nil, err
 	}
 	return transport.Exchange(ctx, message)
-}
-
-func (t *balancerPlaceholderTransport) ExchangeAsync(ctx context.Context, message *mDNS.Msg, callback func(response *mDNS.Msg, err error)) {
-	transport, err := t.get()
-	if err != nil {
-		callback(nil, err)
-		return
-	}
-	transport.ExchangeAsync(ctx, message, callback)
 }

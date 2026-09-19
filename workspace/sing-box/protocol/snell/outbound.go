@@ -44,7 +44,6 @@ type Outbound struct {
 	psk           []byte
 	userKey       []byte
 	version       int
-	quicProxyMode bool
 	quicDestCache *expiringmap.Map[quicDestCacheKey, uint64]
 	quicDestSeq   atomic.Uint64
 }
@@ -66,7 +65,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	serverAddr := options.ServerOptions.Build()
 	version := options.Version
 	if version == 0 {
-		return nil, E.New("snell: missing version")
+		version = 4
 	}
 	if version == 6 && (len(options.PSK) < 12 || len(options.PSK) > 255) {
 		return nil, E.New("snell: psk length must be between 12 and 255 bytes")
@@ -125,19 +124,18 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		return nil, err
 	}
 	outbound := &Outbound{
-		Adapter:       outbound.NewAdapterWithDialerOptions(C.TypeSnell, tag, networks, options.DialerOptions),
-		logger:        logger,
-		dialer:        outboundDialer,
-		tcpDialer:     tcpDialer,
-		client:        client,
-		legacy:        legacyClient,
-		serverAddr:    serverAddr,
-		psk:           []byte(options.PSK),
-		userKey:       []byte(options.UserKey),
-		version:       version,
-		quicProxyMode: version == 5 || version == 6 && options.V6Options.QUICProxyMode,
+		Adapter:    outbound.NewAdapterWithDialerOptions(C.TypeSnell, tag, networks, options.DialerOptions),
+		logger:     logger,
+		dialer:     outboundDialer,
+		tcpDialer:  tcpDialer,
+		client:     client,
+		legacy:     legacyClient,
+		serverAddr: serverAddr,
+		psk:        []byte(options.PSK),
+		userKey:    []byte(options.UserKey),
+		version:    version,
 	}
-	if outbound.quicProxyMode {
+	if version == 5 {
 		outbound.quicDestCache = expiringmap.New[quicDestCacheKey, uint64](quicDestCacheTTL)
 	}
 	return outbound, nil
@@ -196,7 +194,7 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 		return h.client.DialContext(ctx, destination)
 	case N.NetworkUDP:
 		h.logger.InfoContext(ctx, "outbound packet connection to ", destination)
-		if h.version == 5 || h.quicProxyMode {
+		if h.version == 5 {
 			packetConn := newV5LazyPacketConn(ctx, h, metadata.Source, destination, metadata.Protocol == C.ProtocolQUIC || h.isRecentQUICDest(metadata.Source, destination))
 			return &packetConnWrapper{PacketConn: packetConn, destination: destination}, nil
 		}
@@ -215,7 +213,7 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 	metadata.Outbound = h.Tag()
 	metadata.Destination = destination
 	h.logger.InfoContext(ctx, "outbound packet connection to ", destination)
-	if h.version == 5 || h.quicProxyMode {
+	if h.version == 5 {
 		return newV5LazyPacketConn(ctx, h, metadata.Source, destination, metadata.Protocol == C.ProtocolQUIC || h.isRecentQUICDest(metadata.Source, destination)), nil
 	}
 	return h.dialUDPOverTCP(ctx)
@@ -270,8 +268,6 @@ func (h *Outbound) dialUDPOverTCP(ctx context.Context) (net.PacketConn, error) {
 	}
 	return packetConn, nil
 }
-
-func (h *Outbound) InterfaceUpdated(context.Context) {}
 
 const quicDestCacheTTL = 5 * time.Minute
 

@@ -3,6 +3,7 @@ package libcore
 import (
 	"encoding/json"
 	"fmt"
+	"net/netip"
 
 	tun "github.com/sagernet/sing-tun"
 	E "github.com/sagernet/sing/common/exceptions"
@@ -12,7 +13,7 @@ import (
 // the Go core (libcore) and the Android VpnService through
 // BoxPlatformInterface.OpenTun. Bump it whenever the field set changes in a
 // backwards-incompatible way; the Android side rejects unknown versions.
-const androidTunPayloadVersion = 2
+const androidTunPayloadVersion = 1
 
 // androidTunPayload is the stable, versioned contract that replaces the raw
 // github.com/sagernet/sing-tun option structs on the JNI boundary.
@@ -34,10 +35,11 @@ type androidTunPayload struct {
 	// Inet6Address is the IPv6 interface address as a CIDR.
 	// Empty when the plan is IPv4-only.
 	Inet6Address string `json:"inet6_address,omitempty"`
-	// DNSMode is sing-tun's effective DNS mode.
-	DNSMode string `json:"dns_mode"`
-	// DNSServers are sing-tun's effective DNS server addresses. Always non-nil.
-	DNSServers []string `json:"dns_servers"`
+	// Inet4DNSServer is the in-TUN IPv4 DNS server address (next address in the
+	// configured IPv4 prefix). Empty when the plan is IPv6-only.
+	Inet4DNSServer string `json:"inet4_dns_server,omitempty"`
+	// Inet6DNSServer is the in-TUN IPv6 DNS server address. Empty for IPv4-only.
+	Inet6DNSServer string `json:"inet6_dns_server,omitempty"`
 	// Inet4Routes are the flattened IPv4 route ranges to claim on the VPN.
 	// Always non-nil (may be empty) so the JSON shape is deterministic.
 	Inet4Routes []string `json:"inet4_routes"`
@@ -48,9 +50,11 @@ type androidTunPayload struct {
 // buildAndroidTunPayload translates sing-tun options into the stable Android
 // TUN payload.
 //
-// DNS mode and server addresses come from sing-tun's effective 1.14 options, so
-// explicit dns_address values, default next-address derivation, and disabled DNS
-// mode are represented exactly on the Android side.
+// The DNS server for each configured family is derived as the next address
+// inside the family's TUN prefix, which matches what sing-tun itself serves DNS
+// hijacking on (see sing-tun Options.Inet4GatewayAddr / system stack DNS listen
+// address). Families that are not configured are omitted entirely so the Android
+// side never declares an unrequested address family.
 func buildAndroidTunPayload(options *tun.Options) (*androidTunPayload, error) {
 	if options == nil {
 		return nil, E.New("android: tun options are nil")
@@ -70,37 +74,27 @@ func buildAndroidTunPayload(options *tun.Options) (*androidTunPayload, error) {
 		Version:     androidTunPayloadVersion,
 		MTU:         options.MTU,
 		AutoRoute:   options.AutoRoute,
-		DNSMode:     options.DNSModeOrDefault(),
-		DNSServers:  []string{},
 		Inet4Routes: []string{},
 		Inet6Routes: []string{},
 	}
 
 	if len(options.Inet4Address) > 0 {
-		payload.Inet4Address = options.Inet4Address[0].String()
+		v4 := options.Inet4Address[0]
+		payload.Inet4Address = v4.String()
+		dns, err := tunDNSServerAddress(v4)
+		if err != nil {
+			return nil, err
+		}
+		payload.Inet4DNSServer = dns.String()
 	}
 	if len(options.Inet6Address) > 0 {
-		payload.Inet6Address = options.Inet6Address[0].String()
-	}
-
-	if payload.DNSMode != tun.DNSModeDisabled {
-		if len(options.DNSAddress) == 0 {
-			v4Usable := len(options.Inet4Address) > 0 && tun.HasNextAddress(options.Inet4Address[0], 1)
-			v6Usable := len(options.Inet6Address) > 0 && tun.HasNextAddress(options.Inet6Address[0], 1)
-			if !v4Usable && !v6Usable {
-				return nil, E.New("android: no address available for in-tun dns")
-			}
-		}
-		dnsServers, err := options.DNSServerAddress()
+		v6 := options.Inet6Address[0]
+		payload.Inet6Address = v6.String()
+		dns, err := tunDNSServerAddress(v6)
 		if err != nil {
-			return nil, fmt.Errorf("android: build dns server addresses: %w", err)
+			return nil, err
 		}
-		for _, dnsServer := range dnsServers {
-			payload.DNSServers = append(payload.DNSServers, dnsServer.String())
-		}
-		if len(payload.DNSServers) == 0 {
-			return nil, E.New("android: no dns server matches a configured tun address family")
-		}
+		payload.Inet6DNSServer = dns.String()
 	}
 
 	routes, err := options.BuildAutoRouteRanges(true)
@@ -131,6 +125,18 @@ func marshalAndroidTunPayload(options *tun.Options) (string, error) {
 	return string(encoded), nil
 }
 
+// tunDNSServerAddress returns the next address inside prefix, used as the
+// in-TUN DNS server address. It mirrors sing-tun's gateway/DNS derivation on
+// Android. A prefix with no room for a second address (e.g. a /32 or /128) is
+// rejected, surfacing the misconfiguration instead of silently serving DNS on
+// an address the platform never declares.
+func tunDNSServerAddress(prefix netip.Prefix) (netip.Addr, error) {
+	if !tun.HasNextAddress(prefix, 1) {
+		return netip.Addr{}, E.New("android: no address available for in-tun dns in prefix ", prefix)
+	}
+	return prefix.Addr().Next(), nil
+}
+
 // rejectUnsupportedTunOptions fails fast on sing-tun options that the Android
 // platform bridge cannot honor. Per-app routing is owned by NekoBox settings
 // (allow/disallow applications) and must not be imported from the sing-box TUN
@@ -145,9 +151,6 @@ func rejectUnsupportedTunOptions(options *tun.Options) error {
 	}
 	if len(options.IncludePackage) > 0 || len(options.ExcludePackage) > 0 {
 		return E.New("android: unsupported package options; per-app routing is owned by NekoBox settings")
-	}
-	if len(options.IncludeMACAddress) > 0 || len(options.ExcludeMACAddress) > 0 {
-		return E.New("android: unsupported mac address options")
 	}
 	return nil
 }

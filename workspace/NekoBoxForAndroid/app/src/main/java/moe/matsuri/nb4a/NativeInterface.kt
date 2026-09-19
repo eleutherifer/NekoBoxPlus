@@ -232,12 +232,6 @@ class NativeInterface : BoxPlatformInterface, NB4AInterface {
         }
     }
 
-    override fun cancelNotification(identifier: String, typeID: Int) {
-        runCatching {
-            NotificationManagerCompat.from(app).cancel(identifier.hashCode())
-        }.onFailure(Logs::w)
-    }
-
     fun syncNetworkState(network: Network?) {
         val defaultInterface = if (network == null) "" else buildDefaultInterface(network)?.toString() ?: ""
         val interfaces = networkInterfaces()
@@ -307,15 +301,6 @@ class NativeInterface : BoxPlatformInterface, NB4AInterface {
             } else if (!message.isNullOrBlank()) {
                 Logs.w(message)
             }
-            SagerNet.stopService()
-        }
-    }
-
-    override fun endpointAuthenticationRequired(protocol: String?, detail: String?) {
-        Handler(Looper.getMainLooper()).post {
-            val message = app.getString(R.string.endpoint_authentication_required, protocol ?: "VPN")
-            Logs.w(listOfNotNull(message, detail?.takeIf { it.isNotBlank() }).joinToString(" "))
-            Toast.makeText(app, message, Toast.LENGTH_LONG).show()
             SagerNet.stopService()
         }
     }

@@ -1,0 +1,139 @@
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <EditTextPreference
+        app:icon="@drawable/ic_social_emoji_symbols"
+        app:key="name"
+        app:title="@string/profile_name"
+        app:useSimpleSummaryProvider="true" />
+
+    <PreferenceCategory app:title="@string/proxy_cat">
+        <EditTextPreference
+            app:icon="@drawable/ic_hardware_router"
+            app:key="serverAddress"
+            app:title="@string/server_address"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_maps_directions_boat"
+            app:key="serverPort"
+            app:title="@string/server_port"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_person_24"
+            app:key="username"
+            app:title="@string/username"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:dialogLayout="@layout/layout_password_dialog"
+            app:icon="@drawable/ic_settings_password"
+            app:key="password"
+            app:title="@string/password" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_baseline_speed_24"
+            app:key="healthCheck"
+            app:title="@string/health_check" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:entries="@array/trusttunnel_protocol_entry"
+            app:entryValues="@array/trusttunnel_protocol_value"
+            app:icon="@drawable/ic_baseline_fast_forward_24"
+            app:key="trustTunnelProtocol"
+            app:title="@string/trusttunnel_protocol"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:entries="@array/trusttunnel_cronet_stack_entry"
+            app:entryValues="@array/trusttunnel_cronet_stack_value"
+            app:icon="@drawable/ic_baseline_fast_forward_24"
+            app:key="trustTunnelCronetStack"
+            app:title="@string/trusttunnel_use_chrome_network_stack"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:entries="@array/trusttunnel_quic_congestion_controller_entry"
+            app:entryValues="@array/trusttunnel_quic_congestion_controller_value"
+            app:icon="@drawable/ic_baseline_compare_arrows_24"
+            app:key="quicCongestionControl"
+            app:title="@string/tuic_congestion_controller"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_shuffle_24"
+            app:key="clientRandomPrefix"
+            app:title="@string/client_random_prefix"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/security_settings">
+        <EditTextPreference
+            app:icon="@drawable/ic_action_copyright"
+            app:key="serverName"
+            app:title="@string/sni"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_action_lock_open"
+            app:key="allowInsecure"
+            app:title="@string/allow_insecure" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_legend_toggle_24"
+            app:key="alpn"
+            app:title="@string/alpn"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_vpn_key_24"
+            app:key="certificates"
+            app:title="@string/certificates"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="certPublicKeySha256"
+            app:title="@string/cert_public_key_sha256"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:entries="@array/utls_fingerprint_entry"
+            app:entryValues="@array/utls_fingerprint_value"
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="utlsFingerprint"
+            app:title="@string/utls_fingerprint"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_baseline_texture_24"
+            app:key="tlsFragment"
+            app:title="@string/tls_fragment" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timelapse_24"
+            app:key="tlsFragmentFallbackDelay"
+            app:title="@string/tls_fragment_fallback_delay"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="tlsRecordFragment"
+            app:title="@string/tls_record_fragment" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/ech">
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_action_lock"
+            app:key="ech"
+            app:title="@string/ech" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_format_align_left_24"
+            app:key="echConfig"
+            app:title="@string/ech_config"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_center_focus_weak_24"
+            app:key="echQueryServerName"
+            app:title="@string/ech_query_server_name"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/mutual_tls">
+        <EditTextPreference
+            app:icon="@drawable/ic_action_lock"
+            app:key="clientCert"
+            app:title="@string/certificates"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_vpn_key_24"
+            app:key="clientKey"
+            app:title="@string/ssh_private_key"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

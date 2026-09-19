@@ -6,7 +6,8 @@ import androidx.room.RoomDatabase
 import dev.matrix.roomigrant.GenerateRoomMigrations
 import io.nekohasekai.sagernet.Key
 import io.nekohasekai.sagernet.SagerNet
-import io.nekohasekai.sagernet.app.AppGraph
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 @Database(entities = [KeyValuePair::class], version = 1)
 @GenerateRoomMigrations
@@ -19,7 +20,7 @@ abstract class PublicDatabase : RoomDatabase() {
                 .allowMainThreadQueries()
                 .enableMultiInstanceInvalidation()
                 .fallbackToDestructiveMigration()
-                .setQueryExecutor(AppGraph.databaseExecutor)
+                .setQueryExecutor { GlobalScope.launch { it.run() } }
                 .build()
         }
 

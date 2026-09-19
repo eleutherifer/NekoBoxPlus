@@ -42,58 +42,29 @@ icon: material/new-box
 
 === "仅分割 DNS"
 
-    === ":material-card-multiple: sing-box 1.14.0"
-
-        ```json
-        {
-          "dns": {
-            "servers": [
-              {
-                "type": "local",
-                "tag": "local"
-              },
-              {
-                "type": "resolved",
-                "tag": "resolved",
-                "service": "resolved"
-              }
-            ],
-            "rules": [
-              {
-                "preferred_by": "resolved",
-                "action": "route",
-                "server": "resolved"
-              }
-            ]
+    ```json
+    {
+      "dns": {
+        "servers": [
+          {
+            "type": "local",
+            "tag": "local"
+          },
+          {
+            "type": "resolved",
+            "tag": "resolved",
+            "service": "resolved"
           }
-        }
-        ```
-
-    === ":material-card-remove: sing-box < 1.14.0"
-
-        ```json
-        {
-          "dns": {
-            "servers": [
-              {
-                "type": "local",
-                "tag": "local"
-              },
-              {
-                "type": "resolved",
-                "tag": "resolved",
-                "service": "resolved"
-              }
-            ],
-            "rules": [
-              {
-                "ip_accept_any": true,
-                "server": "resolved"
-              }
-            ]
+        ],
+        "rules": [
+          {
+            "ip_accept_any": true,
+            "server": "resolved"
           }
-        }
-        ```
+        ]
+      }
+    }
+    ```
 
 === "用作全局 DNS"
 

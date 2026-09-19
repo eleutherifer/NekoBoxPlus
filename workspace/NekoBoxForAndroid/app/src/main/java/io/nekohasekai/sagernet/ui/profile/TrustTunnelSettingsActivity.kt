@@ -1,17 +1,21 @@
 package io.nekohasekai.sagernet.ui.profile
 
-import androidx.compose.runtime.Composable
+import android.os.Bundle
+import androidx.preference.EditTextPreference
+import androidx.preference.PreferenceFragmentCompat
+import io.nekohasekai.sagernet.Key
+import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.database.DataStore
+import io.nekohasekai.sagernet.database.preference.EditTextPreferenceModifiers
 import io.nekohasekai.sagernet.fmt.trusttunnel.TrustTunnelBean
 import io.nekohasekai.sagernet.ktx.applyDefaultValues
-import io.nekohasekai.sagernet.ui.compose.TrustTunnelProfileSettingsScreen
 import moe.matsuri.nb4a.proxy.PreferenceBinding
 import moe.matsuri.nb4a.proxy.PreferenceBindingManager
 import moe.matsuri.nb4a.proxy.Type
+import moe.matsuri.nb4a.ui.MaterialSwitchPreference
+import moe.matsuri.nb4a.ui.SimpleMenuPreference
 
 class TrustTunnelSettingsActivity : ProfileSettingsActivity<TrustTunnelBean>() {
-
-    override val usesComposePreferences = true
 
     companion object {
         private const val KEY_PROTOCOL = "trustTunnelProtocol"
@@ -57,27 +61,116 @@ class TrustTunnelSettingsActivity : ProfileSettingsActivity<TrustTunnelBean>() {
 
     override fun TrustTunnelBean.init() {
         pbm.writeToCacheAll(this)
-        DataStore.profileCacheStore.putString(
-            KEY_PROTOCOL,
-            when {
-                !quic -> PROTOCOL_HTTPS
-                forceQuic -> PROTOCOL_FORCE_QUIC
-                else -> PROTOCOL_PREFER_QUIC
-            },
-        )
-        DataStore.profileCacheStore.putString(
-            KEY_CRONET_STACK,
-            when {
-                useCronetHttps && useCronetQuic -> CRONET_FOR_HTTPS_AND_QUIC
-                useCronetHttps -> CRONET_FOR_HTTPS
-                useCronetQuic -> CRONET_FOR_QUIC
-                else -> CRONET_NO
-            },
-        )
     }
 
-    @Composable
-    override fun ComposePreferences() = TrustTunnelProfileSettingsScreen()
+    override fun PreferenceFragmentCompat.createPreferences(
+        savedInstanceState: Bundle?,
+        rootKey: String?,
+    ) {
+        addPreferencesFromResource(R.xml.trusttunnel_preferences)
+        pbm.setPreferenceFragment(this)
+
+        findPreference<EditTextPreference>(Key.SERVER_PORT)!!.apply {
+            setOnBindEditTextListener(EditTextPreferenceModifiers.Port)
+        }
+        findPreference<EditTextPreference>("password")!!.summaryProvider = PasswordSummaryProvider
+
+        val protocolPreference = findPreference<SimpleMenuPreference>(KEY_PROTOCOL)!!
+        val cronetStackPreference = findPreference<SimpleMenuPreference>(KEY_CRONET_STACK)!!
+        val congestionControl = findPreference<SimpleMenuPreference>("quicCongestionControl")!!
+        val clientRandom = findPreference<EditTextPreference>("clientRandomPrefix")!!
+        val alpnPreference = findPreference<EditTextPreference>("alpn")!!
+        val utls = findPreference<SimpleMenuPreference>("utlsFingerprint")!!
+        val allowInsecurePreference = findPreference<MaterialSwitchPreference>("allowInsecure")!!
+        val fragment = findPreference<MaterialSwitchPreference>("tlsFragment")!!
+        val fragmentDelay = findPreference<EditTextPreference>("tlsFragmentFallbackDelay")!!
+        val recordFragment = findPreference<MaterialSwitchPreference>("tlsRecordFragment")!!
+        val echPreference = findPreference<MaterialSwitchPreference>("ech")!!
+        val echConfigPreference = findPreference<EditTextPreference>("echConfig")!!
+        val echQueryServerNamePreference = findPreference<EditTextPreference>("echQueryServerName")!!
+
+        fun protocolValue(quicEnabled: Boolean, forceQuicEnabled: Boolean) = when {
+            !quicEnabled -> PROTOCOL_HTTPS
+            forceQuicEnabled -> PROTOCOL_FORCE_QUIC
+            else -> PROTOCOL_PREFER_QUIC
+        }
+
+        fun cronetStackValue(useCronetHttpsEnabled: Boolean, useCronetQuicEnabled: Boolean) = when {
+            useCronetHttpsEnabled && useCronetQuicEnabled -> CRONET_FOR_HTTPS_AND_QUIC
+            useCronetHttpsEnabled -> CRONET_FOR_HTTPS
+            useCronetQuicEnabled -> CRONET_FOR_QUIC
+            else -> CRONET_NO
+        }
+
+        fun updateTransportOptions(
+            protocol: String = protocolPreference.value,
+            cronetStack: String = cronetStackPreference.value,
+        ) {
+            val quicEnabled = protocol != PROTOCOL_HTTPS
+            val forceQuicActive = protocol == PROTOCOL_FORCE_QUIC
+            val cronetSelected = cronetStack != CRONET_NO
+            congestionControl.isEnabled = quicEnabled
+            alpnPreference.isEnabled = !forceQuicActive
+            utls.isEnabled = !forceQuicActive && !cronetSelected
+            allowInsecurePreference.isEnabled = !forceQuicActive && !cronetSelected
+            clientRandom.isEnabled = !cronetSelected
+            fragment.isEnabled = !forceQuicActive && !cronetSelected && !recordFragment.isChecked
+            fragmentDelay.isEnabled = !forceQuicActive && !cronetSelected && fragment.isChecked
+            recordFragment.isEnabled = !forceQuicActive && !cronetSelected && !fragment.isChecked
+        }
+
+        fun updateEchOptions(enabled: Boolean) {
+            echConfigPreference.isEnabled = enabled
+            echQueryServerNamePreference.isEnabled = enabled
+        }
+
+        protocolPreference.value = protocolValue(
+            quicBinding.readBoolFromCache(),
+            forceQuicBinding.readBoolFromCache(),
+        )
+        cronetStackPreference.value = cronetStackValue(
+            useCronetHttpsBinding.readBoolFromCache(),
+            useCronetQuicBinding.readBoolFromCache(),
+        )
+        updateTransportOptions()
+        updateEchOptions(echPreference.isChecked)
+
+        protocolPreference.setOnPreferenceChangeListener { _, newValue ->
+            updateTransportOptions(protocol = newValue as String, cronetStack = cronetStackPreference.value)
+            true
+        }
+        cronetStackPreference.setOnPreferenceChangeListener { _, newValue ->
+            updateTransportOptions(protocol = protocolPreference.value, cronetStack = newValue as String)
+            true
+        }
+        utls.setOnPreferenceChangeListener { _, newValue ->
+            if (newValue == "cronet") {
+                cronetStackPreference.value = CRONET_FOR_HTTPS
+                updateTransportOptions(protocol = protocolPreference.value, cronetStack = cronetStackPreference.value)
+            } else {
+                updateTransportOptions(protocol = protocolPreference.value, cronetStack = cronetStackPreference.value)
+            }
+            true
+        }
+        fragment.setOnPreferenceChangeListener { _, newValue ->
+            val enabled = newValue as Boolean
+            val forceQuicActive = protocolPreference.value == PROTOCOL_FORCE_QUIC
+            val cronetSelected = cronetStackPreference.value != CRONET_NO
+            fragmentDelay.isEnabled = enabled && !forceQuicActive && !cronetSelected
+            recordFragment.isEnabled = !enabled && !forceQuicActive && !cronetSelected
+            true
+        }
+        recordFragment.setOnPreferenceChangeListener { _, newValue ->
+            val forceQuicActive = protocolPreference.value == PROTOCOL_FORCE_QUIC
+            val cronetSelected = cronetStackPreference.value != CRONET_NO
+            fragment.isEnabled = !(newValue as Boolean) && !forceQuicActive && !cronetSelected
+            true
+        }
+        echPreference.setOnPreferenceChangeListener { _, newValue ->
+            updateEchOptions(newValue as Boolean)
+            true
+        }
+    }
 
     override fun TrustTunnelBean.serialize() {
         val protocol = DataStore.profileCacheStore.getString(KEY_PROTOCOL) ?: PROTOCOL_HTTPS

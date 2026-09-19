@@ -1,5 +1,8 @@
 package moe.matsuri.nb4a.proxy
 
+import androidx.preference.PreferenceFragmentCompat
+
+
 class PreferenceBindingManager {
     val items = mutableListOf<PreferenceBinding>()
 
@@ -21,4 +24,11 @@ class PreferenceBindingManager {
             it.writeToCache()
         }
     }
+
+    fun setPreferenceFragment(pf: PreferenceFragmentCompat) {
+        items.forEach {
+            it.pf = pf
+        }
+    }
+
 }

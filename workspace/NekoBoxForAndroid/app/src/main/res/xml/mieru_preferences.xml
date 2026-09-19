@@ -1,0 +1,80 @@
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <EditTextPreference
+        app:icon="@drawable/ic_social_emoji_symbols"
+        app:key="profileName"
+        app:title="@string/profile_name"
+        app:useSimpleSummaryProvider="true" />
+
+    <PreferenceCategory app:title="@string/proxy_cat">
+
+        <EditTextPreference
+            app:icon="@drawable/ic_hardware_router"
+            app:key="serverAddress"
+            app:title="@string/server_address"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_maps_directions_boat"
+            app:key="serverPort"
+            app:title="@string/server_port"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_maps_directions_boat"
+            app:key="serverPorts"
+            app:title="@string/mieru_port_range"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:entries="@array/mieru_protocol"
+            app:entryValues="@array/int_array_2"
+            app:icon="@drawable/ic_baseline_compare_arrows_24"
+            app:key="serverProtocol"
+            app:title="@string/protocol"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_person_24"
+            app:key="serverUsername"
+            app:title="@string/username"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:dialogLayout="@layout/layout_password_dialog"
+            app:icon="@drawable/ic_settings_password"
+            app:key="serverPassword"
+            app:title="@string/password"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:entries="@array/mieru_mux_level_entry"
+            app:entryValues="@array/mieru_mux_level_value"
+            app:icon="@drawable/ic_baseline_compare_arrows_24"
+            app:key="serverMieruMuxLevel"
+            app:title="@string/mieru_multiplexing_level"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="2"
+            app:entries="@array/mieru_handshake_mode_entry"
+            app:entryValues="@array/mieru_handshake_mode_value"
+            app:icon="@drawable/baseline_flight_takeoff_24"
+            app:key="serverMieruHandshakeMode"
+            app:title="@string/mieru_handshake_mode"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="serverMieruTrafficPattern"
+            app:title="@string/mieru_traffic_pattern"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:entries="@array/mieru_low_entropy_mode"
+            app:entryValues="@array/mieru_low_entropy_mode"
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="serverMieruLowEntropyMode"
+            app:title="@string/mieru_low_entropy_mode"
+            app:useSimpleSummaryProvider="true" />
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:entries="@array/mieru_low_entropy_mask_rotation"
+            app:entryValues="@array/mieru_low_entropy_mask_rotation"
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="serverMieruLowEntropyMaskRotation"
+            app:title="@string/mieru_low_entropy_mask_rotation"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

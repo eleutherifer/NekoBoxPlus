@@ -18,7 +18,6 @@ public class SnellBean extends AbstractBean {
     public String obfsMode;
     public String obfsHost;
     public String mode;          // v6: "default", "unshaped", "unsafe-raw"
-    public Boolean quicProxyMode;
     public Boolean reuse;
     public String network;
 
@@ -31,7 +30,6 @@ public class SnellBean extends AbstractBean {
         if (obfsMode == null) obfsMode = "";
         if (obfsHost == null) obfsHost = "";
         if (mode == null || mode.isEmpty()) mode = "default";
-        if (quicProxyMode == null) quicProxyMode = false;
         if (reuse == null) reuse = false;
         if (network == null) network = "";
 
@@ -40,7 +38,7 @@ public class SnellBean extends AbstractBean {
 
     @Override
     public void serialize(ByteBufferOutput output) {
-        output.writeInt(4);
+        output.writeInt(3);
         super.serialize(output);
         output.writeString(psk);
         output.writeInt(version);
@@ -50,7 +48,6 @@ public class SnellBean extends AbstractBean {
         output.writeString(network);
         output.writeString(userKey);
         output.writeString(mode);
-        output.writeBoolean(quicProxyMode);
     }
 
     @Override
@@ -68,9 +65,6 @@ public class SnellBean extends AbstractBean {
         if (version >= 3) {
             userKey = input.readString();
             mode = input.readString();
-        }
-        if (version >= 4) {
-            quicProxyMode = input.readBoolean();
         }
     }
 

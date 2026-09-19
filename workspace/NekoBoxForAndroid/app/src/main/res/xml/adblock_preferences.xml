@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="@string/adblock">
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            android:icon="@drawable/ic_baseline_filter_list_24"
+            android:key="adblockEnabled"
+            android:title="@string/adblock_enable"
+            android:defaultValue="false" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:key="adblockFilteringSection" app:title="@string/adblock_filtering">
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            android:icon="@drawable/ic_baseline_dns_24"
+            android:key="adblockDnsFiltering"
+            android:title="@string/adblock_dns_filtering"
+            android:defaultValue="true" />
+
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            android:icon="@drawable/ic_baseline_link_24"
+            android:key="adblockCnameUncloaking"
+            android:title="@string/adblock_cname_uncloaking"
+            android:defaultValue="true" />
+
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            android:icon="@drawable/ic_baseline_http_24"
+            android:key="adblockHttpFiltering"
+            android:title="@string/adblock_http_filtering"
+            android:defaultValue="true" />
+
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            android:icon="@drawable/ic_baseline_lock_24"
+            android:key="adblockHttpsFiltering"
+            android:title="@string/adblock_https_filtering"
+            android:summary="@string/adblock_https_filtering_summary"
+            android:defaultValue="false" />
+
+        <Preference
+            android:icon="@drawable/ic_baseline_save_24"
+            android:key="adblockSaveCaCertificate"
+            android:title="@string/adblock_save_ca_certificate"
+            android:summary="@string/adblock_save_ca_certificate_summary" />
+
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            android:icon="@drawable/ic_baseline_fingerprint_24"
+            android:key="adblockHttpsFingerprint"
+            android:title="@string/adblock_https_fingerprint"
+            android:defaultValue=""
+            app:entries="@array/adblock_https_fingerprint_entry"
+            app:entryValues="@array/adblock_https_fingerprint_value"
+            app:useSimpleSummaryProvider="true" />
+
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            android:icon="@drawable/ic_baseline_lock_24"
+            android:key="adblockHttpsCronet"
+            android:title="@string/adblock_https_cronet"
+            android:summary="@string/adblock_https_cronet_summary"
+            android:defaultValue="false" />
+
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            android:icon="@drawable/ic_baseline_security_24"
+            android:key="adblockSkipEvCerts"
+            android:title="@string/adblock_skip_ev_certs"
+            android:defaultValue="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:key="adblockPerAppSection" app:title="@string/adblock_per_app_filtering">
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            android:icon="@drawable/ic_baseline_vpn_key_24"
+            android:key="adblockSystemWideFilter"
+            android:title="@string/adblock_system_wide_filter"
+            android:summary="@string/adblock_system_wide_filter_summary"
+            android:defaultValue="false" />
+
+        <io.nekohasekai.sagernet.widget.AppListPreference
+            android:icon="@drawable/ic_navigation_apps"
+            android:key="adblockIncludedPackages"
+            android:title="@string/adblock_included_apps" />
+
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            android:icon="@drawable/ic_baseline_lock_24"
+            android:key="adblockMixedLanFiltering"
+            android:title="@string/adblock_mixed_lan_filtering"
+            android:summary="@string/adblock_mixed_lan_filtering_summary"
+            android:defaultValue="false" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:key="adblockFilterListsSection" app:title="@string/adblock_filter_lists">
+        <Preference
+            android:icon="@drawable/ic_baseline_rule_folder_24"
+            android:key="adblockBundledFiltersScreen"
+            android:title="@string/adblock_bundled_filters" />
+
+        <Preference
+            android:icon="@drawable/ic_baseline_download_24"
+            android:key="adblockCustomFiltersScreen"
+            android:title="@string/adblock_custom_filters" />
+
+        <Preference
+            android:icon="@drawable/baseline_wrap_text_24"
+            android:key="adblockCustomRulesScreen"
+            android:title="@string/adblock_custom_rules" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

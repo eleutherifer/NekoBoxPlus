@@ -2,8 +2,7 @@ package ccm
 
 import (
 	"bytes"
-	"context"
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"io"
 	"net/http"
 	"os"
@@ -12,7 +11,6 @@ import (
 	"time"
 
 	E "github.com/sagernet/sing/common/exceptions"
-	"github.com/sagernet/sing/service/filemanager"
 )
 
 const (
@@ -44,8 +42,8 @@ func getDefaultCredentialsPath() (string, error) {
 	return filepath.Join(userInfo.HomeDir, ".claude", ".credentials.json"), nil
 }
 
-func readCredentialsFromFile(ctx context.Context, path string) (*oauthCredentials, error) {
-	data, err := filemanager.ReadFile(ctx, path)
+func readCredentialsFromFile(path string) (*oauthCredentials, error) {
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -62,14 +60,14 @@ func readCredentialsFromFile(ctx context.Context, path string) (*oauthCredential
 	return credentialsContainer.ClaudeAIAuth, nil
 }
 
-func writeCredentialsToFile(ctx context.Context, oauthCredentials *oauthCredentials, path string) error {
+func writeCredentialsToFile(oauthCredentials *oauthCredentials, path string) error {
 	data, err := json.MarshalIndent(map[string]any{
 		"claudeAiOauth": oauthCredentials,
 	}, "", "  ")
 	if err != nil {
 		return err
 	}
-	return filemanager.WriteFile(ctx, path, data, 0o600)
+	return os.WriteFile(path, data, 0o600)
 }
 
 type oauthCredentials struct {

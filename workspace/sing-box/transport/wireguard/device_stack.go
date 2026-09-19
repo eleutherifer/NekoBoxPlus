@@ -8,6 +8,7 @@ import (
 	"net/netip"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/sagernet/gvisor/pkg/buffer"
 	"github.com/sagernet/gvisor/pkg/tcpip"
@@ -19,7 +20,10 @@ import (
 	"github.com/sagernet/gvisor/pkg/tcpip/transport/icmp"
 	"github.com/sagernet/gvisor/pkg/tcpip/transport/tcp"
 	"github.com/sagernet/gvisor/pkg/tcpip/transport/udp"
+	"github.com/sagernet/sing-box/adapter"
+	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-tun"
+	"github.com/sagernet/sing-tun/ping"
 	"github.com/sagernet/sing/common/buf"
 	E "github.com/sagernet/sing/common/exceptions"
 	M "github.com/sagernet/sing/common/metadata"
@@ -28,9 +32,11 @@ import (
 	wgTun "github.com/sagernet/wireguard-go/tun"
 )
 
-var _ Device = (*stackDevice)(nil)
+var _ NatDevice = (*stackDevice)(nil)
 
 type stackDevice struct {
+	ctx            context.Context
+	logger         log.ContextLogger
 	stack          *stack.Stack
 	mtu            uint32
 	events         chan wgTun.Event
@@ -41,12 +47,12 @@ type stackDevice struct {
 	dispatcher     stack.NetworkDispatcher
 	inet4Address   netip.Addr
 	inet6Address   netip.Addr
-	icmpForwarder  *tun.ICMPForwarder
-	udpForwarder   *tun.UDPForwarder
 }
 
 func newStackDevice(options DeviceOptions) (*stackDevice, error) {
 	tunDevice := &stackDevice{
+		ctx:            options.Context,
+		logger:         options.Logger,
 		mtu:            options.MTU,
 		events:         make(chan wgTun.Event, 1),
 		outbound:       make(chan *stack.PacketBuffer, 256),
@@ -57,6 +63,10 @@ func newStackDevice(options DeviceOptions) (*stackDevice, error) {
 	if err != nil {
 		return nil, err
 	}
+	var (
+		inet4Address netip.Addr
+		inet6Address netip.Addr
+	)
 	for _, prefix := range options.Address {
 		addr := tun.AddressFromAddr(prefix.Addr())
 		protoAddr := tcpip.ProtocolAddress{
@@ -66,10 +76,12 @@ func newStackDevice(options DeviceOptions) (*stackDevice, error) {
 			},
 		}
 		if prefix.Addr().Is4() {
-			tunDevice.inet4Address = prefix.Addr()
+			inet4Address = prefix.Addr()
+			tunDevice.inet4Address = inet4Address
 			protoAddr.Protocol = ipv4.ProtocolNumber
 		} else {
-			tunDevice.inet6Address = prefix.Addr()
+			inet6Address = prefix.Addr()
+			tunDevice.inet6Address = inet6Address
 			protoAddr.Protocol = ipv6.ProtocolNumber
 		}
 		gErr := ipStack.AddProtocolAddress(tun.DefaultNIC, protoAddr, stack.AddressProperties{})
@@ -80,20 +92,11 @@ func newStackDevice(options DeviceOptions) (*stackDevice, error) {
 	tunDevice.stack = ipStack
 	if options.Handler != nil {
 		ipStack.SetTransportProtocolHandler(tcp.ProtocolNumber, tun.NewTCPForwarder(options.Context, ipStack, options.Handler).HandlePacket)
-		udpForwarder := tun.NewUDPForwarder(options.Context, ipStack, options.Handler, tun.UDPNatOptions{
-			Timeout:         options.UDPTimeout,
-			Shared:          true,
-			Mapping:         options.UDPMapping,
-			Filtering:       options.UDPFiltering,
-			MaxSize:         options.UDPNATMax,
-			InterfaceFinder: options.InterfaceFinder,
-		})
-		ipStack.SetTransportProtocolHandler(udp.ProtocolNumber, udpForwarder.HandlePacket)
-		tunDevice.udpForwarder = udpForwarder
-		icmpForwarder := tun.NewICMPForwarder(ipStack, options.Handler, options.Logger)
+		ipStack.SetTransportProtocolHandler(udp.ProtocolNumber, tun.NewUDPForwarder(options.Context, ipStack, options.Handler, options.UDPTimeout).HandlePacket)
+		icmpForwarder := tun.NewICMPForwarder(options.Context, ipStack, options.Handler, options.ICMPTimeout)
+		icmpForwarder.SetLocalAddresses(inet4Address, inet6Address)
 		ipStack.SetTransportProtocolHandler(icmp.ProtocolNumber4, icmpForwarder.HandlePacket)
 		ipStack.SetTransportProtocolHandler(icmp.ProtocolNumber6, icmpForwarder.HandlePacket)
-		tunDevice.icmpForwarder = icmpForwarder
 	}
 	return tunDevice, nil
 }
@@ -176,12 +179,6 @@ func (w *stackDevice) SetDevice(device *device.Device) {
 }
 
 func (w *stackDevice) Start() error {
-	if w.udpForwarder != nil {
-		err := w.udpForwarder.Start()
-		if err != nil {
-			return err
-		}
-	}
 	w.events <- wgTun.EventUp
 	return nil
 }
@@ -258,12 +255,6 @@ func (w *stackDevice) Close() error {
 	w.closeOnce.Do(func() {
 		close(w.done)
 		close(w.events)
-		if w.icmpForwarder != nil {
-			w.icmpForwarder.Close()
-		}
-		if w.udpForwarder != nil {
-			_ = w.udpForwarder.Close()
-		}
 		w.stack.Close()
 		for _, endpoint := range w.stack.CleanupEndpoints() {
 			endpoint.Abort()
@@ -275,6 +266,23 @@ func (w *stackDevice) Close() error {
 
 func (w *stackDevice) BatchSize() int {
 	return 1
+}
+
+func (w *stackDevice) CreateDestination(metadata adapter.InboundContext, routeContext tun.DirectRouteContext, timeout time.Duration) (tun.DirectRouteDestination, error) {
+	ctx := log.ContextWithNewID(w.ctx)
+	destination, err := ping.ConnectGVisor(
+		ctx, w.logger,
+		metadata.Source.Addr, metadata.Destination.Addr,
+		routeContext,
+		w.stack,
+		w.inet4Address, w.inet6Address,
+		timeout,
+	)
+	if err != nil {
+		return nil, err
+	}
+	w.logger.InfoContext(ctx, "linked ", metadata.Network, " connection from ", metadata.Source.AddrString(), " to ", metadata.Destination.AddrString())
+	return destination, nil
 }
 
 var _ stack.LinkEndpoint = (*wireEndpoint)(nil)

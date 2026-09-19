@@ -5,6 +5,7 @@ import androidx.room.TypeConverter;
 import com.esotericsoftware.kryo.io.ByteBufferInput;
 import com.esotericsoftware.kryo.io.ByteBufferOutput;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 
 import io.nekohasekai.sagernet.database.SubscriptionBean;
@@ -16,8 +17,6 @@ import io.nekohasekai.sagernet.fmt.masterdns.MasterDnsVPNBean;
 import io.nekohasekai.sagernet.fmt.masque.MasqueBean;
 import io.nekohasekai.sagernet.fmt.mieru.MieruBean;
 import io.nekohasekai.sagernet.fmt.naive.NaiveBean;
-import io.nekohasekai.sagernet.fmt.openconnect.OpenConnectBean;
-import io.nekohasekai.sagernet.fmt.openvpn.OpenVPNBean;
 import io.nekohasekai.sagernet.fmt.shadowsocks.ShadowsocksBean;
 import io.nekohasekai.sagernet.fmt.shadowsocksr.ShadowsocksRBean;
 import io.nekohasekai.sagernet.fmt.snell.SnellBean;
@@ -59,7 +58,8 @@ public class KryoConverters {
 
     public static <T extends Serializable> T deserialize(T bean, byte[] bytes) {
         if (bytes == null) return bean;
-        ByteBufferInput buffer = new ByteBufferInput(bytes);
+        ByteArrayInputStream input = new ByteArrayInputStream(bytes);
+        ByteBufferInput buffer = KryosKt.byteBuffer(input);
         try {
             bean.deserializeFromBuffer(buffer);
         } catch (RuntimeException e) {
@@ -211,18 +211,6 @@ public class KryoConverters {
     public static TailscaleBean tailscaleDeserialize(byte[] bytes) {
         if (JavaUtil.isEmpty(bytes)) return null;
         return deserialize(new TailscaleBean(), bytes);
-    }
-
-    @TypeConverter
-    public static OpenVPNBean openVPNDeserialize(byte[] bytes) {
-        if (JavaUtil.isEmpty(bytes)) return null;
-        return deserialize(new OpenVPNBean(), bytes);
-    }
-
-    @TypeConverter
-    public static OpenConnectBean openConnectDeserialize(byte[] bytes) {
-        if (JavaUtil.isEmpty(bytes)) return null;
-        return deserialize(new OpenConnectBean(), bytes);
     }
 
     @TypeConverter

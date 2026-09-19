@@ -75,13 +75,12 @@ resolve_version() {
 	printf '%s' "$version"
 }
 
-VERSION_AMNEZIA="v3.1.20260814"
+VERSION_AMNEZIA="$(resolve_version ../../amneziawg-go tag)"
 VERSION_BYEDPI="ba53229"
 VERSION_MASTERDNSVPN="v2026.06.13.234407-7de2476"
 VERSION_ADBLOCK_RUST="$(resolve_version ../../adblock-rust)"
 VERSION_ADBLOCK_RESOURCES="$(resolve_version ../../adblock-resources)"
 VERSION_UBLOCK="$(resolve_version ../../uBlock)"
-VERSION_SING_BOX="1.14.0-0b8995879"
 
 VERSION_LDFLAGS=""
 append_version_ldflag() {
@@ -94,12 +93,11 @@ append_version_ldflag VersionMasterDnsVPN "$VERSION_MASTERDNSVPN"
 append_version_ldflag VersionAdblockRust "$VERSION_ADBLOCK_RUST"
 append_version_ldflag VersionAdblockResources "$VERSION_ADBLOCK_RESOURCES"
 append_version_ldflag VersionUBlock "$VERSION_UBLOCK"
-[ -n "$VERSION_SING_BOX" ] && VERSION_LDFLAGS="${VERSION_LDFLAGS} -X github.com/sagernet/sing-box/constant.Version=${VERSION_SING_BOX}"
+[ -n "$VERSION_SING_BOX" ] && VERSION_LDFLAGS="${VERSION_LDFLAGS} -X github.com/sagernet/sing-box/constant.PlusVersion=${VERSION_SING_BOX}"
 
-echo ">> core version: sing-box-plus=${VERSION_SING_BOX:-?}"
 echo ">> module versions: amneziawg-go=${VERSION_AMNEZIA:-?} byedpi=${VERSION_BYEDPI:-?} masterdnsvpn=${VERSION_MASTERDNSVPN:-?} adblock-rust=${VERSION_ADBLOCK_RUST:-?} adblock-resources=${VERSION_ADBLOCK_RESOURCES:-?} uBlock=${VERSION_UBLOCK:-?}"
 
-gomobile bind -v -androidapi 23 -trimpath -ldflags="-s -w -checklinkname=0${VERSION_LDFLAGS}" -tags='with_conntrack,with_gvisor,with_quic,with_wireguard,with_awg,with_tailscale,with_openvpn,with_openconnect,with_utls,with_clash_api,with_naive_outbound,with_trusttunnel_cronet,with_adblock,with_adblock_cronet,with_grpc,badlinkname,tfogo_checklinkname0' . || exit 1
+gomobile bind -v -androidapi 23 -trimpath -ldflags="-s -w -checklinkname=0${VERSION_LDFLAGS}" -tags='with_conntrack,with_gvisor,with_quic,with_wireguard,with_awg,with_tailscale,with_utls,with_clash_api,with_naive_outbound,with_trusttunnel_cronet,with_adblock,with_adblock_cronet,badlinkname,tfogo_checklinkname0' . || exit 1
 rm -r libcore-sources.jar
 
 proj=../app/libs

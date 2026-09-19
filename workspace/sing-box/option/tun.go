@@ -4,7 +4,6 @@ import (
 	"net/netip"
 	"strconv"
 
-	"github.com/sagernet/sing-box/schema"
 	E "github.com/sagernet/sing/common/exceptions"
 	F "github.com/sagernet/sing/common/format"
 	"github.com/sagernet/sing/common/json"
@@ -13,11 +12,8 @@ import (
 
 type TunInboundOptions struct {
 	InterfaceName                 string                           `json:"interface_name,omitempty"`
-	NetNs                         string                           `json:"netns,omitempty" reference:"network_namespace"`
 	MTU                           uint32                           `json:"mtu,omitempty"`
-	Address                       badoption.Listable[netip.Prefix] `json:"address,omitempty" examples:"172.19.0.1/30,fdfe:dcba:9876::1/126"`
-	DNSMode                       string                           `json:"dns_mode,omitempty" enum:"disabled,native,hijack"`
-	DNSAddress                    badoption.Listable[netip.Addr]   `json:"dns_address,omitempty"`
+	Address                       badoption.Listable[netip.Prefix] `json:"address,omitempty"`
 	AutoRoute                     bool                             `json:"auto_route,omitempty"`
 	IPRoute2TableIndex            int                              `json:"iproute2_table_index,omitempty"`
 	IPRoute2RuleIndex             int                              `json:"iproute2_rule_index,omitempty"`
@@ -43,32 +39,27 @@ type TunInboundOptions struct {
 	IncludeAndroidUser            badoption.Listable[int]          `json:"include_android_user,omitempty"`
 	IncludePackage                badoption.Listable[string]       `json:"include_package,omitempty"`
 	ExcludePackage                badoption.Listable[string]       `json:"exclude_package,omitempty"`
-	IncludeMACAddress             badoption.Listable[string]       `json:"include_mac_address,omitempty"`
-	ExcludeMACAddress             badoption.Listable[string]       `json:"exclude_mac_address,omitempty"`
 	UDPTimeout                    UDPTimeoutCompat                 `json:"udp_timeout,omitempty"`
-	UDPMapping                    UDPNATBehavior                   `json:"udp_mapping,omitempty"`
-	UDPFiltering                  UDPNATBehavior                   `json:"udp_filtering,omitempty"`
-	UDPNATMax                     uint32                           `json:"udp_nat_max,omitempty"`
-	Stack                         string                           `json:"stack,omitempty" enum:"system,gvisor,mixed"`
+	Stack                         string                           `json:"stack,omitempty"`
 	Platform                      *TunPlatformOptions              `json:"platform,omitempty"`
 	InboundOptions
 
 	// Deprecated: removed
-	GSO bool `json:"gso,omitempty" schema:"omit"`
+	GSO bool `json:"gso,omitempty"`
 	// Deprecated: merged to Address
-	Inet4Address badoption.Listable[netip.Prefix] `json:"inet4_address,omitempty" schema:"omit"`
+	Inet4Address badoption.Listable[netip.Prefix] `json:"inet4_address,omitempty"`
 	// Deprecated: merged to Address
-	Inet6Address badoption.Listable[netip.Prefix] `json:"inet6_address,omitempty" schema:"omit"`
+	Inet6Address badoption.Listable[netip.Prefix] `json:"inet6_address,omitempty"`
 	// Deprecated: merged to RouteAddress
-	Inet4RouteAddress badoption.Listable[netip.Prefix] `json:"inet4_route_address,omitempty" schema:"omit"`
+	Inet4RouteAddress badoption.Listable[netip.Prefix] `json:"inet4_route_address,omitempty"`
 	// Deprecated: merged to RouteAddress
-	Inet6RouteAddress badoption.Listable[netip.Prefix] `json:"inet6_route_address,omitempty" schema:"omit"`
+	Inet6RouteAddress badoption.Listable[netip.Prefix] `json:"inet6_route_address,omitempty"`
 	// Deprecated: merged to RouteExcludeAddress
-	Inet4RouteExcludeAddress badoption.Listable[netip.Prefix] `json:"inet4_route_exclude_address,omitempty" schema:"omit"`
+	Inet4RouteExcludeAddress badoption.Listable[netip.Prefix] `json:"inet4_route_exclude_address,omitempty"`
 	// Deprecated: merged to RouteExcludeAddress
-	Inet6RouteExcludeAddress badoption.Listable[netip.Prefix] `json:"inet6_route_exclude_address,omitempty" schema:"omit"`
+	Inet6RouteExcludeAddress badoption.Listable[netip.Prefix] `json:"inet6_route_exclude_address,omitempty"`
 	// Deprecated: removed
-	EndpointIndependentNat bool `json:"endpoint_independent_nat,omitempty" schema:"omit"`
+	EndpointIndependentNat bool `json:"endpoint_independent_nat,omitempty"`
 }
 
 type FwMark uint32
@@ -92,8 +83,4 @@ func (f *FwMark) UnmarshalJSON(bytes []byte) error {
 	}
 	*f = FwMark(intValue)
 	return nil
-}
-
-func (f FwMark) DescribeSchema(builder schema.Builder) (*schema.Node, error) {
-	return schema.AnyOf(schema.UnsignedNode(32), schema.StringNode()), nil
 }

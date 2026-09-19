@@ -77,8 +77,7 @@ func (d *terminalErrorDialer) ListenPacket(context.Context, M.Socksaddr) (net.Pa
 }
 
 type testTLSConfig struct {
-	config           *gotls.Config
-	handshakeTimeout time.Duration
+	config *gotls.Config
 }
 
 func (c *testTLSConfig) ServerName() string {
@@ -97,14 +96,6 @@ func (c *testTLSConfig) SetNextProtos(nextProtos []string) {
 	c.config.NextProtos = slices.Clone(nextProtos)
 }
 
-func (c *testTLSConfig) HandshakeTimeout() time.Duration {
-	return c.handshakeTimeout
-}
-
-func (c *testTLSConfig) SetHandshakeTimeout(timeout time.Duration) {
-	c.handshakeTimeout = timeout
-}
-
 func (c *testTLSConfig) STDConfig() (*gotls.Config, error) {
 	return c.config, nil
 }
@@ -114,7 +105,7 @@ func (c *testTLSConfig) Client(conn net.Conn) (boxTLS.Conn, error) {
 }
 
 func (c *testTLSConfig) Clone() boxTLS.Config {
-	return &testTLSConfig{config: c.config.Clone(), handshakeTimeout: c.handshakeTimeout}
+	return &testTLSConfig{config: c.config.Clone()}
 }
 
 func newTestTLSConfig(nextProto string) *testTLSConfig {

@@ -13,7 +13,6 @@ import (
 	"github.com/sagernet/sing-box/common/tls"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
-	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/auth"
 	"github.com/sagernet/sing/common/bufio"
@@ -41,7 +40,6 @@ type Outbound struct {
 	logger    log.ContextLogger
 	dnsRouter adapter.DNSRouter
 	client    *trusttunnel.Client
-	icmpPort  *pingAdapter
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options OutboundOptions) (adapter.Outbound, error) {
@@ -114,15 +112,13 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	if withGvisor {
 		networks = append(networks, N.NetworkICMP)
 	}
-	result := &Outbound{
+	return &Outbound{
 		Adapter:   outbound.NewAdapterWithDialerOptions(Type, tag, networks, options.DialerOptions),
 		ctx:       ctx,
 		logger:    logger,
 		dnsRouter: dnsRouter,
 		client:    client,
-	}
-	result.icmpPort = newPingAdapter(ctx, logger, client)
-	return result, nil
+	}, nil
 }
 
 func trustedRootCertificates(certificates []string, certificatePath string) (string, error) {
@@ -184,42 +180,11 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 }
 
 func (h *Outbound) InterfaceUpdated() {
-	if h.icmpPort != nil {
-		_ = h.icmpPort.Reset()
-	}
 	h.client.ResetConnections()
-}
-
-func (h *Outbound) PreMatchFlow(network string, _ netip.Addr) adapter.PreMatchAction {
-	if network == N.NetworkICMP && h.icmpPort != nil {
-		return adapter.PreMatchFlow
-	}
-	return adapter.PreMatchContinue
-}
-
-func (h *Outbound) PortAddresses() (netip.Addr, netip.Addr) {
-	return h.icmpPort.PortAddresses()
-}
-
-func (h *Outbound) PortMTU() uint32 {
-	return h.icmpPort.PortMTU()
-}
-
-func (h *Outbound) AttachReturn(returnPath tun.Return) error {
-	return h.icmpPort.AttachReturn(returnPath)
-}
-
-func (h *Outbound) DetachReturn(returnPath tun.Return) error {
-	return h.icmpPort.DetachReturn(returnPath)
-}
-
-func (h *Outbound) WritePackets(packets [][]byte) error {
-	return h.icmpPort.WritePackets(packets)
 }
 
 func (h *Outbound) Close() error {
 	return common.Close(
-		common.PtrOrNil(h.icmpPort),
 		common.PtrOrNil(h.client),
 	)
 }

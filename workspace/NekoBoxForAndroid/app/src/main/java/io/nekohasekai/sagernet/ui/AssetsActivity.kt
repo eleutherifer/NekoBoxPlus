@@ -3,22 +3,19 @@ package io.nekohasekai.sagernet.ui
 import android.os.Bundle
 import android.provider.OpenableColumns
 import android.text.format.DateFormat
+import android.view.Menu
+import android.view.MenuItem
+import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.core.view.isInvisible
+import androidx.recyclerview.widget.ItemTouchHelper
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.database.DataStore
+import io.nekohasekai.sagernet.databinding.LayoutAssetItemBinding
+import io.nekohasekai.sagernet.databinding.LayoutAssetsBinding
 import io.nekohasekai.sagernet.ktx.*
-import io.nekohasekai.sagernet.ui.compose.AssetUiItem
-import io.nekohasekai.sagernet.ui.compose.AssetsScreen
-import io.nekohasekai.sagernet.ui.compose.NekoComposeTheme
 import io.nekohasekai.sagernet.utils.RulesetSuggestionRepository
 import io.nekohasekai.sagernet.utils.RulesetSuggestionRepository.Source
 import io.nekohasekai.sagernet.widget.UndoSnackbarManager
@@ -31,6 +28,7 @@ import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.CRC32
 
 class AssetsActivity : ThemedActivity() {
@@ -122,47 +120,71 @@ class AssetsActivity : ThemedActivity() {
         )
 
     private lateinit var adapter: AssetAdapter
-    private lateinit var coordinator: CoordinatorLayout
+    lateinit var layout: LayoutAssetsBinding
     lateinit var undoManager: UndoSnackbarManager<File>
     private val crc32Cache = linkedMapOf<String, String>()
-    private val updatingAssets = mutableStateMapOf<String, Boolean>()
-    private var assetRevision by mutableIntStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        adapter = AssetAdapter()
-        undoManager = UndoSnackbarManager(this, adapter)
-        coordinator = CoordinatorLayout(this)
-        val content = ComposeView(this).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-            setContent {
-                NekoComposeTheme {
-                    assetRevision
-                    AssetsScreen(
-                        assets = adapter.uiItems(),
-                        updatesInProgress = updatingAssets.isNotEmpty(),
-                        onClose = ::finish,
-                        onImport = { startFilesForResult(importFile, "*/*") },
-                        onRefresh = adapter::reloadAssets,
-                        onUpdate = ::startAssetUpdate,
-                        onRemove = ::removeAsset,
-                    )
-                }
-            }
+        val binding = LayoutAssetsBinding.inflate(layoutInflater)
+        layout = binding
+        setContentView(binding.root)
+
+        setSupportActionBar(findViewById(R.id.toolbar))
+        supportActionBar?.apply {
+            setTitle(R.string.route_assets)
+            setDisplayHomeAsUpEnabled(true)
+            setHomeAsUpIndicator(R.drawable.ic_navigation_close)
         }
-        coordinator.addView(
-            content,
-            CoordinatorLayout.LayoutParams(
-                CoordinatorLayout.LayoutParams.MATCH_PARENT,
-                CoordinatorLayout.LayoutParams.MATCH_PARENT,
-            ),
-        )
-        setContentView(coordinator)
+
+        binding.recyclerView.layoutManager = FixedLinearLayoutManager(binding.recyclerView)
+        adapter = AssetAdapter()
+        binding.recyclerView.adapter = adapter
+
+        binding.refreshLayout.setOnRefreshListener {
+            adapter.reloadAssets()
+            binding.refreshLayout.isRefreshing = false
+        }
+        binding.refreshLayout.setColorSchemeColors(getColorAttr(R.attr.colorPrimary))
+
+        undoManager = UndoSnackbarManager(this, adapter)
+
+        ItemTouchHelper(
+            object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.START) {
+                override fun getSwipeDirs(
+                    recyclerView: RecyclerView,
+                    viewHolder: RecyclerView.ViewHolder,
+                ): Int {
+                    val index = viewHolder.bindingAdapterPosition
+                    if (index < adapter.managedCount) return 0
+                    return super.getSwipeDirs(recyclerView, viewHolder)
+                }
+
+                override fun onSwiped(
+                    viewHolder: RecyclerView.ViewHolder,
+                    direction: Int,
+                ) {
+                    val index = viewHolder.bindingAdapterPosition
+                    adapter.remove(index)
+                    undoManager.remove(index to (viewHolder as AssetHolder).item.file)
+                }
+
+                override fun onMove(
+                    recyclerView: RecyclerView,
+                    viewHolder: RecyclerView.ViewHolder,
+                    target: RecyclerView.ViewHolder,
+                ) = false
+            },
+        ).attachToRecyclerView(binding.recyclerView)
     }
 
-    override fun snackbarInternal(text: CharSequence): Snackbar =
-        Snackbar.make(coordinator, text, Snackbar.LENGTH_LONG)
+    override fun snackbarInternal(text: CharSequence): Snackbar = Snackbar.make(layout.coordinator, text, Snackbar.LENGTH_LONG)
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.import_asset_menu, menu)
+        return true
+    }
 
     val importFile =
         registerForActivityResult(ActivityResultContracts.GetContent()) { file ->
@@ -201,8 +223,21 @@ class AssetsActivity : ThemedActivity() {
             }
         }
 
-    private inner class AssetAdapter : UndoSnackbarManager.Interface<File> {
-        private val assets = mutableStateListOf<AssetItem>()
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.action_import_file -> {
+                startFilesForResult(importFile, "*/*")
+                return true
+            }
+        }
+        return false
+    }
+
+    private inner class AssetAdapter :
+        RecyclerView.Adapter<AssetHolder>(),
+        UndoSnackbarManager.Interface<File> {
+        private val assets = ArrayList<AssetItem>()
+        var managedCount = 0
 
         init {
             reloadAssets()
@@ -218,21 +253,40 @@ class AssetsActivity : ThemedActivity() {
                     ?.filter { it.isFile && (it.name.endsWith(".db") || it.name.endsWith(".dat")) && it.name !in managedFileNames }
                     ?.map { AssetItem(file = it, displayName = it.name, managed = false) }
 
-            val reloaded = managedAssets + files.orEmpty()
-            runOnMainDispatcher {
-                assets.clear()
-                assets.addAll(reloaded)
-                preloadCrc32()
+            assets.clear()
+            assets.addAll(managedAssets)
+            managedCount = assets.size
+            if (files != null) assets.addAll(files)
+
+            layout.refreshLayout.post {
+                notifyDataSetChanged()
             }
+            preloadCrc32()
         }
+
+        override fun onCreateViewHolder(
+            parent: ViewGroup,
+            viewType: Int,
+        ): AssetHolder = AssetHolder(LayoutAssetItemBinding.inflate(layoutInflater, parent, false))
+
+        override fun onBindViewHolder(
+            holder: AssetHolder,
+            position: Int,
+        ) {
+            holder.bind(assets[position])
+        }
+
+        override fun getItemCount(): Int = assets.size
 
         fun remove(index: Int) {
             assets.removeAt(index)
+            notifyItemRemoved(index)
         }
 
         override fun undo(actions: List<Pair<Int, File>>) {
             for ((index, file) in actions) {
                 assets.add(index, AssetItem(file = file, displayName = file.name, managed = false))
+                notifyItemInserted(index)
             }
         }
 
@@ -253,82 +307,86 @@ class AssetsActivity : ThemedActivity() {
             if (crc32Cache.containsKey(key)) return
             if (!file.isFile) {
                 crc32Cache[key] = "<unknown>"
-                assetRevision++
                 return
             }
 
             runOnDefaultDispatcher {
                 val crc32Value = calculateCrc32(file)
                 crc32Cache[key] = crc32Value
-                onMainDispatcher { assetRevision++ }
-            }
-        }
-
-        fun item(path: String): AssetItem? = assets.firstOrNull { it.file.absolutePath == path }
-
-        fun indexOf(path: String): Int = assets.indexOfFirst { it.file.absolutePath == path }
-
-        fun uiItems(): List<AssetUiItem> = assets.map { item ->
-            val localVersion = localVersion(item)
-            val crc32Value = crc32Cache[item.file.absolutePath]
-                ?: getString(R.string.route_asset_crc32_pending)
-            AssetUiItem(
-                path = item.file.absolutePath,
-                name = item.displayName,
-                status = getString(R.string.route_asset_status, displayVersion(localVersion)) + "\n" +
-                    getString(R.string.route_asset_crc32, crc32Value),
-                managed = item.managed,
-                updating = updatingAssets.containsKey(item.file.absolutePath),
-            )
-        }
-    }
-
-    private fun localVersion(item: AssetItem): String {
-        val file = item.file
-        return if (file.isFile) {
-            if (item.versionFile.isFile) {
-                runCatching { item.versionFile.readText().trim() }
-                    .getOrElse {
-                        snackbar(it.readableMessage)
-                        "<unknown>"
+                val index = assets.indexOfFirst { it.file.absolutePath == key }
+                if (index >= 0) {
+                    onMainDispatcher {
+                        notifyItemChanged(index)
                     }
-            } else if (item.bundledVersionAssetPath != null) {
-                readBundledVersion(item)
-            } else {
-                "Unknown-" + DateFormat.getDateFormat(app).format(Date(file.lastModified()))
-            }
-        } else if (item.bundledVersionAssetPath != null) {
-            readBundledVersion(item)
-        } else {
-            "<unknown>"
-        }
-    }
-
-    private fun startAssetUpdate(path: String) {
-        val item = adapter.item(path) ?: return
-        val localVersion = localVersion(item)
-        if (updatingAssets.put(path, true) != null) return
-        runOnDefaultDispatcher {
-            runCatching {
-                updateAsset(item, localVersion)
-            }.onFailure {
-                onMainDispatcher {
-                    alert(it.readableMessage).tryToShow()
                 }
             }
-
-            onMainDispatcher {
-                updatingAssets.remove(path)
-            }
         }
     }
 
-    private fun removeAsset(path: String) {
-        val index = adapter.indexOf(path)
-        val item = adapter.item(path) ?: return
-        if (index < 0 || item.managed) return
-        adapter.remove(index)
-        undoManager.remove(index to item.file)
+    val updating = AtomicInteger()
+
+    private inner class AssetHolder(
+        val binding: LayoutAssetItemBinding,
+    ) : RecyclerView.ViewHolder(binding.root) {
+        lateinit var item: AssetItem
+
+        fun bind(item: AssetItem) {
+            this.item = item
+            val file = item.file
+            val versionFile = item.versionFile
+
+            binding.assetName.text = item.displayName
+
+            val localVersion =
+                if (file.isFile) {
+                    if (versionFile.isFile) {
+                        try {
+                            versionFile.readText().trim()
+                        } catch (e: Throwable) {
+                            snackbar(e.readableMessage)
+                            "<unknown>"
+                        }
+                    } else if (item.bundledVersionAssetPath != null) {
+                        readBundledVersion(item)
+                    } else {
+                        "Unknown-" + DateFormat.getDateFormat(app).format(Date(file.lastModified()))
+                    }
+                } else if (item.bundledVersionAssetPath != null) {
+                    readBundledVersion(item)
+                } else {
+                    "<unknown>"
+                }
+            val displayVersion = displayVersion(localVersion)
+
+            val crc32Value = crc32Cache[file.absolutePath] ?: getString(R.string.route_asset_crc32_pending)
+            binding.assetStatus.text = getString(R.string.route_asset_status, displayVersion) + "\n" +
+                getString(R.string.route_asset_crc32, crc32Value)
+
+            binding.rulesUpdate.isInvisible = !item.managed
+            binding.rulesUpdate.setOnClickListener {
+                updating.incrementAndGet()
+                layout.refreshLayout.isEnabled = false
+                binding.subscriptionUpdateProgress.isInvisible = false
+                binding.rulesUpdate.isInvisible = true
+                runOnDefaultDispatcher {
+                    runCatching {
+                        updateAsset(item, localVersion)
+                    }.onFailure {
+                        onMainDispatcher {
+                            alert(it.readableMessage).tryToShow()
+                        }
+                    }
+
+                    onMainDispatcher {
+                        binding.rulesUpdate.isInvisible = false
+                        binding.subscriptionUpdateProgress.isInvisible = true
+                        if (updating.decrementAndGet() == 0) {
+                            layout.refreshLayout.isEnabled = true
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private fun managedAssets(filesDir: File): List<AssetItem> {
@@ -726,11 +784,6 @@ class AssetsActivity : ThemedActivity() {
     override fun onSupportNavigateUp(): Boolean {
         finish()
         return true
-    }
-
-    override fun onDestroy() {
-        if (::undoManager.isInitialized) undoManager.flush()
-        super.onDestroy()
     }
 
     override fun onBackPressed() {

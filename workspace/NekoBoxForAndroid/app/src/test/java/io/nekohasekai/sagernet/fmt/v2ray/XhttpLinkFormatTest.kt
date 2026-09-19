@@ -1,6 +1,5 @@
 package io.nekohasekai.sagernet.fmt.v2ray
 
-import io.nekohasekai.sagernet.fmt.KryoConverters
 import moe.matsuri.nb4a.SingBoxOptions.V2RayTransportOptions_XHTTPOptions
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -11,56 +10,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class XhttpLinkFormatTest {
-
-    @Test
-    fun congestionFieldsRoundTripThroughPersistenceAndLink() {
-        val original = VMessBean().apply {
-            initializeDefaultValues()
-            alterId = -1
-            type = "xhttp"
-            serverAddress = "example.com"
-            serverPort = 443
-            uuid = "00000000-0000-0000-0000-000000000000"
-            xhttpCongestionController = "cubic"
-            xhttpCwnd = "64"
-            name = "XHTTP congestion"
-        }
-
-        val restored = KryoConverters.deserialize(
-            VMessBean(),
-            KryoConverters.serialize(original),
-        )
-        assertEquals("cubic", restored.xhttpCongestionController)
-        assertEquals("64", restored.xhttpCwnd)
-
-        restored.name = ""
-        val exportedExtra = JSONObject(exportedVlessXhttpExtra(restored))
-        assertEquals("cubic", exportedExtra.getString("congestion_controller"))
-        assertEquals(64, exportedExtra.getInt("cwnd"))
-
-        val reparsed = parseVlessXhttpExtra(exportedExtra.toString())
-        assertEquals("cubic", reparsed.xhttpCongestionController)
-        assertEquals("64", reparsed.xhttpCwnd)
-    }
-
-    @Test
-    fun singBoxXhttpTransportUsesCongestionFields() {
-        val bean = VMessBean().apply {
-            initializeDefaultValues()
-            alterId = -1
-            type = "xhttp"
-            serverAddress = "example.com"
-            serverPort = 443
-            uuid = "00000000-0000-0000-0000-000000000000"
-            xhttpCongestionController = "reno"
-            xhttpCwnd = "48"
-        }
-
-        val transport = buildSingBoxOutboundStreamSettings(bean) as V2RayTransportOptions_XHTTPOptions
-
-        assertEquals("reno", transport.congestion_controller)
-        assertEquals(48, transport.cwnd)
-    }
 
     @Test
     fun vlessXhttpLinkRoundTripPreservesSingBoxOnlyExtraFields() {

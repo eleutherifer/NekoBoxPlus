@@ -4,7 +4,6 @@
 package settings
 
 import (
-	"context"
 	"os"
 
 	"github.com/sagernet/sing-box/adapter"
@@ -16,7 +15,7 @@ func NewWIFIMonitor(callback func(adapter.WIFIState)) (WIFIMonitor, error) {
 	return nil, os.ErrInvalid
 }
 
-func (m *stubWIFIMonitor) ReadWIFIState(ctx context.Context) adapter.WIFIState {
+func (m *stubWIFIMonitor) ReadWIFIState() adapter.WIFIState {
 	return adapter.WIFIState{}
 }
 

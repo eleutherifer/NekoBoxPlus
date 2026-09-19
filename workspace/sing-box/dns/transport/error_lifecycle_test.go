@@ -124,11 +124,11 @@ func TestReadMessageStopsOnHTTP2StreamError(t *testing.T) {
 
 func TestTCPExchangeClosesAfterHTTP2StreamError(t *testing.T) {
 	conn := &terminalErrorConn{err: testStreamError()}
-	transport := NewTCPRaw(
-		dns.NewTransportAdapter("tcp", "test", nil),
-		&terminalErrorDialer{conn: conn},
-		M.Socksaddr{Addr: netip.MustParseAddr("127.0.0.1"), Port: 53},
-	)
+	transport := &TCPTransport{
+		TransportAdapter: dns.NewTransportAdapter("tcp", "test", nil),
+		dialer:           &terminalErrorDialer{conn: conn},
+		serverAddr:       M.Socksaddr{Addr: netip.MustParseAddr("127.0.0.1"), Port: 53},
+	}
 	message := &mDNS.Msg{}
 	message.SetQuestion("example.com.", mDNS.TypeA)
 
@@ -152,18 +152,17 @@ func TestTLSExchangeDiscardsAfterHTTP2StreamError(t *testing.T) {
 		logger:           log.NewNOPFactory().Logger(),
 		dialer:           &terminalErrorTLSDialer{conn: tlsConn},
 		serverAddr:       M.Socksaddr{Addr: netip.MustParseAddr("127.0.0.1"), Port: 853},
+		connections: NewConnPool(ConnPoolOptions[*tlsDNSConn]{
+			Mode:        ConnPoolOrdered,
+			MaxInflight: tlsDNSMaxInflight,
+			IsAlive: func(conn *tlsDNSConn) bool {
+				return conn != nil
+			},
+			Close: func(conn *tlsDNSConn, _ error) {
+				_ = conn.Close()
+			},
+		}),
 	}
-	transport.multiplexer = newQueryMultiplexer(queryMultiplexerOptions{
-		dial: func(context.Context) (net.Conn, error) {
-			return tlsConn, nil
-		},
-		write: func(conn net.Conn, message *mDNS.Msg, queryID uint16) error {
-			return WriteMessage(conn, queryID, message)
-		},
-		readNext: func(conn net.Conn) (*mDNS.Msg, error) {
-			return ReadMessage(conn)
-		},
-	})
 	message := &mDNS.Msg{}
 	message.SetQuestion("example.com.", mDNS.TypeA)
 
@@ -181,24 +180,46 @@ func TestTLSExchangeDiscardsAfterHTTP2StreamError(t *testing.T) {
 
 func TestUDPReceiveLoopInvalidatesAfterHTTP2StreamError(t *testing.T) {
 	conn := &terminalErrorConn{err: testStreamError()}
-	transport := NewUDPRaw(
-		log.NewNOPFactory().Logger(),
-		dns.NewTransportAdapter("udp", "test", nil),
-		&terminalErrorDialer{conn: conn},
-		M.Socksaddr{Addr: netip.MustParseAddr("127.0.0.1"), Port: 53},
-	)
-	message := new(mDNS.Msg)
-	message.SetQuestion("example.com.", mDNS.TypeA)
-
-	_, err := transport.Exchange(t.Context(), message)
-	if err == nil {
-		t.Fatal("expected exchange error")
+	pool := NewConnPool(ConnPoolOptions[net.Conn]{
+		Mode:    ConnPoolSingle,
+		IsAlive: func(net.Conn) bool { return true },
+		Close: func(conn net.Conn, _ error) {
+			_ = conn.Close()
+		},
+	})
+	defer func() {
+		if err := pool.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+	acquired, _, _, err := pool.AcquireShared(t.Context(), func(context.Context) (net.Conn, error) {
+		return conn, nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
+	transport := &UDPTransport{
+		connection: pool,
+		callbacks:  make(map[uint16]*udpCallback),
+	}
+	transport.udpSize.Store(2048)
+
+	transport.recvLoop(acquired)
 
 	if reads := conn.reads.Load(); reads != 1 {
 		t.Fatalf("UDP DNS reads = %d, want 1", reads)
 	}
 	if !conn.closed.Load() {
 		t.Fatal("UDP DNS connection was not invalidated")
+	}
+	replacement := &terminalErrorConn{err: net.ErrClosed}
+	acquired, _, created, err := pool.AcquireShared(t.Context(), func(context.Context) (net.Conn, error) {
+		return replacement, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if acquired != replacement || !created {
+		t.Fatal("UDP DNS connection pool reused the failed connection")
 	}
 }

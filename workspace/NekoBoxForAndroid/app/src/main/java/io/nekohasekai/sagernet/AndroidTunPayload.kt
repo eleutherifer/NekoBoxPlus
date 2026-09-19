@@ -23,8 +23,8 @@ data class AndroidTunPayload(
     val auto_route: Boolean = false,
     val inet4_address: String? = null,
     val inet6_address: String? = null,
-    val dns_mode: String? = null,
-    val dns_servers: List<String>? = null,
+    val inet4_dns_server: String? = null,
+    val inet6_dns_server: String? = null,
     val inet4_routes: List<String>? = null,
     val inet6_routes: List<String>? = null,
 ) {
@@ -36,8 +36,8 @@ data class AndroidTunPayload(
         val autoRoute: Boolean,
         val inet4Address: Cidr?,
         val inet6Address: Cidr?,
-        val dnsMode: String,
-        val dnsServers: List<String>,
+        val inet4DnsServer: String?,
+        val inet6DnsServer: String?,
         val inet4Routes: List<Cidr>,
         val inet6Routes: List<Cidr>,
     )
@@ -53,7 +53,7 @@ data class AndroidTunPayload(
 
     companion object {
         /** Supported payload contract version. Bump in lockstep with libcore. */
-        const val VERSION: Int = 2
+        const val VERSION: Int = 1
 
         /** MTU bounds enforced before the TUN is created. */
         const val MTU_MIN: Long = 576L
@@ -85,8 +85,9 @@ data class AndroidTunPayload(
      * - [version] must match [VERSION].
      * - [mtu] must be within the supported range.
      * - At least one address family must be declared.
-     * - DNS mode and servers must agree, and a DNS server without its address
-     *   family is rejected so the platform never declares an unrequested family.
+     * - Each declared address family must carry its in-TUN DNS server, and a DNS
+     *   server without its family is rejected, so the platform never declares an
+     *   unrequested address family.
      * - All addresses, DNS servers and routes must be numeric CIDRs/IPs of the
      *   matching family.
      */
@@ -100,22 +101,20 @@ data class AndroidTunPayload(
             "tun requires at least one interface address family"
         }
 
-        val dnsMode = requireNotNull(dns_mode) { "dns_mode is missing" }
-        require(dnsMode in setOf("disabled", "native", "hijack")) { "unsupported dns_mode: $dnsMode" }
-        val dnsServers =
-            (dns_servers ?: emptyList()).mapIndexed { index, server ->
-                parseAnyIpAddress(server, "dns_servers[$index]")
-            }
-        if (dnsMode == "disabled") {
-            require(dnsServers.isEmpty()) { "dns_servers must be empty when dns_mode is disabled" }
-        } else {
-            require(dnsServers.isNotEmpty()) { "dns_servers is empty while dns_mode is $dnsMode" }
+        val v4Dns = inet4_dns_server?.let { parseIpAddress(it, expectV4 = true, "inet4_dns_server") }
+        val v6Dns = inet6_dns_server?.let { parseIpAddress(it, expectV4 = false, "inet6_dns_server") }
+
+        if (v4Address != null) {
+            requireNotNull(v4Dns) { "inet4 address declared without inet4_dns_server" }
         }
-        require(dnsServers.none { it.contains(':') } || v6Address != null) {
-            "ipv6 dns server declared without inet6 address"
+        if (v6Address != null) {
+            requireNotNull(v6Dns) { "inet6 address declared without inet6_dns_server" }
         }
-        require(dnsServers.none { !it.contains(':') } || v4Address != null) {
-            "ipv4 dns server declared without inet4 address"
+        if (v4Address == null) {
+            require(v4Dns == null) { "inet4_dns_server declared without inet4 address" }
+        }
+        if (v6Address == null) {
+            require(v6Dns == null) { "inet6_dns_server declared without inet6 address" }
         }
 
         val v4Routes =
@@ -139,8 +138,8 @@ data class AndroidTunPayload(
             autoRoute = auto_route,
             inet4Address = v4Address,
             inet6Address = v6Address,
-            dnsMode = dnsMode,
-            dnsServers = dnsServers,
+            inet4DnsServer = v4Dns,
+            inet6DnsServer = v6Dns,
             inet4Routes = v4Routes,
             inet6Routes = v6Routes,
         )
@@ -174,13 +173,20 @@ private fun parseCidr(
     return AndroidTunPayload.Cidr(addressPart, prefix)
 }
 
-/** Parse and validate a bare numeric IP. */
-private fun parseAnyIpAddress(raw: String, what: String): String {
+/** Parse and validate a bare numeric IP of the expected family. */
+private fun parseIpAddress(
+    raw: String,
+    expectV4: Boolean,
+    what: String,
+): String {
     val text = raw.trim()
     require(text.isNotEmpty()) { "$what is empty" }
     val isV4 = isIpv4Literal(text)
     val isV6 = !isV4 && isIpv6Literal(text)
     require(isV4 || isV6) { "$what is not a numeric ip: $raw" }
+    require(isV4 == expectV4) {
+        "$what family mismatch: expected ${if (expectV4) "ipv4" else "ipv6"}: $raw"
+    }
     return text
 }
 

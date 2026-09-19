@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingStart="8dp"
+    android:paddingTop="8dp"
+    android:paddingEnd="8dp"
+    android:paddingBottom="8dp">
+
+    <LinearLayout
+        android:id="@+id/ruleset_loading_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:minHeight="240dp"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <ProgressBar
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
+
+    <io.nekohasekai.sagernet.widget.RulesetEditText
+        android:id="@+id/ruleset_editor"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:fontFamily="@font/jetbrains_mono"
+        android:hint="@string/ruleset_editor_hint"
+        android:gravity="top|start"
+        android:inputType="textMultiLine|textNoSuggestions"
+        android:minLines="10"
+        android:overScrollMode="ifContentScrolls"
+        android:padding="12dp"
+        android:scrollbars="vertical"
+        android:textSize="14sp" />
+</FrameLayout>

@@ -1,0 +1,80 @@
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <EditTextPreference
+        app:icon="@drawable/ic_social_emoji_symbols"
+        app:key="profileName"
+        app:title="@string/profile_name"
+        app:useSimpleSummaryProvider="true" />
+
+    <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        app:defaultValue="0"
+        app:entries="@array/proxy_set_mode_entry"
+        app:entryValues="@array/int_array_2"
+        app:icon="@drawable/ic_baseline_tune_24"
+        app:key="proxySetMode"
+        app:title="@string/proxy_set_mode"
+        app:useSimpleSummaryProvider="true" />
+
+    <Preference
+        app:icon="@drawable/ic_baseline_push_pin_24"
+        app:key="proxySetDefaultOutbound"
+        app:summary="@string/none"
+        app:title="@string/proxy_set_default_outbound" />
+
+    <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+        app:icon="@drawable/ic_service_stopped"
+        app:key="proxySetInterruptExistConnections"
+        app:title="@string/interrupt_exist_connections" />
+
+    <EditTextPreference
+        app:icon="@drawable/ic_baseline_cast_connected_24"
+        app:key="proxySetTestURL"
+        app:title="@string/connection_test_url"
+        app:useSimpleSummaryProvider="true" />
+
+    <EditTextPreference
+        app:icon="@drawable/ic_baseline_flip_camera_android_24"
+        app:key="proxySetTestInterval"
+        app:title="@string/urltest_interval"
+        app:useSimpleSummaryProvider="true" />
+
+    <EditTextPreference
+        app:icon="@drawable/ic_image_camera_alt"
+        app:key="proxySetTestIdleTimeout"
+        app:title="@string/idle_timeout"
+        app:useSimpleSummaryProvider="true" />
+
+    <EditTextPreference
+        app:icon="@drawable/ic_baseline_emoji_emotions_24"
+        app:key="proxySetTestTolerance"
+        app:title="@string/urltest_tolerance"
+        app:useSimpleSummaryProvider="true" />
+
+    <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        app:defaultValue="0"
+        app:entries="@array/proxy_set_collect_type"
+        app:entryValues="@array/int_array_2"
+        app:icon="@drawable/ic_baseline_nfc_24"
+        app:key="proxySetType"
+        app:title="@string/proxy_set_type"
+        app:useSimpleSummaryProvider="true" />
+
+    <io.nekohasekai.sagernet.widget.GroupPreference
+        app:icon="@drawable/ic_baseline_view_list_24"
+        app:key="proxySetGroup"
+        app:title="@string/proxy_set_type_group"
+        app:useSimpleSummaryProvider="true" />
+
+    <EditTextPreference
+        app:icon="@drawable/baseline_delete_sweep_24"
+        app:key="proxySetGroupFilterNotRegex"
+        app:title="@string/filter_regex"
+        app:useSimpleSummaryProvider="true" />
+
+    <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+        app:defaultValue="false"
+        app:icon="@drawable/ic_baseline_security_24"
+        app:key="proxySetSkipInsecureProfiles"
+        app:title="@string/proxy_set_skip_insecure_profiles" />
+
+</PreferenceScreen>

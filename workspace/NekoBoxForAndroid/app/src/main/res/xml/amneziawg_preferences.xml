@@ -1,0 +1,207 @@
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <EditTextPreference
+        app:icon="@drawable/ic_social_emoji_symbols"
+        app:key="name"
+        app:title="@string/profile_name"
+        app:useSimpleSummaryProvider="true" />
+
+    <PreferenceCategory app:title="@string/proxy_cat">
+        <EditTextPreference
+            app:icon="@drawable/ic_hardware_router"
+            app:key="serverAddress"
+            app:title="@string/server_address"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_maps_directions_boat"
+            app:key="serverPort"
+            app:title="@string/server_port"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_domain_24"
+            app:key="localAddress"
+            app:title="@string/wireguard_local_address"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_vpn_key_24"
+            app:key="privateKey"
+            app:title="@string/ssh_private_key"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_action_copyright"
+            app:key="peerPublicKey"
+            app:title="@string/wireguard_public_key"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:dialogLayout="@layout/layout_password_dialog"
+            app:icon="@drawable/ic_settings_password"
+            app:key="peerPreSharedKey"
+            app:title="@string/wireguard_psk" />
+        <EditTextPreference
+            app:defaultValue="0"
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="peerPersistentKeepalive"
+            app:title="@string/wireguard_persistent_keepalive"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="1280"
+            app:icon="@drawable/baseline_public_24"
+            app:key="mtu"
+            app:title="@string/mtu"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="reserved"
+            app:title="@string/wireguard_reserved"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/amneziawg_obfuscation_awg10">
+        <EditTextPreference
+            app:defaultValue="3"
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="jc"
+            app:title="@string/amneziawg_jc"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="50"
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="jmin"
+            app:title="@string/amneziawg_jmin"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="1000"
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="jmax"
+            app:title="@string/amneziawg_jmax"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="0"
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="s1"
+            app:title="@string/amneziawg_s1"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="0"
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="s2"
+            app:title="@string/amneziawg_s2"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="1"
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="h1"
+            app:title="@string/amneziawg_h1"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="2"
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="h2"
+            app:title="@string/amneziawg_h2"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="3"
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="h3"
+            app:title="@string/amneziawg_h3"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="4"
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="h4"
+            app:title="@string/amneziawg_h4"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/amneziawg_obfuscation_awg15">
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="i1"
+            app:title="@string/amneziawg_i1"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="i2"
+            app:title="@string/amneziawg_i2"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="i3"
+            app:title="@string/amneziawg_i3"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="i4"
+            app:title="@string/amneziawg_i4"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="i5"
+            app:title="@string/amneziawg_i5"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/amneziawg_obfuscation_awg20">
+        <EditTextPreference
+            app:defaultValue="0"
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="s3"
+            app:title="@string/amneziawg_s3"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:defaultValue="0"
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="s4"
+            app:title="@string/amneziawg_s4"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/amneziawg_obfuscation_awg30">
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_vpn_key_24"
+            app:key="headerProtectionKey"
+            app:title="@string/amneziawg_header_protection_key" />
+        <EditTextPreference
+            app:icon="@drawable/ic_device_data_usage"
+            app:key="contentPaddingAddition"
+            app:title="@string/amneziawg_content_padding_addition"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="rekeyAfterTime"
+            app:title="@string/amneziawg_rekey_after_time"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="rekeyTimeout"
+            app:title="@string/amneziawg_rekey_timeout"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="rejectAfterTime"
+            app:title="@string/amneziawg_reject_after_time"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_timer_24"
+            app:key="keepaliveTimeout"
+            app:title="@string/amneziawg_keepalive_timeout"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="maxHandshakeAttempts"
+            app:title="@string/amneziawg_max_handshake_attempts"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/amneziawg_obfuscation_awg31">
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:key="randomTrailers"
+            app:title="@string/amneziawg_random_trailers" />
+        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
+            app:icon="@drawable/ic_settings_password"
+            app:key="disableCookies"
+            app:title="@string/amneziawg_disable_cookies" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

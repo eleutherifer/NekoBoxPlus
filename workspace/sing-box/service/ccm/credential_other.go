@@ -2,9 +2,7 @@
 
 package ccm
 
-import "context"
-
-func platformReadCredentials(ctx context.Context, customPath string) (*oauthCredentials, error) {
+func platformReadCredentials(customPath string) (*oauthCredentials, error) {
 	if customPath == "" {
 		var err error
 		customPath, err = getDefaultCredentialsPath()
@@ -12,10 +10,10 @@ func platformReadCredentials(ctx context.Context, customPath string) (*oauthCred
 			return nil, err
 		}
 	}
-	return readCredentialsFromFile(ctx, customPath)
+	return readCredentialsFromFile(customPath)
 }
 
-func platformWriteCredentials(ctx context.Context, oauthCredentials *oauthCredentials, customPath string) error {
+func platformWriteCredentials(oauthCredentials *oauthCredentials, customPath string) error {
 	if customPath == "" {
 		var err error
 		customPath, err = getDefaultCredentialsPath()
@@ -23,5 +21,5 @@ func platformWriteCredentials(ctx context.Context, oauthCredentials *oauthCreden
 			return err
 		}
 	}
-	return writeCredentialsToFile(ctx, oauthCredentials, customPath)
+	return writeCredentialsToFile(oauthCredentials, customPath)
 }

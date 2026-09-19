@@ -332,11 +332,6 @@ private fun applyGuiXhttpFields(
     bean.xhttpServerMaxHeaderBytes?.trim()?.toIntOrNull()?.let {
         json.put("server_max_header_bytes", it)
     }
-    if (bean.xhttpCongestionController?.isNotBlank() == true)
-        json.put("congestion_controller", bean.xhttpCongestionController)
-    bean.xhttpCwnd?.trim()?.toIntOrNull()?.takeIf { it > 0 }?.let {
-        json.put("cwnd", it)
-    }
     if (bean.xhttpXPaddingKey?.isNotBlank() == true)
         json.put("x_padding_key", bean.xhttpXPaddingKey)
     if (bean.xhttpXPaddingHeader?.isNotBlank() == true)
@@ -1132,7 +1127,7 @@ fun buildSingBoxOutboundStreamSettings(bean: StandardV2RayBean): V2RayTransportO
                         "seq_placement", "seq_key",
                         "x_padding_obfs_mode", "x_padding_key", "x_padding_header",
                         "x_padding_placement", "x_padding_method",
-                        "server_max_header_bytes", "congestion_controller", "cwnd"
+                        "server_max_header_bytes"
                     )
                     allowedKeys.forEach { key ->
                         if (extraJson.has(key) && !extraJson.isNull(key)) {
@@ -1178,11 +1173,6 @@ fun buildSingBoxOutboundStreamSettings(bean: StandardV2RayBean): V2RayTransportO
                             uplink_chunk_size = com.google.gson.JsonPrimitive(bean.xhttpUplinkChunkSize)
                         bean.xhttpServerMaxHeaderBytes?.trim()?.toIntOrNull()?.let {
                             server_max_header_bytes = it
-                        }
-                        if (bean.xhttpCongestionController?.isNotBlank() == true)
-                            congestion_controller = bean.xhttpCongestionController
-                        bean.xhttpCwnd?.trim()?.toIntOrNull()?.takeIf { it > 0 }?.let {
-                            cwnd = it
                         }
                         if (bean.xhttpXPaddingKey?.isNotBlank() == true)
                             x_padding_key = bean.xhttpXPaddingKey
@@ -1247,11 +1237,6 @@ fun buildSingBoxOutboundStreamSettings(bean: StandardV2RayBean): V2RayTransportO
                     uplink_chunk_size = com.google.gson.JsonPrimitive(bean.xhttpUplinkChunkSize)
                 bean.xhttpServerMaxHeaderBytes?.trim()?.toIntOrNull()?.let {
                     server_max_header_bytes = it
-                }
-                if (bean.xhttpCongestionController?.isNotBlank() == true)
-                    congestion_controller = bean.xhttpCongestionController
-                bean.xhttpCwnd?.trim()?.toIntOrNull()?.takeIf { it > 0 }?.let {
-                    cwnd = it
                 }
                 if (bean.xhttpXPaddingKey?.isNotBlank() == true)
                     x_padding_key = bean.xhttpXPaddingKey

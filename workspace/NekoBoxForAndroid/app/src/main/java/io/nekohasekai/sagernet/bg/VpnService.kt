@@ -146,9 +146,9 @@ class VpnService :
         plan.inet4Address?.let { builder.addAddress(it.address, it.prefixLength) }
         plan.inet6Address?.let { builder.addAddress(it.address, it.prefixLength) }
 
-        // Effective in-TUN DNS servers computed by sing-tun 1.14 from
-        // dns_mode/dns_address and the configured address families.
-        plan.dnsServers.forEach(builder::addDnsServer)
+        // in-TUN DNS servers (next address of each declared family's prefix)
+        plan.inet4DnsServer?.let { builder.addDnsServer(it) }
+        plan.inet6DnsServer?.let { builder.addDnsServer(it) }
 
         // route ranges flattened by sing-box BuildAutoRouteRanges(true)
         plan.inet4Routes.forEach { builder.addRoute(it.address, it.prefixLength) }

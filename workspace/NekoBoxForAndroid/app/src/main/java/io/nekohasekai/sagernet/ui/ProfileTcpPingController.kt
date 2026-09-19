@@ -3,10 +3,7 @@ package io.nekohasekai.sagernet.ui
 import android.net.NetworkCapabilities
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.SagerNet
-import io.nekohasekai.sagernet.bg.proto.PingFailureKind
 import io.nekohasekai.sagernet.bg.proto.ProfileStatusUpdater
-import io.nekohasekai.sagernet.bg.proto.TcpPingOutcome
-import io.nekohasekai.sagernet.bg.proto.TcpPingRequest
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.ProxyEntity
 import io.nekohasekai.sagernet.ktx.Logs
@@ -17,6 +14,9 @@ import io.nekohasekai.sagernet.ktx.runOnDefaultDispatcher
 import io.nekohasekai.sagernet.utils.DefaultNetworkListener
 import io.nekohasekai.sagernet.utils.ProfileCountryResolver
 import kotlinx.coroutines.withTimeoutOrNull
+import libcore.Libcore
+import moe.matsuri.nb4a.net.LocalResolverImpl
+import java.net.UnknownHostException
 
 object ProfileTcpPingController {
     fun start(profile: ProxyEntity) {
@@ -43,47 +43,98 @@ object ProfileTcpPingController {
                     error(app.getString(R.string.connection_test_unreachable))
                 }
                 val bean = profile.requireBean()
-                val outcome = libcoreTcpPingProbe { host ->
-                    network.getAllByName(host).mapNotNull { it.hostAddress }
-                }.execute(
-                    TcpPingRequest(
-                        host = bean.serverAddress,
-                        port = bean.serverPort.toString(),
-                        timeoutMillis = 3_000,
-                        hardened = DataStore.connectionTestHardened,
-                        hostIsIpAddress = bean.serverAddress.isIpAddress(),
-                    ),
-                )
-                when (outcome) {
-                    is TcpPingOutcome.Success -> {
-                        ProfileStatusUpdater.update(
-                            profile.id,
-                            status = 1,
-                            ping = outcome.latency,
-                            reloadDelayOrderedGroup = false,
-                        )
-                        ProfileCountryResolver.updateFromAddress(
-                            profile.id,
-                            outcome.address,
-                            ProfileCountryResolver.SOURCE_ENDPOINT,
-                        )
-                    }
-                    is TcpPingOutcome.Failure -> ProfileStatusUpdater.update(
+                if (DataStore.connectionTestHardened) {
+                    val ping = Libcore.tcpPingWithAddress(
+                        bean.serverAddress,
+                        bean.serverPort.toString(),
+                        3000,
+                        true,
+                        LocalResolverImpl,
+                    )
+                    ProfileStatusUpdater.update(
                         profile.id,
-                        status = if (outcome.kind == PingFailureKind.Other) 3 else 2,
-                        error = outcome.kind.localizedMessage(outcome.detail),
+                        status = 1,
+                        ping = ping.latency,
                         reloadDelayOrderedGroup = false,
+                    )
+                    ProfileCountryResolver.updateFromAddress(
+                        profile.id,
+                        ping.address,
+                        ProfileCountryResolver.SOURCE_ENDPOINT,
+                    )
+                    return@runOnDefaultDispatcher
+                }
+                val addresses = if (bean.serverAddress.isIpAddress()) {
+                    listOf(bean.serverAddress)
+                } else {
+                    try {
+                        network.getAllByName(bean.serverAddress).mapNotNull { it.hostAddress }
+                    } catch (_: UnknownHostException) {
+                        emptyList()
+                    }
+                }
+                if (addresses.isEmpty()) error(app.getString(R.string.connection_test_domain_not_found))
+                var ping: Int? = null
+                var successfulAddress: String? = null
+                var lastError: Exception? = null
+                for (address in addresses) {
+                    try {
+                        ping = Libcore.tcpPing(
+                            address,
+                            bean.serverPort.toString(),
+                            3000,
+                            false,
+                            LocalResolverImpl,
+                        )
+                        successfulAddress = address
+                        break
+                    } catch (e: Exception) {
+                        lastError = e
+                        if (!isAddressFamilyFailure(e)) throw e
+                    }
+                }
+                ProfileStatusUpdater.update(
+                    profile.id,
+                    status = 1,
+                    ping = ping ?: throw lastError ?: error("TCP ping failed"),
+                    reloadDelayOrderedGroup = false,
+                )
+                successfulAddress?.let {
+                    ProfileCountryResolver.updateFromAddress(
+                        profile.id,
+                        it,
+                        ProfileCountryResolver.SOURCE_ENDPOINT,
                     )
                 }
             } catch (e: Exception) {
                 Logs.w(e)
+                val message = e.readableMessage
+                val friendly = when {
+                    message.contains("resolve TCP ping host", ignoreCase = true) ->
+                        app.getString(R.string.connection_test_domain_not_found)
+                    message.contains("ECONNREFUSED") ->
+                        app.getString(R.string.connection_test_refused)
+                    isAddressFamilyFailure(e) ->
+                        app.getString(R.string.connection_test_unreachable)
+                    message.contains("deadline exceeded", ignoreCase = true) ||
+                        message.contains("timed out", ignoreCase = true) ->
+                        app.getString(R.string.connection_test_timeout_error)
+                    else -> message
+                }
                 ProfileStatusUpdater.update(
                     profile.id,
-                    status = 3,
-                    error = e.readableMessage,
+                    status = if (friendly == message) 3 else 2,
+                    error = friendly,
                     reloadDelayOrderedGroup = false,
                 )
             }
         }
+    }
+
+    private fun isAddressFamilyFailure(error: Throwable): Boolean {
+        val message = error.readableMessage
+        return message.contains("ENETUNREACH") ||
+            message.contains("EHOSTUNREACH") ||
+            message.contains("EAFNOSUPPORT")
     }
 }

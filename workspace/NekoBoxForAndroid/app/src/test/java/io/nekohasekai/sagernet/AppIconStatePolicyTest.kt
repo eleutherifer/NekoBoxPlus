@@ -50,18 +50,6 @@ class AppIconStatePolicyTest {
     }
 
     @Test
-    fun televisionForcesDynamicIcon() {
-        assertEquals(
-            AppIcon.NEKOBOX_PLUS,
-            AppIconStatePolicy.selectionForDevice(AppIcon.HALLOWEEN, isTelevision = true),
-        )
-        assertEquals(
-            AppIcon.HALLOWEEN,
-            AppIconStatePolicy.selectionForDevice(AppIcon.HALLOWEEN, isTelevision = false),
-        )
-    }
-
-    @Test
     fun previewUsesLightSystemModeWhenAppIsDark() {
         val appUiMode = Configuration.UI_MODE_TYPE_NORMAL or Configuration.UI_MODE_NIGHT_YES
         val systemUiMode = Configuration.UI_MODE_TYPE_NORMAL or Configuration.UI_MODE_NIGHT_NO

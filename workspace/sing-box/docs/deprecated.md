@@ -4,74 +4,14 @@ icon: material/delete-alert
 
 # Deprecated Feature List
 
-## 1.14.0
-
-#### Legacy `download_detour` remote rule-set option
-
-Legacy `download_detour` remote rule-set option is deprecated,
-use `http_client` instead.
-
-Old field will be removed in sing-box 1.16.0.
-
-#### Implicit default HTTP client
-
-Implicit default HTTP client using the default outbound for remote rule-sets is deprecated.
-Configure `http_clients` and `route.default_http_client` explicitly.
-
-Old behavior will be removed in sing-box 1.16.0.
-
-#### Inline ACME options in TLS
-
-Inline ACME options (`tls.acme`) are deprecated
-and can be replaced by the ACME certificate provider,
-check [Migration](../migration/#migrate-inline-acme-to-certificate-provider).
-
-Old fields will be removed in sing-box 1.16.0.
-
-#### Legacy `strategy` DNS rule action option
-
-Legacy `strategy` DNS rule action option is deprecated.
-
-Old fields will be removed in sing-box 1.16.0.
-
-#### Legacy `rule_set_ip_cidr_accept_empty` DNS rule item
-
-Legacy `rule_set_ip_cidr_accept_empty` DNS rule item is deprecated,
-check [Migration](../migration/#migrate-address-filter-fields-to-response-matching).
-
-Old fields will be removed in sing-box 1.16.0.
-
-#### `independent_cache` DNS option
-
-`independent_cache` DNS option is deprecated.
-The DNS cache now always keys by transport, making this option unnecessary,
-check [Migration](../migration/#migrate-independent-dns-cache).
-
-Old fields will be removed in sing-box 1.16.0.
-
-#### `store_rdrc` cache file option
-
-`store_rdrc` cache file option is deprecated,
-check [Migration](../migration/#migrate-store-rdrc).
-
-Old fields will be removed in sing-box 1.16.0.
-
-#### Legacy Address Filter Fields in DNS rules
-
-Legacy Address Filter Fields (`ip_cidr`, `ip_is_private` without `match_response`)
-in DNS rules are deprecated,
-check [Migration](../migration/#migrate-address-filter-fields-to-response-matching).
-
-Old behavior will be removed in sing-box 1.16.0.
-
 ## 1.12.0
 
 #### Legacy DNS server formats
 
 DNS servers are refactored,
-check [Migration](../migration/#migrate-to-new-dns-server-formats).
+check [Migration](../migration/#migrate-to-new-dns-servers).
 
-Old formats were removed in sing-box 1.14.0.
+Compatibility for old formats will be removed in sing-box 1.14.0.
 
 #### `outbound` DNS rule item
 
@@ -88,7 +28,7 @@ so `pq_signature_schemes_enabled` has been deprecated and no longer works.
 Also, `dynamic_record_sizing_disabled` has nothing to do with ECH,
 was added by mistake, has been deprecated and no longer works.
 
-These fields were removed in sing-box 1.13.0.
+These fields will be removed in sing-box 1.13.0.
 
 ## 1.11.0
 
@@ -98,7 +38,7 @@ Legacy special outbounds (`block` / `dns`) are deprecated
 and can be replaced by rule actions,
 check [Migration](../migration/#migrate-legacy-special-outbounds-to-rule-actions).
 
-Old fields were removed in sing-box 1.13.0.
+Old fields will be removed in sing-box 1.13.0.
 
 #### Legacy inbound fields
 
@@ -106,7 +46,7 @@ Legacy inbound fields （`inbound.<sniff/domain_strategy/...>` are deprecated
 and can be replaced by rule actions,
 check [Migration](../migration/#migrate-legacy-inbound-fields-to-rule-actions).
 
-Old fields were removed in sing-box 1.13.0.
+Old fields will be removed in sing-box 1.13.0.
 
 #### Destination override fields in direct outbound
 
@@ -114,14 +54,12 @@ Destination override fields (`override_address` / `override_port`) in direct out
 and can be replaced by rule actions,
 check [Migration](../migration/#migrate-destination-override-fields-to-route-options).
 
-Old fields were removed in sing-box 1.13.0.
-
 #### WireGuard outbound
 
 WireGuard outbound is deprecated and can be replaced by endpoint,
 check [Migration](../migration/#migrate-wireguard-outbound-to-endpoint).
 
-Old outbound was removed in sing-box 1.13.0.
+Old outbound will be removed in sing-box 1.13.0.
 
 #### AmneziaWG outbound
 
@@ -132,7 +70,7 @@ see [Migration](../migration/#migrate-amneziawg-outbound-to-endpoint).
 
 GSO has no advantages for transparent proxy scenarios, is deprecated and no longer works in TUN.
 
-Old fields were removed in sing-box 1.13.0.
+Old fields will be removed in sing-box 1.13.0.
 
 ## 1.10.0
 
@@ -142,12 +80,12 @@ Old fields were removed in sing-box 1.13.0.
 `inet4_route_address` and `inet6_route_address` are merged into `route_address`,
 `inet4_route_exclude_address` and `inet6_route_exclude_address` are merged into `route_exclude_address`.
 
-Old fields were removed in sing-box 1.12.0.
+Old fields will be removed in sing-box 1.12.0.
 
 #### Match source rule items are renamed
 
 `rule_set_ipcidr_match_source` route and DNS rule items are renamed to
-`rule_set_ip_cidr_match_source` and were removed in sing-box 1.11.0.
+`rule_set_ip_cidr_match_source` and will be remove in sing-box 1.11.0.
 
 #### Drop support for go1.18 and go1.19
 
@@ -162,7 +100,7 @@ check [Migration](/migration/#migrate-cache-file-from-clash-api-to-independent-o
 
 #### GeoIP
 
-GeoIP is deprecated and was removed in sing-box 1.12.0.
+GeoIP is deprecated and will be removed in sing-box 1.12.0.
 
 The maxmind GeoIP National Database, as an IP classification database,
 is not entirely suitable for traffic bypassing,
@@ -173,7 +111,7 @@ check [Migration](/migration/#migrate-geoip-to-rule-sets).
 
 #### Geosite
 
-Geosite is deprecated and was removed in sing-box 1.12.0.
+Geosite is deprecated and will be removed in sing-box 1.12.0.
 
 Geosite, the `domain-list-community` project maintained by V2Ray as an early traffic bypassing solution,
 suffers from a number of problems, including lack of maintenance, inaccurate rules, and difficult management.

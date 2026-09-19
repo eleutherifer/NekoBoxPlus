@@ -1,14 +1,18 @@
 package moe.matsuri.nb4a.proxy.config
 
-import androidx.compose.runtime.Composable
+import android.os.Bundle
+import androidx.preference.PreferenceDataStore
+import androidx.preference.PreferenceFragmentCompat
+import io.nekohasekai.sagernet.Key
+import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.database.DataStore
-import io.nekohasekai.sagernet.ui.compose.ConfigProfileSettingsScreen
+import io.nekohasekai.sagernet.database.preference.OnPreferenceDataStoreChangeListener
 import io.nekohasekai.sagernet.ui.profile.ProfileSettingsActivity
+import moe.matsuri.nb4a.ui.EditConfigPreference
 
 class ConfigSettingActivity :
-    ProfileSettingsActivity<ConfigBean>() {
-
-    override val usesComposePreferences = true
+    ProfileSettingsActivity<ConfigBean>(),
+    OnPreferenceDataStoreChangeListener {
 
     private val isOutboundOnlyKey = "isOutboundOnly"
 
@@ -28,7 +32,29 @@ class ConfigSettingActivity :
         config = DataStore.serverConfig
     }
 
-    @Composable
-    override fun ComposePreferences() = ConfigProfileSettingsScreen(isOutboundOnlyKey)
+    override fun onPreferenceDataStoreChanged(store: PreferenceDataStore, key: String) {
+        if (key != Key.PROFILE_DIRTY) {
+            DataStore.dirty = true
+        }
+    }
+
+    private lateinit var editConfigPreference: EditConfigPreference
+
+    override fun PreferenceFragmentCompat.createPreferences(
+        savedInstanceState: Bundle?,
+        rootKey: String?,
+    ) {
+        addPreferencesFromResource(R.xml.config_preferences)
+
+        editConfigPreference = findPreference(Key.SERVER_CONFIG)!!
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        if (::editConfigPreference.isInitialized) {
+            editConfigPreference.notifyChanged()
+        }
+    }
 
 }

@@ -9,31 +9,31 @@ import (
 )
 
 type (
-	ConnectionHandlerFunc       = func(ctx context.Context, conn net.Conn, metadata InboundContext, onClose N.CloseHandlerFunc)
-	PacketConnectionHandlerFunc = func(ctx context.Context, conn N.PacketConn, metadata InboundContext, onClose N.CloseHandlerFunc)
+	ConnectionHandlerFuncEx       = func(ctx context.Context, conn net.Conn, metadata InboundContext, onClose N.CloseHandlerFunc)
+	PacketConnectionHandlerFuncEx = func(ctx context.Context, conn N.PacketConn, metadata InboundContext, onClose N.CloseHandlerFunc)
 )
 
-func NewUpstreamHandler(
+func NewUpstreamHandlerEx(
 	metadata InboundContext,
-	connectionHandler ConnectionHandlerFunc,
-	packetHandler PacketConnectionHandlerFunc,
-) UpstreamHandlerAdapter {
-	return &myUpstreamHandlerWrapper{
+	connectionHandler ConnectionHandlerFuncEx,
+	packetHandler PacketConnectionHandlerFuncEx,
+) UpstreamHandlerAdapterEx {
+	return &myUpstreamHandlerWrapperEx{
 		metadata:          metadata,
 		connectionHandler: connectionHandler,
 		packetHandler:     packetHandler,
 	}
 }
 
-var _ UpstreamHandlerAdapter = (*myUpstreamHandlerWrapper)(nil)
+var _ UpstreamHandlerAdapterEx = (*myUpstreamHandlerWrapperEx)(nil)
 
-type myUpstreamHandlerWrapper struct {
+type myUpstreamHandlerWrapperEx struct {
 	metadata          InboundContext
-	connectionHandler ConnectionHandlerFunc
-	packetHandler     PacketConnectionHandlerFunc
+	connectionHandler ConnectionHandlerFuncEx
+	packetHandler     PacketConnectionHandlerFuncEx
 }
 
-func (w *myUpstreamHandlerWrapper) NewConnectionEx(ctx context.Context, conn net.Conn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
+func (w *myUpstreamHandlerWrapperEx) NewConnectionEx(ctx context.Context, conn net.Conn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
 	myMetadata := w.metadata
 	if source.IsValid() {
 		myMetadata.Source = source
@@ -44,7 +44,7 @@ func (w *myUpstreamHandlerWrapper) NewConnectionEx(ctx context.Context, conn net
 	w.connectionHandler(ctx, conn, myMetadata, onClose)
 }
 
-func (w *myUpstreamHandlerWrapper) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
+func (w *myUpstreamHandlerWrapperEx) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
 	myMetadata := w.metadata
 	if source.IsValid() {
 		myMetadata.Source = source
@@ -55,24 +55,24 @@ func (w *myUpstreamHandlerWrapper) NewPacketConnectionEx(ctx context.Context, co
 	w.packetHandler(ctx, conn, myMetadata, onClose)
 }
 
-var _ UpstreamHandlerAdapter = (*myUpstreamContextHandlerWrapper)(nil)
+var _ UpstreamHandlerAdapterEx = (*myUpstreamContextHandlerWrapperEx)(nil)
 
-type myUpstreamContextHandlerWrapper struct {
-	connectionHandler ConnectionHandlerFunc
-	packetHandler     PacketConnectionHandlerFunc
+type myUpstreamContextHandlerWrapperEx struct {
+	connectionHandler ConnectionHandlerFuncEx
+	packetHandler     PacketConnectionHandlerFuncEx
 }
 
-func NewUpstreamContextHandler(
-	connectionHandler ConnectionHandlerFunc,
-	packetHandler PacketConnectionHandlerFunc,
-) UpstreamHandlerAdapter {
-	return &myUpstreamContextHandlerWrapper{
+func NewUpstreamContextHandlerEx(
+	connectionHandler ConnectionHandlerFuncEx,
+	packetHandler PacketConnectionHandlerFuncEx,
+) UpstreamHandlerAdapterEx {
+	return &myUpstreamContextHandlerWrapperEx{
 		connectionHandler: connectionHandler,
 		packetHandler:     packetHandler,
 	}
 }
 
-func (w *myUpstreamContextHandlerWrapper) NewConnectionEx(ctx context.Context, conn net.Conn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
+func (w *myUpstreamContextHandlerWrapperEx) NewConnectionEx(ctx context.Context, conn net.Conn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
 	_, myMetadata := ExtendContext(ctx)
 	if source.IsValid() {
 		myMetadata.Source = source
@@ -83,7 +83,7 @@ func (w *myUpstreamContextHandlerWrapper) NewConnectionEx(ctx context.Context, c
 	w.connectionHandler(ctx, conn, *myMetadata, onClose)
 }
 
-func (w *myUpstreamContextHandlerWrapper) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
+func (w *myUpstreamContextHandlerWrapperEx) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
 	_, myMetadata := ExtendContext(ctx)
 	if source.IsValid() {
 		myMetadata.Source = source
@@ -94,24 +94,24 @@ func (w *myUpstreamContextHandlerWrapper) NewPacketConnectionEx(ctx context.Cont
 	w.packetHandler(ctx, conn, *myMetadata, onClose)
 }
 
-func NewRouteHandler(
+func NewRouteHandlerEx(
 	metadata InboundContext,
 	router ConnectionRouterEx,
-) UpstreamHandlerAdapter {
-	return &routeHandlerWrapper{
+) UpstreamHandlerAdapterEx {
+	return &routeHandlerWrapperEx{
 		metadata: metadata,
 		router:   router,
 	}
 }
 
-var _ UpstreamHandlerAdapter = (*routeHandlerWrapper)(nil)
+var _ UpstreamHandlerAdapterEx = (*routeHandlerWrapperEx)(nil)
 
-type routeHandlerWrapper struct {
+type routeHandlerWrapperEx struct {
 	metadata InboundContext
 	router   ConnectionRouterEx
 }
 
-func (r *routeHandlerWrapper) NewConnectionEx(ctx context.Context, conn net.Conn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
+func (r *routeHandlerWrapperEx) NewConnectionEx(ctx context.Context, conn net.Conn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
 	if source.IsValid() {
 		r.metadata.Source = source
 	}
@@ -121,7 +121,7 @@ func (r *routeHandlerWrapper) NewConnectionEx(ctx context.Context, conn net.Conn
 	r.router.RouteConnectionEx(ctx, conn, r.metadata, onClose)
 }
 
-func (r *routeHandlerWrapper) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
+func (r *routeHandlerWrapperEx) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
 	if source.IsValid() {
 		r.metadata.Source = source
 	}
@@ -131,21 +131,21 @@ func (r *routeHandlerWrapper) NewPacketConnectionEx(ctx context.Context, conn N.
 	r.router.RoutePacketConnectionEx(ctx, conn, r.metadata, onClose)
 }
 
-func NewRouteContextHandler(
+func NewRouteContextHandlerEx(
 	router ConnectionRouterEx,
-) UpstreamHandlerAdapter {
-	return &routeContextHandlerWrapper{
+) UpstreamHandlerAdapterEx {
+	return &routeContextHandlerWrapperEx{
 		router: router,
 	}
 }
 
-var _ UpstreamHandlerAdapter = (*routeContextHandlerWrapper)(nil)
+var _ UpstreamHandlerAdapterEx = (*routeContextHandlerWrapperEx)(nil)
 
-type routeContextHandlerWrapper struct {
+type routeContextHandlerWrapperEx struct {
 	router ConnectionRouterEx
 }
 
-func (r *routeContextHandlerWrapper) NewConnectionEx(ctx context.Context, conn net.Conn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
+func (r *routeContextHandlerWrapperEx) NewConnectionEx(ctx context.Context, conn net.Conn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
 	_, metadata := ExtendContext(ctx)
 	if source.IsValid() {
 		metadata.Source = source
@@ -156,7 +156,7 @@ func (r *routeContextHandlerWrapper) NewConnectionEx(ctx context.Context, conn n
 	r.router.RouteConnectionEx(ctx, conn, *metadata, onClose)
 }
 
-func (r *routeContextHandlerWrapper) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
+func (r *routeContextHandlerWrapperEx) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
 	_, metadata := ExtendContext(ctx)
 	if source.IsValid() {
 		metadata.Source = source

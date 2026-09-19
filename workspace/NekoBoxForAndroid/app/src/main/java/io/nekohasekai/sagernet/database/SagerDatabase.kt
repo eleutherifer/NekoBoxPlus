@@ -10,13 +10,15 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import dev.matrix.roomigrant.GenerateRoomMigrations
 import io.nekohasekai.sagernet.Key
 import io.nekohasekai.sagernet.SagerNet
-import io.nekohasekai.sagernet.app.AppGraph
 import io.nekohasekai.sagernet.fmt.KryoConverters
 import io.nekohasekai.sagernet.fmt.gson.GsonConverters
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 @Database(
     entities = [ProxyGroup::class, ProxyEntity::class, RuleEntity::class],
-    version = 28,
+    version = 27,
     autoMigrations = [
         AutoMigration(from = 3, to = 4),
         AutoMigration(from = 4, to = 5),
@@ -252,60 +254,28 @@ abstract class SagerDatabase : RoomDatabase() {
 
         private val MIGRATION_25_26 = object : Migration(25, 26) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("ALTER TABLE proxy_entities ADD COLUMN openVPNBean BLOB")
-                database.execSQL("ALTER TABLE proxy_entities ADD COLUMN openConnectBean BLOB")
+                database.execSQL("ALTER TABLE proxy_groups ADD COLUMN enableMux INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE proxy_groups ADD COLUMN muxType INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE proxy_groups ADD COLUMN muxMode INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE proxy_groups ADD COLUMN muxConcurrency INTEGER NOT NULL DEFAULT 8")
+                database.execSQL("ALTER TABLE proxy_groups ADD COLUMN muxMaxConnections INTEGER NOT NULL DEFAULT 4")
+                database.execSQL("ALTER TABLE proxy_groups ADD COLUMN muxMinStreams INTEGER NOT NULL DEFAULT 4")
+                database.execSQL("ALTER TABLE proxy_groups ADD COLUMN muxPadding INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE proxy_groups ADD COLUMN muxBrutal INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE proxy_groups ADD COLUMN muxBrutalUpMbps INTEGER NOT NULL DEFAULT 100")
+                database.execSQL("ALTER TABLE proxy_groups ADD COLUMN muxBrutalDownMbps INTEGER NOT NULL DEFAULT 100")
             }
         }
 
         private val MIGRATION_26_27 = object : Migration(26, 27) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                database.addColumnIfMissing("proxy_entities", "openVPNBean", "BLOB")
-                database.addColumnIfMissing("proxy_entities", "openConnectBean", "BLOB")
-                database.addColumnIfMissing("proxy_groups", "enableMux", "INTEGER NOT NULL DEFAULT 0")
-                database.addColumnIfMissing("proxy_groups", "muxType", "INTEGER NOT NULL DEFAULT 0")
-                database.addColumnIfMissing("proxy_groups", "muxMode", "INTEGER NOT NULL DEFAULT 0")
-                database.addColumnIfMissing("proxy_groups", "muxConcurrency", "INTEGER NOT NULL DEFAULT 8")
-                database.addColumnIfMissing("proxy_groups", "muxMaxConnections", "INTEGER NOT NULL DEFAULT 4")
-                database.addColumnIfMissing("proxy_groups", "muxMinStreams", "INTEGER NOT NULL DEFAULT 4")
-                database.addColumnIfMissing("proxy_groups", "muxPadding", "INTEGER NOT NULL DEFAULT 0")
-                database.addColumnIfMissing("proxy_groups", "muxBrutal", "INTEGER NOT NULL DEFAULT 0")
-                database.addColumnIfMissing("proxy_groups", "muxBrutalUpMbps", "INTEGER NOT NULL DEFAULT 100")
-                database.addColumnIfMissing("proxy_groups", "muxBrutalDownMbps", "INTEGER NOT NULL DEFAULT 100")
-                database.addColumnIfMissing("proxy_entities", "countryCode", "TEXT NOT NULL DEFAULT ''")
-                database.addColumnIfMissing("proxy_entities", "countrySource", "INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE proxy_entities ADD COLUMN countryCode TEXT NOT NULL DEFAULT ''")
+                database.execSQL("ALTER TABLE proxy_entities ADD COLUMN countrySource INTEGER NOT NULL DEFAULT 0")
             }
         }
 
-        private val MIGRATION_27_28 = object : Migration(27, 28) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                // Both branches shipped different version-27 schemas. Fill the columns missing
-                // from either layout so upgrades from plus and plus-1.14 converge on version 28.
-                database.addColumnIfMissing("proxy_entities", "openVPNBean", "BLOB")
-                database.addColumnIfMissing("proxy_entities", "openConnectBean", "BLOB")
-                database.addColumnIfMissing("proxy_entities", "countryCode", "TEXT NOT NULL DEFAULT ''")
-                database.addColumnIfMissing("proxy_entities", "countrySource", "INTEGER NOT NULL DEFAULT 0")
-            }
-        }
-
-        private fun SupportSQLiteDatabase.addColumnIfMissing(
-            table: String,
-            column: String,
-            definition: String,
-        ) {
-            val exists = query("PRAGMA table_info(`$table`)").use { cursor ->
-                val nameIndex = cursor.getColumnIndexOrThrow("name")
-                var found = false
-                while (cursor.moveToNext()) {
-                    if (cursor.getString(nameIndex) == column) {
-                        found = true
-                        break
-                    }
-                }
-                found
-            }
-            if (!exists) execSQL("ALTER TABLE `$table` ADD COLUMN `$column` $definition")
-        }
-
+        @OptIn(DelicateCoroutinesApi::class)
+        @Suppress("EXPERIMENTAL_API_USAGE")
         val instance by lazy {
             SagerNet.application.getDatabasePath(Key.DB_PROFILE).parentFile?.mkdirs()
             Room.databaseBuilder(SagerNet.application, SagerDatabase::class.java, Key.DB_PROFILE)
@@ -330,13 +300,12 @@ abstract class SagerDatabase : RoomDatabase() {
                     MIGRATION_24_25,
                     MIGRATION_25_26,
                     MIGRATION_26_27,
-                    MIGRATION_27_28,
                 )
                 .setJournalMode(JournalMode.TRUNCATE)
                 .allowMainThreadQueries()
                 .enableMultiInstanceInvalidation()
                 .fallbackToDestructiveMigration()
-                .setQueryExecutor(AppGraph.databaseExecutor)
+                .setQueryExecutor { GlobalScope.launch { it.run() } }
                 .build()
         }
 

@@ -21,7 +21,6 @@ import (
 	"github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing-tun/ping"
 	"github.com/sagernet/sing/common"
-	"github.com/sagernet/sing/common/control"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/logger"
 	M "github.com/sagernet/sing/common/metadata"
@@ -34,11 +33,10 @@ func RegisterOutbound(registry *outbound.Registry) {
 }
 
 var (
-	_ N.ParallelDialer                = (*Outbound)(nil)
-	_ dialer.ParallelNetworkDialer    = (*Outbound)(nil)
-	_ dialer.DirectDialer             = (*Outbound)(nil)
-	_ adapter.FlowOutbound            = (*Outbound)(nil)
-	_ adapter.InterfaceUpdateListener = (*Outbound)(nil)
+	_ N.ParallelDialer             = (*Outbound)(nil)
+	_ dialer.ParallelNetworkDialer = (*Outbound)(nil)
+	_ dialer.DirectDialer          = (*Outbound)(nil)
+	_ adapter.DirectRouteOutbound  = (*Outbound)(nil)
 )
 
 type Outbound struct {
@@ -52,7 +50,6 @@ type Outbound struct {
 	isEmpty        bool
 	myAddresses    common.TypedValue[[]netip.Prefix]
 	fragment       *Fragment
-	icmpPort       *ping.Port
 }
 
 type Fragment struct {
@@ -85,9 +82,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		domainStrategy: C.DomainStrategy(options.DomainStrategy),
 		fallbackDelay:  time.Duration(options.FallbackDelay),
 		dialer:         outboundDialer.(dialer.ParallelInterfaceDialer),
-		isEmpty: reflect.DeepEqual(options.DialerOptions, option.DialerOptions{
-			AbstractDialerOptions: option.AbstractDialerOptions{UDPFragmentDefault: true},
-		}),
+		isEmpty:        reflect.DeepEqual(options.DialerOptions, option.DialerOptions{UDPFragmentDefault: true}),
 	}
 	//nolint:staticcheck
 	if options.ProxyProtocol != 0 {
@@ -146,52 +141,34 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		}
 		outbound.isEmpty = false
 	}
-	if defaultDialer, isDefaultDialer := common.Cast[*dialer.DefaultDialer](outbound.dialer); isDefaultDialer {
-		outbound.icmpPort = ping.NewPort(ctx, logger, func(destination netip.Addr) control.Func {
-			return defaultDialer.DialerForICMPDestination(destination).Control
-		}, 0)
-	}
 	return outbound, nil
 }
 
 func (h *Outbound) Start(stage adapter.StartStage) error {
 	switch stage {
 	case adapter.StartStatePostStart, adapter.StartStateStarted:
-		if len(h.myAddresses.Load()) == 0 {
-			h.fetchMyAddresses()
-		}
+		h.fetchMyAddresses()
 	}
 	return nil
 }
 
 func (h *Outbound) fetchMyAddresses() {
+	if len(h.myAddresses.Load()) > 0 {
+		return
+	}
 	myInterfaceNames := h.network.InterfaceMonitor().MyInterfaces()
 	if len(myInterfaceNames) == 0 {
 		return
 	}
-	var (
-		myAddresses []netip.Prefix
-		found       bool
-	)
+	var myAddresses []netip.Prefix
 	for _, myInterfaceName := range myInterfaceNames {
 		myInterface, err := h.network.InterfaceFinder().ByName(myInterfaceName)
 		if err != nil {
 			continue
 		}
-		found = true
 		myAddresses = append(myAddresses, myInterface.Addresses...)
 	}
-	if !found {
-		return
-	}
 	h.myAddresses.Store(myAddresses)
-}
-
-func (h *Outbound) InterfaceUpdated(ctx context.Context) {
-	h.fetchMyAddresses()
-	if h.icmpPort != nil {
-		h.icmpPort.Close()
-	}
 }
 
 func (h *Outbound) isMyLoopbackAddress(addresses ...netip.Addr) bool {
@@ -259,38 +236,14 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 	return conn, nil
 }
 
-func (h *Outbound) PreMatchFlow(network string, destination netip.Addr) adapter.PreMatchAction {
-	if network == N.NetworkICMP && h.icmpPort != nil {
-		return adapter.PreMatchFlow
+func (h *Outbound) NewDirectRouteConnection(metadata adapter.InboundContext, routeContext tun.DirectRouteContext, timeout time.Duration) (tun.DirectRouteDestination, error) {
+	ctx := log.ContextWithNewID(h.ctx)
+	destination, err := ping.ConnectDestination(ctx, h.logger, common.MustCast[*dialer.DefaultDialer](h.dialer).DialerForICMPDestination(metadata.Destination.Addr).Control, metadata.Destination.Addr, routeContext, timeout)
+	if err != nil {
+		return nil, err
 	}
-	return adapter.PreMatchContinue
-}
-
-func (h *Outbound) PortAddresses() (netip.Addr, netip.Addr) {
-	return h.icmpPort.PortAddresses()
-}
-
-func (h *Outbound) PortMTU() uint32 {
-	return h.icmpPort.PortMTU()
-}
-
-func (h *Outbound) AttachReturn(returnPath tun.Return) error {
-	return h.icmpPort.AttachReturn(returnPath)
-}
-
-func (h *Outbound) DetachReturn(returnPath tun.Return) error {
-	return h.icmpPort.DetachReturn(returnPath)
-}
-
-func (h *Outbound) WritePackets(packets [][]byte) error {
-	return h.icmpPort.WritePackets(packets)
-}
-
-func (h *Outbound) Close() error {
-	if h.icmpPort != nil {
-		return h.icmpPort.Close()
-	}
-	return nil
+	h.logger.InfoContext(ctx, "linked ", metadata.Network, " connection from ", metadata.Source.AddrString(), " to ", metadata.Destination.AddrString())
+	return destination, nil
 }
 
 func (h *Outbound) DialParallel(ctx context.Context, network string, destination M.Socksaddr, destinationAddresses []netip.Addr) (net.Conn, error) {
