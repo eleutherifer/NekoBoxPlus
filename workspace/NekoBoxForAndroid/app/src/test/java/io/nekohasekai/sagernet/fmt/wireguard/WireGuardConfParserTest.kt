@@ -111,8 +111,6 @@ class WireGuardConfParserTest {
                 "RejectAfterTime" to "180",
                 "KeepaliveTimeout" to "10-15",
                 "MaxHandshakeAttempts" to "20",
-                "RandomTrailers" to "on",
-                "DisableCookies" to "on",
             )
 
         values.forEach { (key, value) ->

@@ -6,7 +6,6 @@ import io.nekohasekai.sagernet.fmt.Serializable
 import io.nekohasekai.sagernet.fmt.shadowsocks.ShadowsocksBean
 import io.nekohasekai.sagernet.fmt.wireguard.AmneziaWGBean
 import io.nekohasekai.sagernet.fmt.wireguard.WireGuardBean
-import io.nekohasekai.sagernet.fmt.wireguard.applyAmneziaWG3Options
 import io.nekohasekai.sagernet.fmt.wireguard.parseAmneziaWGUri
 import io.nekohasekai.sagernet.fmt.wireguard.parseThroneWireGuardUri
 import io.nekohasekai.sagernet.fmt.v2ray.VMessBean
@@ -481,11 +480,9 @@ private fun parseAmneziaWireGuardContainer(wgConfig: JSONObject): List<WireGuard
 }
 
 private fun parseAmneziaAwgLastConfig(lastConfig: String): List<AmneziaWGBean> {
-    val lastConfigJson = runCatching { JSONObject(lastConfig) }.getOrNull()
-    val config = lastConfigJson?.let { lc ->
-        val nativeConfig = lc.optString("config").takeIf { it.isNotBlank() } ?: return emptyList()
-        val peerSection = Regex("(?im)^\\s*\\[Peer]\\s*$").find(nativeConfig)
-        val interfaceIni = peerSection?.let { nativeConfig.substring(0, it.range.first) } ?: nativeConfig
+    val config = runCatching {
+        val lc = JSONObject(lastConfig)
+        val interfaceIni = lc.optString("config").takeIf { it.isNotBlank() } ?: return emptyList()
         val hostName = lc.optString("hostName").takeIf { it.isNotBlank() } ?: return emptyList()
         val port = lc.optString("port").takeIf { it.isNotBlank() } ?: return emptyList()
         val serverPubKey = lc.optString("server_pub_key").takeIf { it.isNotBlank() } ?: return emptyList()
@@ -507,17 +504,11 @@ private fun parseAmneziaAwgLastConfig(lastConfig: String): List<AmneziaWGBean> {
             append("AllowedIPs = $allowedIps\n")
             if (keepAlive.isNotBlank()) append("PersistentKeepalive = $keepAlive\n")
         }
-    } ?: lastConfig
+    }.getOrDefault(lastConfig)
 
     return runCatching { RawUpdater.parseAmneziaWG(config) }.getOrElse {
         Logs.w(it)
         emptyList()
-    }.onEach { bean ->
-        lastConfigJson?.let { json ->
-            bean.applyAmneziaWG3Options { key ->
-                json.optString(key).takeIf(String::isNotBlank)
-            }
-        }
     }
 }
 

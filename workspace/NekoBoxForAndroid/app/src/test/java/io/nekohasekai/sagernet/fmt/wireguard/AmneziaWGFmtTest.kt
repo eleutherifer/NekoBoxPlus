@@ -46,8 +46,6 @@ class AmneziaWGFmtTest {
             rejectAfterTime = "180"
             keepaliveTimeout = "10-15"
             maxHandshakeAttempts = "20"
-            randomTrailers = true
-            disableCookies = true
         }
 
         val endpoint = buildSingBoxEndpointAwgBean(bean)
@@ -79,8 +77,6 @@ class AmneziaWGFmtTest {
         assertEquals("180", endpoint.reject_after_time)
         assertEquals("10-15", endpoint.keepalive_timeout)
         assertEquals("20", endpoint.max_handshake_attempts)
-        assertEquals(true, endpoint.random_trailers)
-        assertEquals(true, endpoint.disable_cookies)
 
         val peer = endpoint.peers.single()
         assertEquals("[2001:db8::1]", peer.address)
@@ -93,7 +89,7 @@ class AmneziaWGFmtTest {
     }
 
     @Test
-    fun awg31OptionsRoundTripThroughBeanSerializationAndConfExport() {
+    fun awg3OptionsRoundTripThroughBeanSerializationAndConfExport() {
         val bean = AmneziaWGBean().apply {
             initializeDefaultValues()
             headerProtectionKey = "header-key"
@@ -104,8 +100,6 @@ class AmneziaWGFmtTest {
             keepaliveTimeout = "10-15"
             maxHandshakeAttempts = "20"
             peerPersistentKeepalive = "22-30"
-            randomTrailers = true
-            disableCookies = true
         }
 
         val restored = KryoConverters.deserialize(
@@ -121,18 +115,13 @@ class AmneziaWGFmtTest {
         assertEquals("10-15", restored.keepaliveTimeout)
         assertEquals("20", restored.maxHandshakeAttempts)
         assertEquals("22-30", restored.peerPersistentKeepalive)
-        assertTrue(restored.randomTrailers)
-        assertTrue(restored.disableCookies)
         assertTrue(restored.hasAmneziaWG3Options())
-        assertTrue(restored.hasAmneziaWG31Options())
 
         val config = restored.buildAmneziaWGConfig()
         assertTrue(config.contains("HeaderProtectionKey = header-key"))
         assertTrue(config.contains("ContentPaddingAddition = 10-20"))
         assertTrue(config.contains("RekeyAfterTime = 100-120"))
         assertTrue(config.contains("PersistentKeepalive = 22-30"))
-        assertTrue(config.contains("RandomTrailers = on"))
-        assertTrue(config.contains("DisableCookies = on"))
     }
 
     @Test

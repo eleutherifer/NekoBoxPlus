@@ -58,8 +58,6 @@ internal object WireGuardConfParser {
             "rejectaftertime",
             "keepalivetimeout",
             "maxhandshakeattempts",
-            "randomtrailers",
-            "disablecookies",
         )
 
     private val multilineKeys = setOf("i1", "i2", "i3", "i4", "i5")

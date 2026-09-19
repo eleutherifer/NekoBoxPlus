@@ -443,12 +443,6 @@ func genIpcConfig(opts option.AwgEndpointOptions, resolvePeer func(domain string
 	appendRange("reject_after_time", opts.RejectAfterTime)
 	appendRange("keepalive_timeout", opts.KeepaliveTimeout)
 	appendRange("max_handshake_attempts", opts.MaxHandshakeAttempts)
-	if opts.RandomTrailers {
-		s += "\nrandom_trailers=true"
-	}
-	if opts.DisableCookies {
-		s += "\ndisable_cookies=true"
-	}
 
 	for _, peer := range opts.Peers {
 		publicKeyBytes, err := base64.StdEncoding.DecodeString(peer.PublicKey)

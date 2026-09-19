@@ -5,7 +5,6 @@ import io.nekohasekai.sagernet.fmt.internal.ProxySetBean
 import io.nekohasekai.sagernet.fmt.mieru.MieruBean
 import io.nekohasekai.sagernet.fmt.v2ray.StandardV2RayBean
 import io.nekohasekai.sagernet.fmt.v2ray.isTLS
-import io.nekohasekai.sagernet.fmt.wireguard.hasAmneziaWG31Options
 import io.nekohasekai.sagernet.fmt.wireguard.hasAmneziaWG3Options
 
 private val insecureShadowsocksMethods = setOf(
@@ -131,11 +130,7 @@ fun ProxyEntity.profileCardType(short: Boolean = false): String = if (short) {
         "MASQUE $network"
     }
     ProxyEntity.TYPE_AWG -> {
-        val version = when {
-            awgBean?.hasAmneziaWG31Options() == true -> "3.1"
-            awgBean?.hasAmneziaWG3Options() == true -> "3.0"
-            else -> "2.0"
-        }
+        val version = if (awgBean?.hasAmneziaWG3Options() == true) "3.0" else "2.0"
         "AmneziaWG $version"
     }
     else -> displayType()

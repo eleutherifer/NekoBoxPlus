@@ -115,8 +115,6 @@ type AwgEndpointOptions struct {
 	RejectAfterTime        AwgUint32Range                   `json:"reject_after_time,omitempty"`
 	KeepaliveTimeout       AwgUint32Range                   `json:"keepalive_timeout,omitempty"`
 	MaxHandshakeAttempts   AwgUint32Range                   `json:"max_handshake_attempts,omitempty"`
-	RandomTrailers         bool                             `json:"random_trailers,omitempty"`
-	DisableCookies         bool                             `json:"disable_cookies,omitempty"`
 	Peers                  []AwgPeerOptions                 `json:"peers,omitempty"`
 	DialerOptions
 }

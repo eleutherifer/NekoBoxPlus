@@ -193,15 +193,4 @@
             app:useSimpleSummaryProvider="true" />
     </PreferenceCategory>
 
-    <PreferenceCategory app:title="@string/amneziawg_obfuscation_awg31">
-        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
-            app:icon="@drawable/ic_baseline_fingerprint_24"
-            app:key="randomTrailers"
-            app:title="@string/amneziawg_random_trailers" />
-        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
-            app:icon="@drawable/ic_settings_password"
-            app:key="disableCookies"
-            app:title="@string/amneziawg_disable_cookies" />
-    </PreferenceCategory>
-
 </PreferenceScreen>

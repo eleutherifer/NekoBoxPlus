@@ -51,10 +51,6 @@ public class AmneziaWGBean extends AbstractBean {
     public String keepaliveTimeout;
     public String maxHandshakeAttempts;
 
-    // AWG 3.1 parameters
-    public Boolean randomTrailers;
-    public Boolean disableCookies;
-
     @Override
     public void initializeDefaultValues() {
         super.initializeDefaultValues();
@@ -88,13 +84,11 @@ public class AmneziaWGBean extends AbstractBean {
         if (rejectAfterTime == null) rejectAfterTime = "";
         if (keepaliveTimeout == null) keepaliveTimeout = "";
         if (maxHandshakeAttempts == null) maxHandshakeAttempts = "";
-        if (randomTrailers == null) randomTrailers = false;
-        if (disableCookies == null) disableCookies = false;
     }
 
     @Override
     public void serialize(ByteBufferOutput output) {
-        output.writeInt(4); // serialization version
+        output.writeInt(3); // serialization version
         super.serialize(output);
         output.writeString(localAddress);
         output.writeString(privateKey);
@@ -126,8 +120,6 @@ public class AmneziaWGBean extends AbstractBean {
         output.writeString(rejectAfterTime);
         output.writeString(keepaliveTimeout);
         output.writeString(maxHandshakeAttempts);
-        output.writeBoolean(randomTrailers);
-        output.writeBoolean(disableCookies);
     }
 
     @Override
@@ -171,10 +163,6 @@ public class AmneziaWGBean extends AbstractBean {
             rejectAfterTime = input.readString();
             keepaliveTimeout = input.readString();
             maxHandshakeAttempts = input.readString();
-        }
-        if (version >= 4) {
-            randomTrailers = input.readBoolean();
-            disableCookies = input.readBoolean();
         }
     }
 

@@ -19,7 +19,6 @@ import io.nekohasekai.sagernet.fmt.tailscale.TailscaleBean
 import io.nekohasekai.sagernet.fmt.trojan_go.parseTrojanGo
 import io.nekohasekai.sagernet.fmt.v2ray.StandardV2RayBean
 import io.nekohasekai.sagernet.fmt.wireguard.AmneziaWGBean
-import io.nekohasekai.sagernet.fmt.wireguard.applyAmneziaWG3Options
 import io.nekohasekai.sagernet.fmt.wireguard.WireGuardBean
 import io.nekohasekai.sagernet.fmt.wireguard.WireGuardConfDocument
 import io.nekohasekai.sagernet.fmt.wireguard.WireGuardConfParser
@@ -762,7 +761,14 @@ object RawUpdater : GroupUpdater() {
         // AWG 2.0 parameters
         iface["S3"]?.toIntOrNull()?.let { bean.s3 = it }
         iface["S4"]?.toIntOrNull()?.let { bean.s4 = it }
-        bean.applyAmneziaWG3Options { iface[it] }
+        // AWG 3.0 parameters
+        iface["HeaderProtectionKey"]?.let { bean.headerProtectionKey = it }
+        iface["ContentPaddingAddition"]?.let { bean.contentPaddingAddition = it }
+        iface["RekeyAfterTime"]?.let { bean.rekeyAfterTime = it }
+        iface["RekeyTimeout"]?.let { bean.rekeyTimeout = it }
+        iface["RejectAfterTime"]?.let { bean.rejectAfterTime = it }
+        iface["KeepaliveTimeout"]?.let { bean.keepaliveTimeout = it }
+        iface["MaxHandshakeAttempts"]?.let { bean.maxHandshakeAttempts = it }
         val peers = document.peers
         if (peers.isNullOrEmpty()) error("Missing 'Peer' selections")
         val beans = mutableListOf<AmneziaWGBean>()

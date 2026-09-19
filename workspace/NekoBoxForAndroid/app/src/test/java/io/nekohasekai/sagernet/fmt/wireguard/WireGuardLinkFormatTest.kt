@@ -47,15 +47,12 @@ class WireGuardLinkFormatTest {
         val parsed = parseThroneWireGuardUri(
             "wireguard://example.com:51820" +
                 "?private_key=private&peer_public_key=public&local_address=10.0.0.2%2F32" +
-                "&enable_amnezia=true&jc=4&i1=%3Cb%200x01%3E&rekey_after_time=10-20" +
-                "&random_trailers=on&disable_cookies=enabled",
+                "&enable_amnezia=true&jc=4&i1=%3Cb%200x01%3E&rekey_after_time=10-20",
         ) as AmneziaWGBean
 
         assertEquals(4, parsed.jc)
         assertEquals("<b 0x01>", parsed.i1)
         assertEquals("10-20", parsed.rekeyAfterTime)
-        assertTrue(parsed.randomTrailers)
-        assertTrue(parsed.disableCookies)
     }
 
     @Test
@@ -117,45 +114,6 @@ class WireGuardLinkFormatTest {
         assertEquals("amneziawg", exported.getString("type"))
         assertEquals(1, exported.getInt("version"))
         assertEquals(2, exported.getJSONArray("servers").length())
-    }
-
-    @Test
-    fun awg3OptionsRoundTripThroughExistingExports() {
-        val bean = AmneziaWGBean().apply {
-            initializeDefaultValues()
-            name = "AWG 3.1"
-            serverAddress = "awg.example.com"
-            serverPort = 51820
-            localAddress = "10.0.0.2/32"
-            privateKey = "private"
-            peerPublicKey = "public"
-            headerProtectionKey = "header-key"
-            contentPaddingAddition = "10-100"
-            rekeyAfterTime = "100-120"
-            rekeyTimeout = "3-7"
-            rejectAfterTime = "150-180"
-            keepaliveTimeout = "5-15"
-            maxHandshakeAttempts = "15-20"
-            randomTrailers = true
-            disableCookies = true
-        }
-
-        val fromLink = parseAmneziaWGUri(bean.toAmneziaWGUri()).single()
-        val fromJson = parseAmneziaWGJsonContainer(
-            JSONObject(buildAmneziaWGJsonContainer(listOf(bean))),
-        ).single()
-
-        listOf(fromLink, fromJson).forEach { parsed ->
-            assertEquals("header-key", parsed.headerProtectionKey)
-            assertEquals("10-100", parsed.contentPaddingAddition)
-            assertEquals("100-120", parsed.rekeyAfterTime)
-            assertEquals("3-7", parsed.rekeyTimeout)
-            assertEquals("150-180", parsed.rejectAfterTime)
-            assertEquals("5-15", parsed.keepaliveTimeout)
-            assertEquals("15-20", parsed.maxHandshakeAttempts)
-            assertTrue(parsed.randomTrailers)
-            assertTrue(parsed.disableCookies)
-        }
     }
 
     private fun amneziaConfig(host: String) =

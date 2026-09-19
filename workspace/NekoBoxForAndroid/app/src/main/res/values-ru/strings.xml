@@ -930,9 +930,6 @@
     <string name="amneziawg_obfuscation_awg15">Обфускация AmneziaWG 1.5</string>
     <string name="amneziawg_obfuscation_awg20">Обфускация AmneziaWG 2.0</string>
     <string name="amneziawg_obfuscation_awg30">AmneziaWG 3.0</string>
-    <string name="amneziawg_obfuscation_awg31">AmneziaWG 3.1</string>
-    <string name="amneziawg_random_trailers">Случайные хвосты пакетов</string>
-    <string name="amneziawg_disable_cookies">Отключить ответы cookie</string>
     <string name="amneziawg_header_protection_key">Ключ защиты заголовков</string>
     <string name="amneziawg_content_padding_addition">Дополнительное заполнение данных (значение или диапазон)</string>
     <string name="amneziawg_rekey_after_time">Время до смены ключа, секунды (значение или диапазон)</string>

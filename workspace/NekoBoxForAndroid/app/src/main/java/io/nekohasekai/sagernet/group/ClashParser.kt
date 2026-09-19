@@ -490,8 +490,6 @@ internal object ClashParser {
         rejectAfterTime = options.value("reject-after-time")
         keepaliveTimeout = options.value("keepalive-timeout")
         maxHandshakeAttempts = options.value("max-handshake-attempts")
-        randomTrailers = options.boolean("random-trailers")
-        disableCookies = options.boolean("disable-cookies")
     }
 
     private fun applyWireGuardOverrides(

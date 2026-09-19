@@ -3933,11 +3933,6 @@ public class SingBoxOptions {
 
         public String max_handshake_attempts;
 
-        // AWG 3.1 parameters
-        public Boolean random_trailers;
-
-        public Boolean disable_cookies;
-
         public List<AwgPeer> peers;
 
     }

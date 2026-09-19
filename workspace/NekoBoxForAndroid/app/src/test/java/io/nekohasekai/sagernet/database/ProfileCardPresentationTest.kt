@@ -166,14 +166,6 @@ class ProfileCardPresentationTest {
             "AmneziaWG 3.0",
             profile(AmneziaWGBean()) { peerPersistentKeepalive = "22-30" }.profileCardType(),
         )
-        assertEquals(
-            "AmneziaWG 3.1",
-            profile(AmneziaWGBean()) { randomTrailers = true }.profileCardType(),
-        )
-        assertEquals(
-            "AmneziaWG 3.1",
-            profile(AmneziaWGBean()) { disableCookies = true }.profileCardType(),
-        )
     }
 
     @Test

@@ -43,8 +43,6 @@ class ClashAwgMasqueImportTest {
                 reject-after-time: 180
                 keepalive-timeout: 10-15
                 max-handshake-attempts: 20
-                random-trailers: true
-                disable-cookies: true
             msq: &msq
               type: masque
               private-key: MHcCAQEEILEmhxxAAmIzUbDIJ6g7irEZIAruZPoMjdw9YaGrFFDnoAoGCCqGSM49AwEHoUQDQgAECQCgMdRjPl7Euqgv6LMDvMMiTTRRGyYrqTJoTpt8sTtrKMhgREDy7fyswFKPP3OZKaQZHv32dQs897/jZ4oNqA==
@@ -103,8 +101,6 @@ class ClashAwgMasqueImportTest {
         assertEquals("180", awg.rejectAfterTime)
         assertEquals("10-15", awg.keepaliveTimeout)
         assertEquals("20", awg.maxHandshakeAttempts)
-        assertTrue(awg.randomTrailers)
-        assertTrue(awg.disableCookies)
         assertEquals("22-30", awg.peerPersistentKeepalive)
 
         val masque = proxies[2] as MasqueBean

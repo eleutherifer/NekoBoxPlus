@@ -863,9 +863,6 @@
     <string name="amneziawg_obfuscation_awg15">AmneziaWG 1.5 Obfuscation</string>
     <string name="amneziawg_obfuscation_awg20">AmneziaWG 2.0 Obfuscation</string>
     <string name="amneziawg_obfuscation_awg30">AmneziaWG 3.0</string>
-    <string name="amneziawg_obfuscation_awg31">AmneziaWG 3.1</string>
-    <string name="amneziawg_random_trailers">Randomize packet trailers</string>
-    <string name="amneziawg_disable_cookies">Disable cookie replies</string>
     <string name="amneziawg_header_protection_key">Header protection key</string>
     <string name="amneziawg_content_padding_addition">Content padding addition (value or range)</string>
     <string name="amneziawg_rekey_after_time">Rekey after time, seconds (value or range)</string>

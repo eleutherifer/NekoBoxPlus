@@ -66,8 +66,6 @@ func TestGenIpcConfigAmneziaWG3(t *testing.T) {
 		RejectAfterTime:        "180",
 		KeepaliveTimeout:       "10-15",
 		MaxHandshakeAttempts:   "20",
-		RandomTrailers:         true,
-		DisableCookies:         true,
 		Peers: []option.AwgPeerOptions{{
 			PublicKey:                   publicKey,
 			PersistentKeepaliveInterval: "22-30",
@@ -86,27 +84,11 @@ func TestGenIpcConfigAmneziaWG3(t *testing.T) {
 		"reject_after_time=180",
 		"keepalive_timeout=10-15",
 		"max_handshake_attempts=20",
-		"random_trailers=true",
-		"disable_cookies=true",
 		"persistent_keepalive_interval=22-30",
 	}
 	for _, expectedLine := range expectedLines {
 		if !strings.Contains(ipc, "\n"+expectedLine) {
 			t.Fatalf("missing IPC line %q in:\n%s", expectedLine, ipc)
-		}
-	}
-}
-
-func TestGenIpcConfigAmneziaWG31Defaults(t *testing.T) {
-	ipc, err := genIpcConfig(option.AwgEndpointOptions{
-		PrivateKey: base64.StdEncoding.EncodeToString(make([]byte, 32)),
-	}, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, unexpectedLine := range []string{"random_trailers=", "disable_cookies="} {
-		if strings.Contains(ipc, unexpectedLine) {
-			t.Fatalf("unexpected IPC line %q in:\n%s", unexpectedLine, ipc)
 		}
 	}
 }

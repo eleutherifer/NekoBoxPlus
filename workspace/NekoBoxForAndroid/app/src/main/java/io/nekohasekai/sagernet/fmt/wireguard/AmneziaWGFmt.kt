@@ -9,7 +9,6 @@ import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.json.JSONArray
 import org.json.JSONObject
-import java.util.Locale
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -25,7 +24,6 @@ private val throneAmneziaParameters = setOf(
     "h1", "h2", "h3", "h4", "i1", "i2", "i3", "i4", "i5",
     "header_protection_key", "content_padding_addition", "rekey_after_time",
     "rekey_timeout", "reject_after_time", "keepalive_timeout", "max_handshake_attempts",
-    "random_trailers", "disable_cookies",
 )
 
 fun parseThroneWireGuardUri(url: String): AbstractBean {
@@ -72,28 +70,7 @@ fun parseThroneWireGuardUri(url: String): AbstractBean {
         url.throneQueryParameter("reject_after_time")?.let { rejectAfterTime = it }
         url.throneQueryParameter("keepalive_timeout")?.let { keepaliveTimeout = it }
         url.throneQueryParameter("max_handshake_attempts")?.let { maxHandshakeAttempts = it }
-        parseAmneziaWGToggle(url.throneQueryParameter("random_trailers"))?.let { randomTrailers = it }
-        parseAmneziaWGToggle(url.throneQueryParameter("disable_cookies"))?.let { disableCookies = it }
     }
-}
-
-internal fun parseAmneziaWGToggle(value: String?): Boolean? =
-    when (value?.trim()?.lowercase(Locale.ROOT)) {
-        "1", "true", "yes", "on", "enabled" -> true
-        "0", "false", "no", "off", "disabled" -> false
-        else -> null
-    }
-
-internal fun AmneziaWGBean.applyAmneziaWG3Options(option: (String) -> String?) {
-    option("HeaderProtectionKey")?.let { headerProtectionKey = it }
-    option("ContentPaddingAddition")?.let { contentPaddingAddition = it }
-    option("RekeyAfterTime")?.let { rekeyAfterTime = it }
-    option("RekeyTimeout")?.let { rekeyTimeout = it }
-    option("RejectAfterTime")?.let { rejectAfterTime = it }
-    option("KeepaliveTimeout")?.let { keepaliveTimeout = it }
-    option("MaxHandshakeAttempts")?.let { maxHandshakeAttempts = it }
-    parseAmneziaWGToggle(option("RandomTrailers"))?.let { randomTrailers = it }
-    parseAmneziaWGToggle(option("DisableCookies"))?.let { disableCookies = it }
 }
 
 fun parseAmneziaWGUri(link: String): List<AmneziaWGBean> {
@@ -225,8 +202,6 @@ fun AmneziaWGBean.buildAmneziaWGConfig(): String = buildString {
     if (maxHandshakeAttempts.isNotBlank()) {
         append("MaxHandshakeAttempts = ").append(maxHandshakeAttempts).append('\n')
     }
-    if (randomTrailers) append("RandomTrailers = on\n")
-    if (disableCookies) append("DisableCookies = on\n")
     append('\n')
     append("[Peer]\n")
     append("PublicKey = ").append(peerPublicKey).append('\n')
@@ -301,13 +276,8 @@ fun buildSingBoxEndpointAwgBean(bean: AmneziaWGBean): SingBoxOptions.AwgEndpoint
         if (bean.maxHandshakeAttempts.isNotBlank()) {
             max_handshake_attempts = bean.maxHandshakeAttempts
         }
-        if (bean.randomTrailers) random_trailers = true
-        if (bean.disableCookies) disable_cookies = true
     }
 }
-
-fun AmneziaWGBean.hasAmneziaWG31Options(): Boolean =
-    randomTrailers == true || disableCookies == true
 
 fun AmneziaWGBean.hasAmneziaWG3Options(): Boolean =
     !headerProtectionKey.isNullOrBlank() ||

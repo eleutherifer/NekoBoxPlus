@@ -4,7 +4,6 @@ import io.nekohasekai.sagernet.fmt.wireguard.AmneziaWGBean
 import io.nekohasekai.sagernet.fmt.wireguard.WireGuardBean
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -81,8 +80,6 @@ class WireGuardConfImportTest {
                 RejectAfterTime = 180
                 KeepaliveTimeout = 10-15
                 MaxHandshakeAttempts = 20
-                RandomTrailers = ON
-                DisableCookies = enabled
 
                 [Peer]
                 PublicKey = public-key==
@@ -99,31 +96,7 @@ class WireGuardConfImportTest {
         assertEquals("180", profile.rejectAfterTime)
         assertEquals("10-15", profile.keepaliveTimeout)
         assertEquals("20", profile.maxHandshakeAttempts)
-        assertTrue(profile.randomTrailers)
-        assertTrue(profile.disableCookies)
         assertEquals("22-30", profile.peerPersistentKeepalive)
-    }
-
-    @Test
-    fun `AWG 31-only toggles select AmneziaWG and accept disabled aliases`() = runBlocking {
-        val profiles =
-            RawUpdater.parseRaw(
-                """
-                [Interface]
-                PrivateKey = private-key==
-                Address = 10.2.0.2/32
-                RandomTrailers = off
-                DisableCookies = 0
-
-                [Peer]
-                PublicKey = public-key==
-                Endpoint = example.com:51820
-                """.trimIndent(),
-            ).orEmpty()
-
-        val profile = profiles.single() as AmneziaWGBean
-        assertFalse(profile.randomTrailers)
-        assertFalse(profile.disableCookies)
     }
 
     @Test

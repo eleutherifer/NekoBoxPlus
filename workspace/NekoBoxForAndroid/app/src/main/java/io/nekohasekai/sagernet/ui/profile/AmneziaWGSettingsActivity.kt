@@ -48,8 +48,6 @@ class AmneziaWGSettingsActivity : ProfileSettingsActivity<AmneziaWGBean>() {
     private val rejectAfterTime = pbm.add(PreferenceBinding(Type.Text, "rejectAfterTime"))
     private val keepaliveTimeout = pbm.add(PreferenceBinding(Type.Text, "keepaliveTimeout"))
     private val maxHandshakeAttempts = pbm.add(PreferenceBinding(Type.Text, "maxHandshakeAttempts"))
-    private val randomTrailers = pbm.add(PreferenceBinding(Type.Bool, "randomTrailers"))
-    private val disableCookies = pbm.add(PreferenceBinding(Type.Bool, "disableCookies"))
 
     override fun AmneziaWGBean.init() {
         pbm.writeToCacheAll(this)
