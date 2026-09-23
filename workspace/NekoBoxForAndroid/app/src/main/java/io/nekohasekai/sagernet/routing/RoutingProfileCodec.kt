@@ -120,10 +120,6 @@ object IncyRoutingLinkProcessor : RoutingLinkProcessor {
     override val format = RoutingProfileFormat.INCY
 }
 
-object V2RayTunRoutingLinkProcessor : RoutingLinkProcessor {
-    override val format = RoutingProfileFormat.V2RAY_TUN
-}
-
 object NekoBoxPlusRoutingLinkProcessor : RoutingLinkProcessor {
     override val format = RoutingProfileFormat.NEKOBOX_PLUS
 }
@@ -131,7 +127,6 @@ object NekoBoxPlusRoutingLinkProcessor : RoutingLinkProcessor {
 object RoutingLinkProcessors {
     private val processors = listOf(
         HappRoutingLinkProcessor,
-        V2RayTunRoutingLinkProcessor,
         IncyRoutingLinkProcessor,
         NekoBoxPlusRoutingLinkProcessor,
     )

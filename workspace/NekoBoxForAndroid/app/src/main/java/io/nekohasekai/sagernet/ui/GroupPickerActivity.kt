@@ -24,22 +24,15 @@ class GroupPickerActivity : ThemedActivity(R.layout.layout_group_picker) {
     companion object {
         const val EXTRA_GROUP_ID = "group_id"
         private const val EXTRA_OPERATION = "operation"
-        private const val EXTRA_VISIBLE_GROUP_IDS = "visible_group_ids"
 
         fun createIntent(context: Context, operation: ProfileTransferOperation) =
             Intent(context, GroupPickerActivity::class.java).apply {
                 putExtra(EXTRA_OPERATION, operation.name)
             }
-
-        fun createNavigationIntent(context: Context, visibleGroupIds: LongArray) =
-            Intent(context, GroupPickerActivity::class.java).apply {
-                putExtra(EXTRA_VISIBLE_GROUP_IDS, visibleGroupIds)
-            }
     }
 
     private lateinit var binding: LayoutGroupPickerBinding
     private val adapter = GroupAdapter()
-    private var visibleGroupIds: LongArray? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,21 +40,14 @@ class GroupPickerActivity : ThemedActivity(R.layout.layout_group_picker) {
 
         val operation = intent.getStringExtra(EXTRA_OPERATION)
             ?.let { runCatching { ProfileTransferOperation.valueOf(it) }.getOrNull() }
-        visibleGroupIds = intent.getLongArrayExtra(EXTRA_VISIBLE_GROUP_IDS)
-        if (operation == null && visibleGroupIds == null) {
-            finish()
-            return
-        }
+            ?: run {
+                finish()
+                return
+            }
 
         setSupportActionBar(findViewById<MaterialToolbar>(R.id.toolbar))
         supportActionBar?.apply {
-            setTitle(
-                when (operation) {
-                    ProfileTransferOperation.COPY -> R.string.copy
-                    ProfileTransferOperation.MOVE -> R.string.move
-                    null -> R.string.go_to
-                }
-            )
+            setTitle(if (operation == ProfileTransferOperation.COPY) R.string.copy else R.string.move)
             setDisplayHomeAsUpEnabled(true)
         }
 
@@ -78,10 +64,7 @@ class GroupPickerActivity : ThemedActivity(R.layout.layout_group_picker) {
 
     private fun loadGroups() {
         runOnDefaultDispatcher {
-            val allGroups = SagerDatabase.groupDao.allGroups()
-            val groups = visibleGroupIds?.let {
-                GroupTabSelectionPolicy.navigatorGroups(allGroups, it)
-            } ?: ProfileTransferPolicy.eligibleGroups(allGroups)
+            val groups = ProfileTransferPolicy.eligibleGroups(SagerDatabase.groupDao.allGroups())
             binding.groupList.post {
                 adapter.groups.clear()
                 adapter.groups.addAll(groups)

@@ -40,15 +40,6 @@ func TestVLESSOutboundOptionsUnmarshalPreservesUTLSOutsideXHTTPQUICOnly(t *testi
 			"transport": {"type": "http"},
 			"tls": {"enabled": true, "alpn": ["h3"], "utls": {"enabled": true, "fingerprint": "chrome"}}
 		}`,
-		"Reality": `{
-			"transport": {"type": "xhttp"},
-			"tls": {
-				"enabled": true,
-				"alpn": ["h3"],
-				"utls": {"enabled": true, "fingerprint": "chrome"},
-				"reality": {"enabled": true}
-			}
-		}`,
 		"TCP ALPN": `{
 			"transport": {"type": "xhttp"},
 			"tls": {"enabled": true, "alpn": ["h2"], "utls": {"enabled": true, "fingerprint": "chrome"}}

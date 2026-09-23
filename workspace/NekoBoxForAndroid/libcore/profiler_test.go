@@ -31,49 +31,6 @@ func TestPhaseFileName(t *testing.T) {
 	}
 }
 
-func TestCoreProfilerMode(t *testing.T) {
-	tests := []struct {
-		mode  int32
-		valid bool
-		name  string
-	}{
-		{mode: CoreProfilerModeCPU, valid: true, name: "cpu"},
-		{mode: CoreProfilerModeTrace, valid: true, name: "trace"},
-		{mode: -1, valid: false, name: "unknown"},
-		{mode: 2, valid: false, name: "unknown"},
-	}
-	for _, test := range tests {
-		if actual := validCoreProfilerMode(test.mode); actual != test.valid {
-			t.Errorf("validCoreProfilerMode(%d) = %t, want %t", test.mode, actual, test.valid)
-		}
-		if actual := coreProfilerModeName(test.mode); actual != test.name {
-			t.Errorf("coreProfilerModeName(%d) = %q, want %q", test.mode, actual, test.name)
-		}
-	}
-}
-
-func TestCompatibleCoreProfilerMode(t *testing.T) {
-	tests := []struct {
-		name         string
-		mode         int32
-		hasAmneziaWG bool
-		expected     int32
-	}{
-		{name: "CPU with AWG", mode: CoreProfilerModeCPU, hasAmneziaWG: true, expected: CoreProfilerModeCPU},
-		{name: "trace without AWG", mode: CoreProfilerModeTrace, expected: CoreProfilerModeTrace},
-		{name: "trace with AWG", mode: CoreProfilerModeTrace, hasAmneziaWG: true, expected: CoreProfilerModeCPU},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			actual := compatibleCoreProfilerMode(test.mode, test.hasAmneziaWG)
-			if actual != test.expected {
-				t.Fatalf("compatibleCoreProfilerMode(%d, %t) = %d, want %d",
-					test.mode, test.hasAmneziaWG, actual, test.expected)
-			}
-		})
-	}
-}
-
 func TestCoreProfilingRunningIncludesPendingShutdownCapture(t *testing.T) {
 	setProfilerStateForTest(t, &profilerState{shutdownPending: true})
 	if !CoreProfilingRunning() {
@@ -85,7 +42,6 @@ func TestFinishCoreProfilerShutdownFailed(t *testing.T) {
 	dir := t.TempDir()
 	setProfilerStateForTest(t, &profilerState{
 		shutdownPending: true,
-		mode:            CoreProfilerModeTrace,
 		started:         time.Now().Add(-time.Second),
 		stopped:         time.Now(),
 		dir:             dir,
@@ -95,7 +51,6 @@ func TestFinishCoreProfilerShutdownFailed(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertFileContains(t, filepath.Join(dir, "metadata.txt"), "shutdown: failed")
-	assertFileContains(t, filepath.Join(dir, "metadata.txt"), "mode: trace")
 	if _, err := os.Stat(filepath.Join(dir, "heap-after-close.pprof")); !os.IsNotExist(err) {
 		t.Fatalf("unexpected after-close heap: %v", err)
 	}
@@ -131,7 +86,6 @@ func TestFinishCoreProfilerShutdownCompleted(t *testing.T) {
 		}
 	}
 	assertFileContains(t, filepath.Join(dir, "metadata.txt"), "shutdown: completed")
-	assertFileContains(t, filepath.Join(dir, "metadata.txt"), "mode: cpu")
 }
 
 func TestCopyProfilerFilesCopiesCompleteSnapshot(t *testing.T) {

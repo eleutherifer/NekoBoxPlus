@@ -47,8 +47,6 @@ class EndAlignedMarqueeTextView @JvmOverloads constructor(
         }
 
         val textLayout = layout ?: return
-        paint.drawableState = drawableState
-        paint.color = currentTextColor
         val contentHeight = height - compoundPaddingTop - compoundPaddingBottom
         val verticalOffset = when (gravity and Gravity.VERTICAL_GRAVITY_MASK) {
             Gravity.CENTER_VERTICAL -> (contentHeight - textLayout.height) / 2f

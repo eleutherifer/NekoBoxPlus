@@ -17,7 +17,6 @@ import androidx.core.view.ViewCompat
 import androidx.preference.*
 import com.github.shadowsocks.plugin.Empty
 import com.github.shadowsocks.plugin.fragment.AlertDialogFragment
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import io.nekohasekai.sagernet.GroupOrder
 import io.nekohasekai.sagernet.GroupType
 import io.nekohasekai.sagernet.Key
@@ -26,21 +25,12 @@ import io.nekohasekai.sagernet.SagerNet
 import io.nekohasekai.sagernet.SpoofApp
 import io.nekohasekai.sagernet.SubscriptionFilterMode
 import io.nekohasekai.sagernet.database.*
-import io.nekohasekai.sagernet.databinding.LayoutProgressBinding
 import io.nekohasekai.sagernet.database.preference.OnPreferenceDataStoreChangeListener
 import io.nekohasekai.sagernet.group.GroupUpdater
-import io.nekohasekai.sagernet.group.defaultSpoofUserAgent
-import io.nekohasekai.sagernet.group.normalizeSpoofUserAgent
-import io.nekohasekai.sagernet.group.shouldWarnAboutMissingSpoofHwid
 import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ktx.applyDefaultValues
 import io.nekohasekai.sagernet.ktx.onMainDispatcher
 import io.nekohasekai.sagernet.ktx.runOnDefaultDispatcher
-import io.nekohasekai.sagernet.ktx.readableMessage
-import io.nekohasekai.sagernet.routing.ProviderRoutingSource
-import io.nekohasekai.sagernet.routing.RoutingPreviewPayloadStore
-import io.nekohasekai.sagernet.routing.SubscriptionRoutingIntervals
-import io.nekohasekai.sagernet.routing.SubscriptionRoutingRepository
 import io.nekohasekai.sagernet.widget.ListListener
 import io.nekohasekai.sagernet.widget.OutboundPreference
 import io.nekohasekai.sagernet.widget.UserAgentPreference
@@ -88,8 +78,7 @@ class GroupSettingsActivity(
         DataStore.subscriptionForceResolve = subscription.forceResolve
         DataStore.subscriptionDeduplication = subscription.deduplication
         DataStore.subscriptionUpdateWhenConnectedOnly = subscription.updateWhenConnectedOnly
-        DataStore.subscriptionUserAgent =
-            normalizeSpoofUserAgent(subscription.spoofApp ?: SpoofApp.NONE, subscription.customUserAgent)
+        DataStore.subscriptionUserAgent = subscription.customUserAgent
         DataStore.subscriptionAutoUpdate = subscription.autoUpdate
         DataStore.subscriptionAutoUpdateDelay = subscription.autoUpdateDelay
         DataStore.subscriptionFilterMode = subscription.filterMode
@@ -97,11 +86,6 @@ class GroupSettingsActivity(
         DataStore.subscriptionHwidEnabled = subscription.hwidEnabled
         DataStore.subscriptionSpoofApp = subscription.spoofApp
         DataStore.subscriptionServerDns = subscription.serverDnsResolver ?: ""
-        DataStore.subscriptionBannerLayout =
-            SubscriptionBannerLayout.toValues(subscription.bannerLayout ?: SubscriptionBannerLayout.ALL)
-        DataStore.subscriptionRoutingEnabled = subscription.routingEnabled
-        DataStore.subscriptionRoutingInterval =
-            SubscriptionRoutingIntervals.normalize(subscription.routingUpdateInterval)
     }
 
     fun ProxyGroup.serialize() {
@@ -150,11 +134,6 @@ class GroupSettingsActivity(
                     hwidEnabled = DataStore.subscriptionHwidEnabled
                     spoofApp = DataStore.subscriptionSpoofApp
                     serverDnsResolver = DataStore.subscriptionServerDns
-                    bannerLayout =
-                        SubscriptionBannerLayout.fromValues(DataStore.subscriptionBannerLayout)
-                    routingEnabled = DataStore.subscriptionRoutingEnabled
-                    routingUpdateInterval =
-                        SubscriptionRoutingIntervals.normalize(DataStore.subscriptionRoutingInterval)
                 }
         }
     }
@@ -406,31 +385,29 @@ class GroupSettingsActivity(
         val subscriptionUserAgent =
             findPreference<UserAgentPreference>(Key.SUBSCRIPTION_USER_AGENT)!!
 
-        fun showSpoofWithoutHwidWarning() {
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle(R.string.spoof_app_without_hwid_title)
-                .setMessage(R.string.spoof_app_without_hwid_message)
-                .setPositiveButton(android.R.string.ok, null)
-                .show()
-        }
+        subscriptionSpoofApp.isEnabled = subscriptionHwidEnabled.isChecked
 
         subscriptionHwidEnabled.setOnPreferenceChangeListener { _, newValue ->
             val enabled = newValue as Boolean
-            if (shouldWarnAboutMissingSpoofHwid(DataStore.subscriptionSpoofApp, enabled)) {
-                showSpoofWithoutHwidWarning()
+            subscriptionSpoofApp.isEnabled = enabled
+            if (!enabled) {
+                subscriptionUserAgent.text = ""
+                DataStore.subscriptionUserAgent = ""
+                subscriptionUserAgent.notifyChanged()
             }
             true
         }
 
         subscriptionSpoofApp.setOnPreferenceChangeListener { _, newValue ->
-            val spoofApp = (newValue as String).toInt()
-            val ua = defaultSpoofUserAgent(spoofApp)
+            val ua =
+                when ((newValue as String).toInt()) {
+                    SpoofApp.HAPP -> "Happ/3.17.0/Android/17756505247711753599"
+                    SpoofApp.V2RAY_TUN -> "v2raytun/android"
+                    else -> ""
+                }
             subscriptionUserAgent.text = ua
             DataStore.subscriptionUserAgent = ua
             subscriptionUserAgent.notifyChanged()
-            if (shouldWarnAboutMissingSpoofHwid(spoofApp, subscriptionHwidEnabled.isChecked)) {
-                showSpoofWithoutHwidWarning()
-            }
             true
         }
 
@@ -453,91 +430,6 @@ class GroupSettingsActivity(
                         Toast.LENGTH_LONG,
                     ).show()
                 false
-            }
-        }
-
-        val subscriptionRoutingEnabled =
-            findPreference<MaterialSwitchPreference>(Key.SUBSCRIPTION_ROUTING_ENABLED)!!
-        val subscriptionRoutingInterval =
-            findPreference<SimpleMenuPreference>(Key.SUBSCRIPTION_ROUTING_INTERVAL)!!
-        subscriptionRoutingInterval.isEnabled = subscriptionRoutingEnabled.isChecked
-        subscriptionRoutingEnabled.setOnPreferenceChangeListener { _, newValue ->
-            subscriptionRoutingInterval.isEnabled = newValue as Boolean
-            true
-        }
-        subscriptionRoutingInterval.setOnPreferenceChangeListener { _, newValue ->
-            newValue.toString().toIntOrNull() in SubscriptionRoutingIntervals.allowed
-        }
-        findPreference<Preference>(Key.SUBSCRIPTION_IMPORT_ROUTING)!!
-            .setOnPreferenceClickListener {
-                importSubscriptionRouting()
-                true
-            }
-    }
-
-    private fun importSubscriptionRouting() {
-        val link = DataStore.subscriptionLink.trim()
-        if (link.isBlank()) {
-            Toast.makeText(this, R.string.subscription_routing_not_found, Toast.LENGTH_LONG).show()
-            return
-        }
-        val progress = MaterialAlertDialogBuilder(this)
-            .setMessage(R.string.routing_import_preparing)
-            .setCancelable(false)
-            .show()
-        runOnDefaultDispatcher {
-            val result = runCatching {
-                val storedGroup = DataStore.editingId.takeIf { it > 0L }
-                    ?.let(SagerDatabase.groupDao::getById)
-                val group = storedGroup ?: ProxyGroup(type = GroupType.SUBSCRIPTION).apply {
-                    subscription = SubscriptionBean().applyDefaultValues()
-                }
-                group.subscription!!.apply {
-                    this.link = link
-                    customUserAgent = DataStore.subscriptionUserAgent
-                    hwidEnabled = DataStore.subscriptionHwidEnabled
-                    spoofApp = DataStore.subscriptionSpoofApp
-                }
-                SubscriptionRoutingRepository.fetchFromSubscription(group)
-            }
-            onMainDispatcher {
-                progress.dismiss()
-                result.onSuccess { (source, routing) ->
-                    when {
-                        source is ProviderRoutingSource.Off -> {
-                            Toast.makeText(
-                                this@GroupSettingsActivity,
-                                R.string.subscription_routing_disabled_by_provider,
-                                Toast.LENGTH_LONG,
-                            ).show()
-                        }
-                        routing == null -> {
-                            Toast.makeText(
-                                this@GroupSettingsActivity,
-                                R.string.subscription_routing_not_found,
-                                Toast.LENGTH_LONG,
-                            ).show()
-                        }
-                        else -> {
-                            val token = RoutingPreviewPayloadStore.put(
-                                this@GroupSettingsActivity,
-                                routing.candidate(),
-                            )
-                            startActivity(
-                                Intent(
-                                    this@GroupSettingsActivity,
-                                    RoutingImportPreviewActivity::class.java,
-                                ).putExtra(RoutingImportPreviewActivity.EXTRA_PAYLOAD_TOKEN, token),
-                            )
-                        }
-                    }
-                }.onFailure {
-                    MaterialAlertDialogBuilder(this@GroupSettingsActivity)
-                        .setTitle(R.string.error_title)
-                        .setMessage(it.readableMessage)
-                        .setPositiveButton(android.R.string.ok, null)
-                        .show()
-                }
             }
         }
     }
@@ -634,125 +526,29 @@ class GroupSettingsActivity(
     suspend fun saveAndExit() {
         val editingId = DataStore.editingId
         if (editingId == 0L) {
-            val draft = ProxyGroup().apply { serialize() }
-            val requestedRouting = draft.subscription?.routingEnabled == true
-            if (requestedRouting) draft.subscription?.routingEnabled = false
-            val newGroup = GroupManager.createGroup(draft)
-            val routingResult =
-                if (requestedRouting) downloadRoutingForSave(newGroup, newGroup.id) else Result.success(null)
-            if (routingResult.isFailure) {
-                DataStore.editingId = newGroup.id
-                return
-            }
-            val routing = routingResult.getOrNull()
-            if (requestedRouting && routing == null) {
-                newGroup.subscription?.let(SubscriptionRoutingRepository::clearStored)
-            }
-            if (routing != null) {
-                SubscriptionRoutingRepository.store(newGroup.subscription!!, routing)
-                GroupManager.updateGroup(newGroup)
-            } else if (requestedRouting) {
-                GroupManager.updateGroup(newGroup)
-                showRoutingNotProvided()
-            }
+            val newGroup = GroupManager.createGroup(ProxyGroup().apply { serialize() })
             if (isFromClipboard && newGroup.type == GroupType.SUBSCRIPTION && !newGroup.subscription?.link.isNullOrEmpty()) {
                 GroupUpdater.startUpdate(newGroup, true)
             }
         } else if (needSave()) {
-            val entity = SagerDatabase.groupDao.getById(editingId)
+            val entity = SagerDatabase.groupDao.getById(DataStore.editingId)
             if (entity == null) {
-                onMainDispatcher { finish() }
+                finish()
                 return
             }
-            val routingWasEnabled = entity.subscription?.routingEnabled == true
             val keepUserInfo = (
                 entity.type == GroupType.SUBSCRIPTION &&
                     DataStore.groupType == GroupType.SUBSCRIPTION &&
                     entity.subscription?.link == DataStore.subscriptionLink
             )
             if (!keepUserInfo) {
-                entity.subscription?.apply {
-                    subscriptionUserinfo = ""
-                    announcement = ""
-                    announcementUrl = ""
-                    supportUrl = ""
-                    supportEmail = ""
-                    profileWebPageUrl = ""
-                    homepage = ""
-                    SubscriptionRoutingRepository.clearStored(this)
-                }
-                SubscriptionRoutingRepository.deleteFiles(entity.id)
+                entity.subscription?.subscriptionUserinfo = ""
             }
             persistManualOrderFromPreviousMode(entity)
-            entity.serialize()
-            val subscription = entity.subscription
-            if (entity.type == GroupType.SUBSCRIPTION && subscription?.routingEnabled == true) {
-                val routingResult = downloadRoutingForSave(entity, entity.id)
-                if (routingResult.isFailure) return
-                val routing = routingResult.getOrNull()
-                if (routing == null) {
-                    SubscriptionRoutingRepository.clearStored(subscription)
-                    SubscriptionRoutingRepository.deleteFiles(entity.id)
-                    GroupManager.updateGroup(entity)
-                    showRoutingNotProvided()
-                } else {
-                    SubscriptionRoutingRepository.store(subscription, routing)
-                    GroupManager.updateGroup(entity)
-                }
-            } else {
-                if (routingWasEnabled) {
-                    subscription?.let(SubscriptionRoutingRepository::clearStored)
-                    SubscriptionRoutingRepository.deleteFiles(entity.id)
-                }
-                GroupManager.updateGroup(entity)
-            }
+            GroupManager.updateGroup(entity.apply { serialize() })
         }
 
-        onMainDispatcher { finish() }
-    }
-
-    private suspend fun downloadRoutingForSave(
-        group: ProxyGroup,
-        groupId: Long,
-    ): Result<io.nekohasekai.sagernet.routing.ResolvedSubscriptionRouting?> {
-        val dialog = onMainDispatcher {
-            val progress = LayoutProgressBinding.inflate(layoutInflater)
-            progress.content.setText(R.string.subscription_routing_downloading)
-            MaterialAlertDialogBuilder(this@GroupSettingsActivity)
-                .setView(progress.root)
-                .setCancelable(false)
-                .show()
-        }
-        val result = runCatching {
-            val (source, routing) = SubscriptionRoutingRepository.fetchFromSubscription(group)
-            routing.takeUnless {
-                source is ProviderRoutingSource.Missing || source is ProviderRoutingSource.Off
-            }?.also {
-                SubscriptionRoutingRepository.prepareAssets(groupId, it)
-            }
-        }
-        onMainDispatcher { dialog.dismiss() }
-        result.exceptionOrNull()?.let { showRoutingError(it) }
-        return result
-    }
-
-    private suspend fun showRoutingNotProvided() {
-        onMainDispatcher {
-            MessageStore.showMessage(
-                this@GroupSettingsActivity,
-                R.string.subscription_routing_not_provided,
-            )
-        }
-    }
-
-    private suspend fun showRoutingError(error: Throwable) {
-        onMainDispatcher {
-            MaterialAlertDialogBuilder(this@GroupSettingsActivity)
-                .setTitle(R.string.error_title)
-                .setMessage(error.readableMessage)
-                .setPositiveButton(android.R.string.ok, null)
-                .show()
-        }
+        finish()
     }
 
     val child by lazy { supportFragmentManager.findFragmentById(R.id.settings) as MyPreferenceFragmentCompat }

@@ -61,14 +61,6 @@ type routingRuleCachePlan struct {
 // inline SRS-decoded rules. The returned bool reports whether a source geo
 // resource was opened, which lets the caller promptly release transient heap.
 func prepareRoutingRuleSets(options *option.Options) (bool, error) {
-	return prepareRoutingRuleSetsWithPaths(
-		options,
-		externalAssetsPath,
-		filepath.Join(tempPath, routingRulesCacheFileName),
-	)
-}
-
-func prepareRoutingRuleSetsWithPaths(options *option.Options, assetsPath string, cachePath string) (bool, error) {
 	referencedTags := make(map[string]struct{})
 	if options.Route != nil {
 		collectRouteRuleSetReferences(options.Route.Rules, referencedTags)
@@ -123,7 +115,7 @@ func prepareRoutingRuleSetsWithPaths(options *option.Options, assetsPath string,
 		return false, nil
 	}
 
-	prepared, loadedFromResource, err := loadPreparedRoutingRules(requests, assetsPath, cachePath)
+	prepared, loadedFromResource, err := loadPreparedRoutingRules(requests)
 	if err != nil {
 		return loadedFromResource, err
 	}
@@ -190,11 +182,7 @@ func parseRoutingRuleKey(path string) (routingRuleKind, string, bool) {
 	return 0, "", false
 }
 
-func loadPreparedRoutingRules(
-	requests routingRuleRequests,
-	assetsPath string,
-	cachePath string,
-) (map[routingRuleKind]map[string][]option.HeadlessRule, bool, error) {
+func loadPreparedRoutingRules(requests routingRuleRequests) (map[routingRuleKind]map[string][]option.HeadlessRule, bool, error) {
 	routingRulesCacheAccess.Lock()
 	defer routingRulesCacheAccess.Unlock()
 
@@ -203,15 +191,13 @@ func loadPreparedRoutingRules(
 		routingRuleGeosite: make(map[string][]option.HeadlessRule),
 	}
 	versions := map[routingRuleKind]string{
-		routingRuleGeoIP:   readRoutingRuleVersion(assetsPath, geoipVersion),
-		routingRuleGeosite: readRoutingRuleVersion(assetsPath, geositeVersion),
+		routingRuleGeoIP:   readRoutingRuleVersion(geoipVersion),
+		routingRuleGeosite: readRoutingRuleVersion(geositeVersion),
 	}
 	lookups := map[routingRuleKind]routingRuleCacheLookup{}
+	cachePath := filepath.Join(tempPath, routingRulesCacheFileName)
 	cacheEnabled := isBgProcess
 	if cacheEnabled {
-		if err := os.MkdirAll(filepath.Dir(cachePath), 0o755); err != nil {
-			return nil, false, err
-		}
 		_ = os.Remove(filepath.Join(tempPath, routingRulesCompactFileName))
 		var err error
 		lookups, err = readRoutingRulesCache(cachePath, versions, requests)
@@ -251,7 +237,7 @@ func loadPreparedRoutingRules(
 			plans[kind] = plan
 			continue
 		}
-		rules, err := loadRoutingRulesFromResource(kind, requested, assetsPath)
+		rules, err := loadRoutingRulesFromResource(kind, requested)
 		if err != nil {
 			return nil, loadedFromResource, err
 		}
@@ -277,8 +263,8 @@ func loadPreparedRoutingRules(
 	return prepared, loadedFromResource, nil
 }
 
-func readRoutingRuleVersion(assetsPath string, name string) string {
-	content, err := os.ReadFile(filepath.Join(assetsPath, name))
+func readRoutingRuleVersion(name string) string {
+	content, err := os.ReadFile(filepath.Join(externalAssetsPath, name))
 	if err != nil {
 		return ""
 	}
@@ -341,11 +327,7 @@ func readRoutingRulesCache(path string, versions map[routingRuleKind]string, req
 	return lookups, errors.Join(err, database.Close())
 }
 
-func loadRoutingRulesFromResource(
-	kind routingRuleKind,
-	requested map[string]struct{},
-	assetsPath string,
-) (map[string][]option.HeadlessRule, error) {
+func loadRoutingRulesFromResource(kind routingRuleKind, requested map[string]struct{}) (map[string][]option.HeadlessRule, error) {
 	keys := slices.Sorted(maps.Keys(requested))
 	codes := make([]string, 0, len(keys))
 	for _, key := range keys {
@@ -359,9 +341,9 @@ func loadRoutingRulesFromResource(
 	)
 	switch kind {
 	case routingRuleGeoIP:
-		loaded, err = loadGeoIPRules(filepath.Join(assetsPath, geoipDat), codes)
+		loaded, err = loadGeoIPRules(filepath.Join(externalAssetsPath, geoipDat), codes)
 	case routingRuleGeosite:
-		loaded, err = loadGeositeRules(filepath.Join(assetsPath, geositeDat), codes)
+		loaded, err = loadGeositeRules(filepath.Join(externalAssetsPath, geositeDat), codes)
 	default:
 		return nil, fmt.Errorf("unknown routing rule kind: %d", kind)
 	}

@@ -5,8 +5,6 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.res.ColorStateList
 import android.graphics.Canvas
-import android.graphics.Rect
-import android.graphics.RectF
 import android.os.DeadObjectException
 import android.text.format.Formatter
 import android.util.AttributeSet
@@ -27,7 +25,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.whenStarted
 import com.google.android.material.bottomappbar.BottomAppBar
 import com.google.android.material.bottomappbar.BottomAppBarTopEdgeTreatment
-import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.shape.MaterialShapeDrawable
 import com.google.android.material.shape.ShapeAppearanceModel
 import io.nekohasekai.sagernet.Key
@@ -73,7 +70,6 @@ class StatsBar @JvmOverloads constructor(
     private lateinit var compactSectionDivider: View
     private lateinit var compactSpeedDivider: View
     private var regularShapeAppearance: ShapeAppearanceModel? = null
-    private var regularTopEdgeTreatment: BottomAppBarTopEdgeTreatment? = null
     private var compactShapeAppearance: ShapeAppearanceModel? = null
     private var compactTopEdgeTreatment: BottomAppBarTopEdgeTreatment? = null
     @Suppress("unused")
@@ -171,8 +167,6 @@ class StatsBar @JvmOverloads constructor(
         compactSectionDivider = findViewById(R.id.compact_section_divider)
         compactSpeedDivider = findViewById(R.id.compact_speed_divider)
         regularShapeAppearance = (background as? MaterialShapeDrawable)?.shapeAppearanceModel
-        regularTopEdgeTreatment =
-            regularShapeAppearance?.topEdge as? BottomAppBarTopEdgeTreatment
         compactTopEdgeTreatment = BottomAppBarTopEdgeTreatment(
             fabCradleMargin,
             fabCradleRoundedCornerRadius,
@@ -277,12 +271,6 @@ class StatsBar @JvmOverloads constructor(
         updateSpeed(lastTxRate, lastRxRate)
         applyThemeColors()
         requestLayout()
-        (parent as? CoordinatorLayout)?.let { coordinator ->
-            coordinator.getDependents(this)
-                .filterIsInstance<FabCluster>()
-                .forEach { it.syncWithStatsBar(this) }
-            coordinator.requestLayout()
-        }
     }
 
     private fun applyBarMargins() {
@@ -315,22 +303,8 @@ class StatsBar @JvmOverloads constructor(
         }
     }
 
-    internal val fabClusterTranslationY: Float
+    internal val fabRestingTranslationY: Float
         get() = if (compactMode) -dp2pxf(12) else 0f
-
-    internal fun updateFabCradle(fab: FloatingActionButton) {
-        if (!this::regularContent.isInitialized || fab.measuredWidth <= 0) return
-        val contentRect = Rect()
-        fab.getMeasuredContentRect(contentRect)
-        if (contentRect.isEmpty) return
-
-        val topEdge = regularTopEdgeTreatment ?: return
-        val diameter = contentRect.height().toFloat()
-        val cornerSize = fab.shapeAppearanceModel.topLeftCornerSize.getCornerSize(RectF(contentRect))
-        if (topEdge.fabDiameter != diameter) topEdge.fabDiameter = diameter
-        if (topEdge.fabCornerRadius != cornerSize) topEdge.setFabCornerSize(cornerSize)
-        invalidate()
-    }
 
     private fun resizeCompactIcons() {
         val size = dp2px(18)

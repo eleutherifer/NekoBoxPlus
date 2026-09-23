@@ -134,15 +134,6 @@
             app:title="@string/group_subscription_link"
             app:useSimpleSummaryProvider="true" />
 
-        <moe.matsuri.nb4a.ui.MaterialMultiSelectListPreference
-            app:defaultValue="@array/subscription_banner_layout_value"
-            app:entries="@array/subscription_banner_layout_entry"
-            app:entryValues="@array/subscription_banner_layout_value"
-            app:icon="@drawable/baseline_widgets_24"
-            app:key="subscriptionBannerLayout"
-            app:title="@string/subscription_banner_layout"
-            app:useSimpleSummaryProvider="true" />
-
         <EditTextPreference
             app:icon="@drawable/ic_action_dns"
             app:key="subscriptionServerDns"
@@ -161,28 +152,6 @@
             app:key="subscriptionDeduplication"
             app:summary="@string/deduplication_sum"
             app:title="@string/deduplication" />
-
-        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
-            app:defaultValue="false"
-            app:icon="@drawable/ic_hardware_router"
-            app:key="subscriptionRoutingEnabled"
-            app:summary="@string/subscription_routing_enabled_summary"
-            app:title="@string/subscription_routing_enabled" />
-
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
-            app:defaultValue="86400"
-            app:entries="@array/subscription_routing_interval_entries"
-            app:entryValues="@array/subscription_routing_interval_values"
-            app:icon="@drawable/ic_baseline_timelapse_24"
-            app:key="subscriptionRoutingInterval"
-            app:title="@string/subscription_routing_interval"
-            app:useSimpleSummaryProvider="true" />
-
-        <Preference
-            app:icon="@drawable/ic_baseline_download_24"
-            app:key="subscriptionImportRouting"
-            app:summary="@string/subscription_import_routing_summary"
-            app:title="@string/subscription_import_routing" />
 
         <moe.matsuri.nb4a.ui.SimpleMenuPreference
             app:defaultValue="0"
@@ -218,7 +187,7 @@
         <moe.matsuri.nb4a.ui.SimpleMenuPreference
             app:defaultValue="0"
             app:entries="@array/spoof_app_modes"
-            app:entryValues="@array/int_array_4"
+            app:entryValues="@array/int_array_3"
             app:icon="@drawable/ic_baseline_android_24"
             app:key="subscriptionSpoofApp"
             app:summary="@string/spoof_app_sum"

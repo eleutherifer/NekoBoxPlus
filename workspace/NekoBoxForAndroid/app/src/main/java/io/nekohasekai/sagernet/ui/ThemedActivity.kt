@@ -1,19 +1,14 @@
 package io.nekohasekai.sagernet.ui
 
-import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.view.View
-import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
-import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -77,43 +72,18 @@ abstract class ThemedActivity : AppCompatActivity {
         }
     }
 
-    internal fun applyHeaderColors() {
+    private fun applyHeaderColors() {
         if (!Theme.isCustom() || !DataStore.customThemeHeaderPrimary) return
         val backgroundColor = getColorAttr(R.attr.colorPrimary)
         val contentColor = getColorAttr(R.attr.colorOnPrimary)
         findViewById<View>(R.id.appbar)?.setBackgroundColor(backgroundColor)
-        findViewById<ViewGroup>(R.id.quick_toolbar)?.apply {
-            setBackgroundColor(backgroundColor)
-            tintImageDescendants(contentColor)
-        }
         findViewById<Toolbar>(R.id.toolbar)?.apply {
             setBackgroundColor(backgroundColor)
             setTitleTextColor(contentColor)
             navigationIcon?.setTint(contentColor)
             overflowIcon?.setTint(contentColor)
-            tintImageDescendants(contentColor)
             for (index in 0 until menu.size()) {
                 menu.getItem(index).icon?.setTint(contentColor)
-            }
-            findViewById<SearchView.SearchAutoComplete>(
-                androidx.appcompat.R.id.search_src_text
-            )?.apply {
-                setTextColor(contentColor)
-                setHintTextColor(ColorUtils.setAlphaComponent(contentColor, 0x99))
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    textCursorDrawable = textCursorDrawable?.mutate()?.apply {
-                        setTint(contentColor)
-                    }
-                }
-            }
-        }
-    }
-
-    private fun ViewGroup.tintImageDescendants(color: Int) {
-        for (index in 0 until childCount) {
-            when (val child = getChildAt(index)) {
-                is ImageView -> child.imageTintList = ColorStateList.valueOf(color)
-                is ViewGroup -> child.tintImageDescendants(color)
             }
         }
     }

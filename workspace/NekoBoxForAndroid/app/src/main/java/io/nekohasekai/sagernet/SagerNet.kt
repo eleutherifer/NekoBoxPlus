@@ -66,7 +66,6 @@ class SagerNet : Application(),
         Thread.setDefaultUncaughtExceptionHandler(CrashHandler)
 
         if (isMainProcess || isBgProcess) {
-            clearCacheAfterAppUpdate()
             externalAssets.mkdirs()
             Seq.setContext(this)
             val logLevel = AppLogLevelController.initialize(DataStore.logLevel)
@@ -133,24 +132,6 @@ class SagerNet : Application(),
                     .penaltyLog()
                     .build()
             )
-        }
-    }
-
-    private fun clearCacheAfterAppUpdate() {
-        runCatching {
-            val currentVersionCode = BuildConfig.VERSION_CODE
-            if (!AppVersionCachePolicy.shouldClearCache(
-                    DataStore.lastStartedVersionCode,
-                    currentVersionCode,
-                )
-            ) {
-                return
-            }
-
-            DataStore.lastStartedVersionCode = currentVersionCode
-            AppCache.clear(cacheDir)
-        }.onFailure {
-            Logs.w("Unable to clear app cache after version change: ${it.message}")
         }
     }
 

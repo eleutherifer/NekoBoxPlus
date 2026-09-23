@@ -86,10 +86,6 @@
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <activity
-            android:name="io.nekohasekai.sagernet.ui.ToolbarLayoutActivity"
-            android:exported="false" />
-
-        <activity
             android:name="io.nekohasekai.sagernet.ui.MainActivity"
             android:configChanges="uiMode"
             android:exported="true"

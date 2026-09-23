@@ -146,7 +146,7 @@ func (i *ClientInstance) Handshake(conn net.Conn) (*CommonConn, error) {
 	paddingLens[0] = ivAndRealysLength + pfsKeyExchangeLength + paddingLens[0]
 	for i, l := range paddingLens { // sends padding in a fragmented way, to create variable traffic pattern, before inner VLESS flow takes control
 		if l > 0 {
-			if err := writeFull(conn, clientHello[:l]); err != nil {
+			if _, err := conn.Write(clientHello[:l]); err != nil {
 				return nil, err
 			}
 			clientHello = clientHello[l:]

@@ -9,7 +9,6 @@ import com.google.gson.stream.JsonWriter
 
 enum class RoutingProfileFormat(val scheme: String) {
     HAPP("happ"),
-    V2RAY_TUN("v2raytun"),
     INCY("incy"),
     NEKOBOX_PLUS("sn"),
 }

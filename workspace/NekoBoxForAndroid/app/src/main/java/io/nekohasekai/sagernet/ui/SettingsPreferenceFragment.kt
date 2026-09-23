@@ -47,7 +47,6 @@ import io.nekohasekai.sagernet.database.preference.OnPreferenceDataStoreChangeLi
 import io.nekohasekai.sagernet.database.preference.EditTextPreferenceModifiers
 import io.nekohasekai.sagernet.database.preference.PublicDatabase
 import io.nekohasekai.sagernet.ktx.*
-import io.nekohasekai.sagernet.utils.AppCache
 import io.nekohasekai.sagernet.utils.AppLocale
 import io.nekohasekai.sagernet.utils.AdblockRepository
 import io.nekohasekai.sagernet.utils.CrashHandler
@@ -157,21 +156,16 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat(), OnPreferenceDataS
                     Key.APP_LANGUAGE,
                     Key.CHANGE_ICON,
                     Key.USE_TOOLBAR,
-                    Key.CONFIGURE_TOOLBAR_LAYOUT,
                     Key.SHOW_PROFILE_COUNT_ON_TABS,
-                    Key.TAB_DOUBLE_TAP_TO_NAVIGATE,
-                    Key.SHORT_PROFILE_PROTOCOL_INFO,
                     Key.DONT_HIGHLIGHT_INSECURE_PROFILES,
                     Key.SHOW_BOTTOM_BAR_IN_SETTINGS,
                     Key.COMPACT_STATS_BAR,
-                    Key.LEGACY_MAIN_VIEW,
                     Key.AUTOMATIC_CONNECTION_CHECK,
                     Key.ENABLE_GROUP_UPDATE_DIALOG,
                     Key.OPEN_GROUP_SETTINGS_ON_LONG_PRESS,
                     Key.SPEED_INTERVAL,
                     Key.PROFILE_TRAFFIC_UPDATE_INTERVAL,
                     Key.PROFILE_TRAFFIC_STATISTICS,
-                    Key.SUBSCRIPTION_TRAFFIC_UNIT,
                     Key.SHOW_DIRECT_SPEED,
                     KEY_SHOW_GROUP_IN_NOTIFICATION,
                     Key.PERSISTENT_STATUS_NOTIFICATION,
@@ -308,12 +302,10 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat(), OnPreferenceDataS
                 iconRes = R.drawable.ic_baseline_bug_report_24,
                 keys = listOf(
                     Key.ENABLE_CORE_PROFILING,
-                    Key.CORE_PROFILER_MODE,
                     Key.SAVE_CORE_PROFILER_SNAPSHOT,
                     Key.DELETE_CORE_PROFILER_SNAPSHOT,
                     Key.PERFORM_LIBCORE_GC_SWEEP,
                     Key.PERFORM_LIBCORE_MANUAL_CRASH,
-                    Key.KILL_BACKGROUND_PROCESS,
                     Key.ENABLE_CLASH_API,
                     Key.HIDE_CLASH_API,
                     KEY_RESET_CLASH_API_SECRET,
@@ -367,7 +359,6 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat(), OnPreferenceDataS
     private var syncingProxyAppsPreference = false
     private lateinit var globalCustomConfig: EditConfigPreference
     private lateinit var enableCoreProfiling: MaterialSwitchPreference
-    private lateinit var coreProfilerMode: SimpleMenuPreference
     private lateinit var performLibcoreGcSweep: Preference
     private lateinit var performLibcoreManualCrash: Preference
     private lateinit var saveCoreProfilerSnapshot: Preference
@@ -469,24 +460,6 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat(), OnPreferenceDataS
                 true
             }
         }
-        val configureToolbarLayout =
-            findPreference<Preference>(Key.CONFIGURE_TOOLBAR_LAYOUT)!!.apply {
-                isVisible = DataStore.useToolbar
-                setOnPreferenceClickListener {
-                    startActivity(Intent(requireContext(), ToolbarLayoutActivity::class.java))
-                    true
-                }
-            }
-        findPreference<MaterialSwitchPreference>(Key.USE_TOOLBAR)!!
-            .setOnPreferenceChangeListener { _, newValue ->
-                configureToolbarLayout.isVisible = newValue as Boolean
-                true
-            }
-        findPreference<MaterialSwitchPreference>(Key.LEGACY_MAIN_VIEW)!!
-            .setOnPreferenceChangeListener { _, _ ->
-                needRestart()
-                true
-            }
 
         fun syncCustomThemePreference(themeValue: Int = DataStore.appTheme) {
             configureCustomTheme.isVisible = themeValue == Theme.CUSTOM && CustomTheme.isSupported
@@ -593,7 +566,6 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat(), OnPreferenceDataS
             true
         }
         enableCoreProfiling = findPreference(Key.ENABLE_CORE_PROFILING)!!
-        coreProfilerMode = findPreference(Key.CORE_PROFILER_MODE)!!
         performLibcoreGcSweep = findPreference(Key.PERFORM_LIBCORE_GC_SWEEP)!!
         performLibcoreManualCrash = findPreference(Key.PERFORM_LIBCORE_MANUAL_CRASH)!!
         saveCoreProfilerSnapshot = findPreference(Key.SAVE_CORE_PROFILER_SNAPSHOT)!!
@@ -613,11 +585,6 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat(), OnPreferenceDataS
             handlePerformLibcoreManualCrash()
             true
         }
-        findPreference<Preference>(Key.KILL_BACKGROUND_PROCESS)!!
-            .setOnPreferenceClickListener {
-                BackgroundProcessController.confirmKill(requireContext())
-                true
-            }
         saveCoreProfilerSnapshot.setOnPreferenceClickListener {
             handleSaveCoreProfilerSnapshot()
             true
@@ -1015,9 +982,6 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat(), OnPreferenceDataS
     }
 
     private fun syncCoreProfilerPreferences(enabled: Boolean = DataStore.enableCoreProfiling) {
-        if (::coreProfilerMode.isInitialized) {
-            coreProfilerMode.isVisible = enabled
-        }
         if (!::saveCoreProfilerSnapshot.isInitialized) return
         val coreActive = DataStore.serviceState.started
         saveCoreProfilerSnapshot.isVisible = enabled
@@ -1113,7 +1077,7 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat(), OnPreferenceDataS
             val error = withContext(Dispatchers.Default) {
                 try {
                     if (enabled) {
-                        service.startCoreProfiling(DataStore.coreProfilerMode)
+                        service.startCoreProfiling()
                     } else {
                         service.stopCoreProfiling()
                     }
@@ -1350,7 +1314,14 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat(), OnPreferenceDataS
     private fun clearAppCache() {
         val appContext = SagerNet.application
         try {
-            AppCache.clear(appContext.cacheDir)
+            val cacheDir = appContext.cacheDir
+            clearDirFiles(cacheDir, skipFiles = setOf("neko.log"))
+            
+            val parentDir = cacheDir.parentFile
+            val relativeCache = File(parentDir, "cache")
+            if (relativeCache.exists() && relativeCache.isDirectory) {
+                clearDirFiles(relativeCache)
+            }
             
             Toast.makeText(appContext, R.string.clear_cache_success, Toast.LENGTH_SHORT).show()
             
@@ -1537,6 +1508,38 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat(), OnPreferenceDataS
             .show()
     }
     
+    private fun clearDirFiles(dir: File, skipFiles: Set<String> = emptySet()): Boolean {
+        if (dir.isDirectory) {
+            val children = dir.list() ?: return true
+            
+            for (child in children) {
+                val childFile = File(dir, child)
+                
+                if (child == "neko.log") {
+                    try {
+                        childFile.writeText("")
+                        continue
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+                
+                if (child in skipFiles) {
+                    continue
+                }
+                
+                if (childFile.isDirectory) {
+                    clearDirFiles(childFile, skipFiles)
+                } else {
+                    childFile.delete()
+                }
+            }
+            
+            return true
+        }
+        return false
+    }
+
     private fun mode(): Mode {
         return when (arguments?.getString(ARG_MODE, MODE_TOP_LEVEL)) {
             MODE_GROUP -> Mode.GROUP
@@ -1645,7 +1648,6 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat(), OnPreferenceDataS
     private fun isSearchItemVisible(key: String): Boolean {
         return when (key) {
             KEY_CONFIGURE_CUSTOM_THEME -> DataStore.appTheme == Theme.CUSTOM && CustomTheme.isSupported
-            Key.CONFIGURE_TOOLBAR_LAYOUT -> DataStore.useToolbar
             Key.METERED_NETWORK -> Build.VERSION.SDK_INT >= 28
             Key.TUN_UNRECOGNIZED_TRAFFIC,
             Key.TUN_SYSTEM_DNS_TRAFFIC,
@@ -1659,7 +1661,6 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat(), OnPreferenceDataS
             Key.EXCLAVE_FRAGMENT_METHOD,
             Key.EXCLAVE_FRAGMENT_FOR_DIRECT -> DataStore.trafficFragmentation == TrafficFragmentation.EXCLAVE
             Key.BYEDPI_FRAGMENT_CLI -> DataStore.trafficFragmentation == TrafficFragmentation.BYEDPI
-            Key.CORE_PROFILER_MODE,
             Key.SAVE_CORE_PROFILER_SNAPSHOT,
             Key.DELETE_CORE_PROFILER_SNAPSHOT -> DataStore.enableCoreProfiling
             else -> true

@@ -21,10 +21,6 @@ import androidx.annotation.IdRes
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.Insets
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.lifecycleScope
@@ -175,9 +171,6 @@ class MainActivity :
         }
 
         setContentView(binding.root)
-        if (DataStore.legacyMainView) {
-            setupLegacyNavigationBarInsets()
-        }
         if (openSettingsOnCreate) {
             displayFragmentWithId(R.id.nav_settings)
             supportFragmentManager.executePendingTransactions()
@@ -228,33 +221,6 @@ class MainActivity :
                 performProxyAppsFirstSetup()
             }
         }
-    }
-
-    private fun setupLegacyNavigationBarInsets() {
-        val coordinatorInitialLeft = binding.coordinator.paddingLeft
-        val coordinatorInitialRight = binding.coordinator.paddingRight
-        val coordinatorInitialBottom = binding.coordinator.paddingBottom
-        val navigationInitialLeft = binding.navView.paddingLeft
-        val navigationInitialRight = binding.navView.paddingRight
-        val navigationInitialBottom = binding.navView.paddingBottom
-
-        ViewCompat.setOnApplyWindowInsetsListener(binding.drawerLayout) { _, insets ->
-            val navigationBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
-            binding.coordinator.updatePadding(
-                left = coordinatorInitialLeft + navigationBars.left,
-                right = coordinatorInitialRight + navigationBars.right,
-                bottom = coordinatorInitialBottom + navigationBars.bottom,
-            )
-            binding.navView.updatePadding(
-                left = navigationInitialLeft + navigationBars.left,
-                right = navigationInitialRight + navigationBars.right,
-                bottom = navigationInitialBottom + navigationBars.bottom,
-            )
-            WindowInsetsCompat.Builder(insets)
-                .setInsets(WindowInsetsCompat.Type.navigationBars(), Insets.NONE)
-                .build()
-        }
-        ViewCompat.requestApplyInsets(binding.drawerLayout)
     }
 
     private suspend fun performProxyAppsFirstSetup() {
@@ -810,13 +776,6 @@ class MainActivity :
         binding.drawerLayout.closeDrawers()
     }
 
-    fun displaySettingsGroup(groupId: String) {
-        val fragment = SettingsFragment()
-        displayFragment(fragment)
-        supportFragmentManager.executePendingTransactions()
-        fragment.openGroup(groupId, animate = false)
-    }
-
     private fun updateBottomControlsVisibility(
         fragment: ToolbarFragment? = supportFragmentManager.findFragmentById(R.id.fragment_holder) as? ToolbarFragment,
         animate: Boolean = true,
@@ -830,8 +789,8 @@ class MainActivity :
         if (bottomControlsVisibleForCurrentFragment) {
             binding.stats.allowShow = true
             binding.stats.visibility = View.VISIBLE
-            binding.fabCluster.visibility = View.VISIBLE
             binding.fabProgress.visibility = View.INVISIBLE
+            binding.fab.show()
             if (syncState) {
                 binding.fab.changeState(DataStore.serviceState, DataStore.serviceState, false)
                 binding.stats.changeState(DataStore.serviceState, DataStore.serviceState)
@@ -850,10 +809,14 @@ class MainActivity :
         if (animate) {
             binding.stats.performHide()
         }
-        // Keep the FAB's own visibility state untouched. The parent cluster is the only anchored
-        // unit, so hiding a fragment cannot leave Material's FAB animation state half-finished.
+        // Do not call fab.hide()/show() here: it runs the BottomAppBar custom motion spec that
+        // translates the FAB, and pairing it with the immediate visibility = GONE below left the
+        // FAB's internal show/hide state and translationY corrupted, so the next show() could
+        // strand the button at the bottom. The FAB now rides the bar via FabAnchorBehavior, so
+        // plain visibility is enough to remove the cluster.
         binding.stats.visibility = View.GONE
-        binding.fabCluster.visibility = View.GONE
+        binding.fab.visibility = View.GONE
+        binding.fabProgress.visibility = View.GONE
     }
 
     fun driveBottomBar(scrollDy: Int) {
@@ -1084,14 +1047,6 @@ class MainActivity :
             Key.SPEED_INTERVAL, Key.PROFILE_TRAFFIC_UPDATE_INTERVAL, Key.PROFILE_TRAFFIC_STATISTICS -> {
                 (supportFragmentManager.findFragmentById(R.id.fragment_holder) as? ConfigurationFragment)
                     ?.refreshVisibleTraffic()
-            }
-
-            Key.SUBSCRIPTION_TRAFFIC_UNIT -> {
-                when (val fragment =
-                    supportFragmentManager.findFragmentById(R.id.fragment_holder)) {
-                    is ConfigurationFragment -> fragment.refreshSubscriptionTrafficUnits()
-                    is GroupFragment -> fragment.refreshSubscriptionTrafficUnits()
-                }
             }
 
             Key.SHOW_BOTTOM_BAR_IN_SETTINGS -> {

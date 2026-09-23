@@ -63,16 +63,7 @@ abstract class BoxInstance(
                     normalizeResult.getViolation(index)
                 }
         }
-        box = if (config.routingAssetsPath != null && config.routingCachePath != null) {
-            Libcore.newSingBoxInstanceWithPaths(
-                config.config,
-                LocalResolverImpl,
-                config.routingAssetsPath,
-                config.routingCachePath,
-            )
-        } else {
-            Libcore.newSingBoxInstance(config.config, LocalResolverImpl)
-        }
+        box = Libcore.newSingBoxInstance(config.config, LocalResolverImpl)
     }
 
     suspend fun syncMasqueConfigFromCache(
@@ -87,7 +78,7 @@ abstract class BoxInstance(
         if (tag.isBlank()) return false
         val configJson =
             runCatching {
-                Libcore.loadMASQUEConfigFromCache(tag, config.singBoxCachePath)
+                Libcore.loadMASQUEConfigFromCache(tag, Param.LIBCORE_CACHE_FILE_PATH)
             }.onFailure {
                 Logs.w(it)
             }.getOrNull()

@@ -74,68 +74,6 @@ func TestCommonConnConcurrentWritesPreserveAEADRecordOrder(t *testing.T) {
 	}
 }
 
-func TestCommonConnWriteSplitsLargePayload(t *testing.T) {
-	const useAES = false
-	contextBytes := []byte("test context")
-	key := []byte("0123456789abcdef0123456789abcdef")
-	clientSide, serverSide := net.Pipe()
-	defer clientSide.Close()
-	defer serverSide.Close()
-	deadline := time.Now().Add(5 * time.Second)
-	if err := clientSide.SetDeadline(deadline); err != nil {
-		t.Fatal(err)
-	}
-	if err := serverSide.SetDeadline(deadline); err != nil {
-		t.Fatal(err)
-	}
-
-	writer := NewCommonConn(clientSide, useAES)
-	writer.AEAD = NewAEAD(contextBytes, key, useAES)
-	reader := NewCommonConn(serverSide, useAES)
-	reader.PeerAEAD = NewAEAD(contextBytes, key, useAES)
-
-	payload := bytes.Repeat([]byte("large encrypted payload"), 1000)
-	type writeResult struct {
-		n   int
-		err error
-	}
-	resultChannel := make(chan writeResult, 1)
-	go func() {
-		n, err := writer.Write(payload)
-		resultChannel <- writeResult{n, err}
-	}()
-
-	received := make([]byte, len(payload))
-	if _, err := io.ReadFull(reader, received); err != nil {
-		t.Fatal(err)
-	}
-	result := <-resultChannel
-	if result.err != nil {
-		t.Fatal(result.err)
-	}
-	if result.n != len(payload) {
-		t.Fatalf("wrote %d bytes, expected %d", result.n, len(payload))
-	}
-	if !bytes.Equal(received, payload) {
-		t.Fatal("received payload differs from sent payload")
-	}
-}
-
-func TestWriteFullCompletesPartialWrites(t *testing.T) {
-	var output bytes.Buffer
-	writer := &partialWriter{
-		writer:   &output,
-		maxWrite: 7,
-	}
-	payload := []byte("complete every partial write")
-	if err := writeFull(writer, payload); err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(output.Bytes(), payload) {
-		t.Fatalf("wrote %q, expected %q", output.Bytes(), payload)
-	}
-}
-
 type reorderingConn struct {
 	access                 sync.Mutex
 	writeCount             int
@@ -144,15 +82,6 @@ type reorderingConn struct {
 	secondWriteEntered     chan struct{}
 	releaseFirstWrite      chan struct{}
 	secondWriteEnteredOnce sync.Once
-}
-
-type partialWriter struct {
-	writer   io.Writer
-	maxWrite int
-}
-
-func (w *partialWriter) Write(data []byte) (int, error) {
-	return w.writer.Write(data[:min(len(data), w.maxWrite)])
 }
 
 func newReorderingConn() *reorderingConn {

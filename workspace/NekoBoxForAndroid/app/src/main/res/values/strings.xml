@@ -145,7 +145,6 @@
     <string name="layout_double_column">Double column</string>
     <string name="profile_actions">Profile actions</string>
     <string name="layout_compact">Compact</string>
-    <string name="layout_alternate">Alternate</string>
     <string name="sort_and_layout">Sort and Layout</string>
     <string name="group_status_empty">Empty group</string>
     <string name="group_status_empty_subscription">Not updated yet</string>
@@ -357,35 +356,14 @@
     <string name="auto_connect_summary">Enable proxy on startup/app update if it was running before</string>
     <string name="use_toolbar">Use toolbar</string>
     <string name="use_toolbar_summary">Replaces the application title with the quick action toolbar</string>
-    <string name="toolbar_layout">Toolbar layout</string>
-    <string name="toolbar_actions_active">Active</string>
-    <string name="toolbar_actions_inactive">Inactive</string>
-    <string name="toolbar_action_enabled">Action enabled</string>
-    <string name="toolbar_action_checkbox_description">Enable %1$s in the toolbar</string>
-    <string name="toolbar_reorder_action">Reorder action</string>
-    <string name="toolbar_active_profile">Active profile</string>
-    <string name="toolbar_restart_app">Restart App</string>
-    <string name="toolbar_more_actions">More actions</string>
-    <string name="kill_background_process">Kill background process</string>
-    <string name="kill_background_process_summary">Stop the proxy service and terminate its background process without restarting it.</string>
-    <string name="kill_background_process_confirm">This stops the active connection and terminates the background process. Continue?</string>
-    <string name="background_process_killed">Background process stopped</string>
-    <string name="background_process_not_running">Background process is not running</string>
     <string name="show_profile_count_on_tabs">Show profile count on tabs</string>
     <string name="show_profile_count_on_tabs_summary">Shows a pill with profile count on each group tab</string>
-    <string name="short_profile_protocol_info">Short profile protocol info</string>
-    <string name="short_profile_protocol_info_summary">Show only a shortened protocol type on profile cards.</string>
-    <string name="tab_double_tap_to_navigate">Tab double tap to navigate</string>
-    <string name="tab_double_tap_to_navigate_summary">Opens tab navigator on double-click on any tab</string>
-    <string name="go_to">Go to...</string>
     <string name="show_bottom_bar_in_settings">Show bottom bar in Settings</string>
     <string name="show_bottom_bar_in_settings_summary">Shows the connection controls and traffic status at the bottom of the main Settings screen.</string>
     <string name="dont_highlight_insecure_profiles">Don\'t highlight insecure profiles</string>
     <string name="dont_highlight_insecure_profiles_summary">Disables insecure profile highlighting without changing insecure profile selection and removal.</string>
     <string name="compact_stats_bar">Compact stats bar</string>
     <string name="compact_stats_bar_summary">Use a compact two-row layout for connection status and traffic speed.</string>
-    <string name="legacy_main_view">Legacy main view</string>
-    <string name="legacy_main_view_summary">Add navigation bar margins to the main screen to prevent overlap. Requires an app restart.</string>
     <string name="enable_group_update_dialog">Enable dialog after group update</string>
     <string name="enable_group_update_dialog_summary">Shows the detailed server diff dialog after manual group updates.</string>
     <string name="open_group_settings_on_long_press">Long press group tabs to open settings</string>
@@ -450,7 +428,6 @@
     <string name="proxy_set_mode_selector">Selector</string>
     <string name="proxy_set_mode_url_test">URL Test</string>
     <string name="proxy_set_default_outbound">Default outbound</string>
-    <string name="proxy_set_skip_insecure_profiles">Skip Insecure Profiles</string>
     <string name="proxy_chain">Proxy Chain</string>
     <string name="custom_config">Custom Config</string>
     <string name="preview_sing_box_config">Preview sing-box config</string>
@@ -625,19 +602,6 @@
     <string name="group_settings">Group Settings</string>
     <string name="subscription">Subscription</string>
     <string name="subscription_settings">Subscription Settings</string>
-    <string name="subscription_banner_layout">Banner Layout</string>
-    <string name="subscription_banner_announcements">Announcements</string>
-    <string name="subscription_banner_announcement_urls">Announcement URLs</string>
-    <string name="subscription_banner_traffic_text">Traffic counter text</string>
-    <string name="subscription_banner_traffic_bar">Traffic counter bar</string>
-    <string name="subscription_banner_clickable">Clickable</string>
-    <string name="subscription_provider_announcement">Provider announcement</string>
-    <string name="subscription_open_link_prompt">What link do you want to open?</string>
-    <string name="subscription_link_announcement">Announcement</string>
-    <string name="subscription_link_support">Support</string>
-    <string name="subscription_link_email_support">E-Mail Support</string>
-    <string name="subscription_link_page">Subscription Page</string>
-    <string name="subscription_traffic_total">%1$s / %2$s</string>
     <string name="group_type">Group Type</string>
     <string name="subscription_type">Subscription Type</string>
     <string name="delete_group_prompt">Are you sure you want to remove this group?</string>
@@ -662,10 +626,8 @@
     <string name="hwid_support">HWID Support</string>
     <string name="hwid_support_sum">Sends this device\'s unique identifier during subscription update. Enable only when subscription provider doesn\'t allow subscriptions without HWID.</string>
     <string name="spoof_app">Spoof App</string>
-    <string name="spoof_app_sum">Mimics another app\'s subscription update requests. These apps usually send HWID.</string>
+    <string name="spoof_app_sum">Mimics another app\'s HWID logic. Use only if subscription provider restricts usage with a predefined apps list.</string>
     <string name="spoof_app_none">None</string>
-    <string name="spoof_app_without_hwid_title">Spoof App without HWID</string>
-    <string name="spoof_app_without_hwid_message">These apps usually send a device identifier with subscription update requests. Spoofing without HWID may be rejected by the subscription provider.</string>
     <string name="hwid_not_supported">This subscription requires HWID support</string>
     <string name="hwid_max_devices_reached">You\'ve reached maximum number of devices in this subscription</string>
     <string name="subscription_user_agent">UserAgent</string>
@@ -692,10 +654,6 @@
     <string name="group_filter">Filter</string>
     <string name="subscription_used">%s Used</string>
     <string name="subscription_traffic">%1$s Used / %2$s Remaining</string>
-    <string name="subscription_traffic_unit">Subscription traffic units</string>
-    <string name="subscription_traffic_unit_summary">Choose the unit system used to display subscription traffic</string>
-    <string name="subscription_traffic_unit_decimal">Decimal (MB, GB)</string>
-    <string name="subscription_traffic_unit_binary">Binary (MiB, GiB)</string>
     <string name="subscription_expire">Expire: %s</string>
     <string name="subscription_import">Import subscription</string>
     <string name="subscription_import_message">Confirm you want to import subscription %s? If you
@@ -1412,9 +1370,6 @@
     <string name="libcore_crash_native_heap_corruption">CGo heap corruption</string>
     <string name="save_core_profiler_snapshot">Save profiler snapshot</string>
     <string name="delete_core_profiler_snapshot">Delete profiler snapshot</string>
-    <string name="core_profiler_mode">Profiler mode</string>
-    <string name="core_profiler_mode_cpu">CPU profile</string>
-    <string name="core_profiler_mode_trace">Execution trace (CPU fallback for AmneziaWG)</string>
     <string name="service_is_not_running">Service is not running</string>
     <string name="done">Done</string>
     <string name="fail_no_crash">Failed to crash libcore</string>
@@ -1586,7 +1541,6 @@
     <string name="proxy_protocol">PROXY protocol</string>
     <string name="routing_import_preview">Routing import preview</string>
     <string name="routing_format_happ" translatable="false">Happ</string>
-    <string name="routing_format_v2ray_tun" translatable="false">v2RayTun</string>
     <string name="routing_format_incy" translatable="false">Incy</string>
     <string name="routing_format_nekobox_plus" translatable="false">NekoBox+</string>
     <string name="routing_export_default_name" translatable="false">NekoBox+ Routing</string>
@@ -1744,20 +1698,4 @@
     <string name="git_branch_name">New branch name</string>
     <string name="git_invalid_branch">Enter a valid Git branch name.</string>
     <string name="git_branch_save_failed">The branch could not be checked or created. Check write permissions and try again.</string>
-    <string name="subscription_routing_enabled">Use subscription routing</string>
-    <string name="subscription_routing_enabled_summary">Use routing supplied by this subscription only when one of its profiles is selected directly</string>
-    <string name="subscription_routing_interval">Routing update frequency</string>
-    <string name="subscription_routing_interval_12_hours">12 hours</string>
-    <string name="subscription_routing_interval_24_hours">24 hours</string>
-    <string name="subscription_routing_interval_3_days">3 days</string>
-    <string name="subscription_routing_interval_7_days">7 days</string>
-    <string name="subscription_import_routing">Import subscription routing</string>
-    <string name="subscription_import_routing_summary">Download the current routing from this subscription and import it once</string>
-    <string name="subscription_routing_unavailable">Update this subscription to use its routing</string>
-    <string name="subscription_routing_not_found">This subscription did not provide routing.</string>
-    <string name="subscription_routing_disabled_by_provider">The subscription provider disabled routing.</string>
-    <string name="subscription_routing_downloading">Downloading routing…</string>
-    <string name="subscription_routing_not_provided">This subscription doesn\'t provide routing data. Your current routing rules will apply.</string>
-    <string name="toolbar_restore_default">Restore default</string>
-    <string name="toolbar_restore_default_confirmation">Restore the default toolbar layout?</string>
 </resources>

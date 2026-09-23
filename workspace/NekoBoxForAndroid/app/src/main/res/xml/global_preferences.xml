@@ -35,28 +35,12 @@
             app:key="useToolbar"
             app:summary="@string/use_toolbar_summary"
             app:title="@string/use_toolbar" />
-        <Preference
-            app:icon="@drawable/ic_baseline_tune_24"
-            app:key="configureToolbarLayout"
-            app:title="@string/toolbar_layout" />
         <moe.matsuri.nb4a.ui.MaterialSwitchPreference
             app:defaultValue="false"
             app:icon="@drawable/baseline_keyboard_tab_24"
             app:key="showProfileCountOnTabs"
             app:summary="@string/show_profile_count_on_tabs_summary"
             app:title="@string/show_profile_count_on_tabs" />
-        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
-            app:defaultValue="true"
-            app:icon="@drawable/baseline_keyboard_tab_24"
-            app:key="tabDoubleTapToNavigate"
-            app:summary="@string/tab_double_tap_to_navigate_summary"
-            app:title="@string/tab_double_tap_to_navigate" />
-        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
-            app:defaultValue="false"
-            app:icon="@drawable/ic_baseline_info_24"
-            app:key="shortProfileProtocolInfo"
-            app:summary="@string/short_profile_protocol_info_summary"
-            app:title="@string/short_profile_protocol_info" />
         <moe.matsuri.nb4a.ui.MaterialSwitchPreference
             app:defaultValue="false"
             app:icon="@drawable/ic_baseline_visibility_off_24"
@@ -75,12 +59,6 @@
             app:key="compactStatsBar"
             app:summary="@string/compact_stats_bar_summary"
             app:title="@string/compact_stats_bar" />
-        <moe.matsuri.nb4a.ui.MaterialSwitchPreference
-            app:defaultValue="@bool/default_legacy_main_view"
-            app:icon="@drawable/ic_baseline_view_list_24"
-            app:key="legacyMainView"
-            app:summary="@string/legacy_main_view_summary"
-            app:title="@string/legacy_main_view" />
         <moe.matsuri.nb4a.ui.MaterialSwitchPreference
             app:defaultValue="true"
             app:icon="@drawable/ic_baseline_speed_24"
@@ -121,15 +99,6 @@
             app:key="profileTrafficStatistics"
             app:summary="@string/profile_traffic_statistics_summary"
             app:title="@string/profile_traffic_statistics" />
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
-            app:defaultValue="0"
-            app:entries="@array/subscription_traffic_unit_entries"
-            app:entryValues="@array/int_array_2"
-            app:icon="@drawable/ic_device_data_usage"
-            app:key="subscriptionTrafficUnit"
-            app:summary="@string/subscription_traffic_unit_summary"
-            app:title="@string/subscription_traffic_unit"
-            app:useSimpleSummaryProvider="true" />
         <moe.matsuri.nb4a.ui.MaterialSwitchPreference
             app:defaultValue="false"
             app:icon="@drawable/ic_baseline_speed_24"
@@ -642,14 +611,6 @@
             app:key="enableCoreProfiling"
             app:summary="@string/enable_core_profiling_summary"
             app:title="@string/enable_core_profiling" />
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
-            app:defaultValue="0"
-            app:entries="@array/core_profiler_mode_entries"
-            app:entryValues="@array/int_array_2"
-            app:icon="@drawable/ic_baseline_bug_report_24"
-            app:key="coreProfilerMode"
-            app:title="@string/core_profiler_mode"
-            app:useSimpleSummaryProvider="true" />
         <Preference
             app:icon="@drawable/ic_baseline_save_24"
             app:key="saveCoreProfilerSnapshot"
@@ -668,11 +629,6 @@
             app:key="performLibcoreManualCrash"
             app:summary="@string/perform_libcore_fake_crash_summary"
             app:title="@string/perform_libcore_fake_crash" />
-        <Preference
-            app:icon="@drawable/ic_baseline_running_with_errors_24"
-            app:key="killBackgroundProcess"
-            app:summary="@string/kill_background_process_summary"
-            app:title="@string/kill_background_process" />
         <moe.matsuri.nb4a.ui.MaterialSwitchPreference
             app:defaultValue="true"
             app:icon="@drawable/baseline_construction_24"

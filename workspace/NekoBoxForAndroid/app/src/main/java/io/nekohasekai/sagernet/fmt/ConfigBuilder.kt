@@ -19,7 +19,6 @@ import io.nekohasekai.sagernet.fmt.hysteria.buildSingBoxOutboundHysteriaBean
 import io.nekohasekai.sagernet.fmt.internal.ChainBean
 import io.nekohasekai.sagernet.fmt.internal.ProxySetBean
 import io.nekohasekai.sagernet.fmt.internal.buildSingBoxOutboundProxySetBean
-import io.nekohasekai.sagernet.fmt.internal.filterInsecureProfiles
 import io.nekohasekai.sagernet.fmt.juicity.JuicityBean
 import io.nekohasekai.sagernet.fmt.juicity.buildSingBoxOutboundJuicityBean
 import io.nekohasekai.sagernet.fmt.masque.MasqueBean
@@ -58,9 +57,6 @@ import io.nekohasekai.sagernet.ktx.isIpAddress
 import io.nekohasekai.sagernet.ktx.mkPort
 import io.nekohasekai.sagernet.utils.AdblockRepository
 import io.nekohasekai.sagernet.utils.PackageCache
-import io.nekohasekai.sagernet.routing.RoutingSettingKind
-import io.nekohasekai.sagernet.routing.SubscriptionRoutingPolicy
-import io.nekohasekai.sagernet.routing.SubscriptionRoutingRepository
 import libcore.Libcore
 import moe.matsuri.nb4a.*
 import moe.matsuri.nb4a.SingBoxOptions.*
@@ -277,9 +273,6 @@ class ConfigBuildResult(
     var trafficMap: Map<String, List<ProxyEntity>>,
     var profileTagMap: Map<Long, String>,
     val selectorGroupId: Long,
-    val routingAssetsPath: String? = null,
-    val routingCachePath: String? = null,
-    val singBoxCachePath: String = Param.LIBCORE_CACHE_FILE_PATH,
 ) {
     data class IndexEntity(
         var chain: LinkedHashMap<Int, ProxyEntity>,
@@ -615,7 +608,6 @@ fun buildConfig(
     proxy: ProxyEntity,
     forTest: Boolean = false,
     forExport: Boolean = false,
-    showSubscriptionRoutingUnavailable: Boolean = true,
 ): ConfigBuildResult {
     if (proxy.type == TYPE_CONFIG) {
         val bean = proxy.requireBean() as ConfigBean
@@ -678,24 +670,6 @@ fun buildConfig(
             TAG_PROXY,
         )
     val group = SagerDatabase.groupDao.getById(proxy.groupId)
-    val subscriptionRouting =
-        group?.subscription
-            ?.takeIf { group.type == GroupType.SUBSCRIPTION && it.routingEnabled == true }
-            ?.let(SubscriptionRoutingRepository::stored)
-            ?.takeIf { SubscriptionRoutingRepository.assetsReady(proxy.groupId) }
-            ?.let { SubscriptionRoutingPolicy(it.candidate()) }
-    if (
-        !forTest &&
-        showSubscriptionRoutingUnavailable &&
-        group?.type == GroupType.SUBSCRIPTION &&
-        group.subscription?.routingEnabled == true &&
-        subscriptionRouting == null
-    ) {
-        showConfigToast(
-            SagerNet.application.getText(R.string.subscription_routing_unavailable),
-            Toast.LENGTH_LONG,
-        )
-    }
     val frontProxy = group?.frontProxy?.let { SagerDatabase.proxyDao.getById(it) }
     val landingProxy = group?.landingProxy?.let { SagerDatabase.proxyDao.getById(it) }
     val groupForceUTLS = group?.forceUTLS?.takeIf { it.isNotBlank() }
@@ -755,9 +729,8 @@ fun buildConfig(
             val beanList = ArrayList<ProxyEntity>()
             val regex = bean.groupFilterNotRegex.takeIf { it.isNotBlank() }?.toRegex()
             val ids = if (bean.type == ProxySetBean.TYPE_LIST) bean.proxies else beans.map { it.id }
-            val candidates = ids.mapNotNull { beansMap[it] }
-                .let { bean.filterInsecureProfiles(it, DataStore.globalAllowInsecure) }
-            for (item in candidates) {
+            for (proxyId in ids) {
+                val item = beansMap[proxyId] ?: continue
                 if (item.id == id) continue
                 if (item.type == ProxyEntity.TYPE_MASTERDNSVPN) continue
                 if (regex != null && !regex.containsMatchIn(item.displayName())) continue
@@ -841,13 +814,8 @@ fun buildConfig(
             }
     }
 
-    val extraRules = when {
-        forTest -> listOf()
-        subscriptionRouting != null -> subscriptionRouting.rules()
-        else -> SagerDatabase.rulesDao.enabledRules()
-    }
-    val customDnsServers =
-        if (forTest || subscriptionRouting != null) listOf() else CustomDnsServerStore.enabledServers()
+    val extraRules = if (forTest) listOf() else SagerDatabase.rulesDao.enabledRules()
+    val customDnsServers = if (forTest) listOf() else CustomDnsServerStore.enabledServers()
     val customDnsServerTags = customDnsServers.map { it.tag }.toSet()
     val extraProxies =
         if (forTest) {
@@ -881,29 +849,17 @@ fun buildConfig(
             isPureIpAddress(DataStore.mixedListener) -> DataStore.mixedListener
             else -> LOCALHOST
         }
-    val effectiveRemoteDns =
-        subscriptionRouting?.setting(RoutingSettingKind.REMOTE_DNS)?.value ?: DataStore.remoteDns
-    val effectiveDirectDns =
-        subscriptionRouting?.setting(RoutingSettingKind.DIRECT_DNS)?.value ?: DataStore.directDns
-    val effectiveDnsOverrides =
-        subscriptionRouting?.setting(RoutingSettingKind.DNS_HOSTS)?.value ?: DataStore.dnsDomainOverrides
-    val effectiveFakeDns =
-        subscriptionRouting?.setting(RoutingSettingKind.FAKE_DNS)?.value?.toBooleanStrictOrNull()
-            ?: DataStore.enableFakeDns
-    val effectiveResolveDestination =
-        subscriptionRouting?.setting(RoutingSettingKind.DOMAIN_STRATEGY)?.value?.toBooleanStrictOrNull()
-            ?: DataStore.resolveDestination
     val remoteDns =
-        effectiveRemoteDns
+        DataStore.remoteDns
             .split("\n")
             .mapNotNull { dns -> dns.trim().takeIf { it.isNotBlank() && !it.startsWith("#") } }
     val directDNS =
-        effectiveDirectDns
+        DataStore.directDns
             .split("\n")
             .mapNotNull { dns -> dns.trim().takeIf { it.isNotBlank() && !it.startsWith("#") } }
-    val dnsDomainOverrides = if (forTest) emptyMap() else parseDnsDomainOverrides(effectiveDnsOverrides)
+    val dnsDomainOverrides = if (forTest) emptyMap() else parseDnsDomainOverrides(DataStore.dnsDomainOverrides)
     val enableDnsRouting = DataStore.enableDnsRouting
-    val useFakeDns = effectiveFakeDns && !forTest
+    val useFakeDns = DataStore.enableFakeDns && !forTest
     val needSniff = DataStore.trafficSniffing > 0
     val externalIndexMap = ArrayList<IndexEntity>()
     val ipv6Mode = if (forTest) IPv6Mode.ENABLE else DataStore.ipv6Mode
@@ -925,9 +881,7 @@ fun buildConfig(
                         cache_file =
                             CacheFile().apply {
                                 enabled = true
-                                path = subscriptionRouting?.let {
-                                    SubscriptionRoutingRepository.singBoxCacheFile(proxy.groupId).absolutePath
-                                } ?: Param.LIBCORE_CACHE_FILE_PATH
+                                path = Param.LIBCORE_CACHE_FILE_PATH
                                 // if (DataStore.enableClashAPI) {
                                 store_fakeip = true
                                 // }
@@ -1026,7 +980,7 @@ fun buildConfig(
                             // so sing-box's effective TUN options (BuildAutoRouteRanges) are
                             // authoritative: the Android side applies exactly what the core
                             // computed instead of re-deriving it from DataStore.
-                            if (subscriptionRouting == null && DataStore.bypassLan) {
+                            if (DataStore.bypassLan) {
                                 val publicRoutes =
                                     SagerNet.application
                                         .resources
@@ -1707,7 +1661,7 @@ fun buildConfig(
             // 在应用用户规则之前检查全局模式
             if (forTest) {
                 route.final_ = mainProxyTag
-            } else if (subscriptionRouting == null && DataStore.globalMode) {
+            } else if (DataStore.globalMode) {
                 // 全局模式下的规则处理
 
                 // 绕过内部网络（如果启用）
@@ -1991,7 +1945,7 @@ fun buildConfig(
                         }
 
                     // Explicitly route direct DNS to direct.
-                    val directDnsRule = buildDirectDnsRouteRule(effectiveDirectDns)
+                    val directDnsRule = buildDirectDnsRouteRule(DataStore.directDns)
 
                     // Only Android's DNS daemon may bypass the system-traffic policy
                     // for known resolver endpoints. Other apps follow their normal rules.
@@ -2305,7 +2259,7 @@ fun buildConfig(
                         if (isVPN) add(TAG_TUN)
                         if (!isVPN || DataStore.requireProxyInVPN) add(TAG_MIXED)
                     }
-                val domainStrategyStr = genDomainStrategy(effectiveResolveDestination)
+                val domainStrategyStr = genDomainStrategy(DataStore.resolveDestination)
                 routeActionInbounds.asReversed().forEach { inboundTag ->
                     if (domainStrategyStr.isNotEmpty()) {
                         route.rules.add(
@@ -2337,7 +2291,7 @@ fun buildConfig(
                         },
                     )
                 }
-                if (subscriptionRouting == null && DataStore.bypassLanInCore) {
+                if (DataStore.bypassLanInCore) {
                     route.rules.add(
                         Rule_DefaultOptions().apply {
                             outbound = TAG_BYPASS
@@ -2472,15 +2426,6 @@ fun buildConfig(
                 trafficMap,
                 tagMap,
                 if (buildSelector) group.id else -1L,
-                subscriptionRouting?.let {
-                    SubscriptionRoutingRepository.assetsDirectory(proxy.groupId).absolutePath
-                },
-                subscriptionRouting?.let {
-                    SubscriptionRoutingRepository.routingRulesCacheFile(proxy.groupId).absolutePath
-                },
-                subscriptionRouting?.let {
-                    SubscriptionRoutingRepository.singBoxCacheFile(proxy.groupId).absolutePath
-                } ?: Param.LIBCORE_CACHE_FILE_PATH,
             )
         }
 }

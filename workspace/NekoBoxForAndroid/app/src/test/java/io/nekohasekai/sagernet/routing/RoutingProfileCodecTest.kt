@@ -84,7 +84,7 @@ class RoutingProfileCodecTest {
 
     @Test
     fun acceptsAddAndOnaddForBothSchemes() {
-        for (scheme in listOf("happ", "v2raytun", "incy")) {
+        for (scheme in listOf("happ", "incy")) {
             for (action in listOf("add", "onadd")) {
                 val original = link(scheme, """{"Name":"$scheme-$action"}""", action)
                 assertEquals("$scheme-$action", RoutingProfileCodec.decode(original).second.name)

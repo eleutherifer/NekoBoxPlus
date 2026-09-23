@@ -27,16 +27,6 @@
         <item>1</item>
     </string-array>
 
-    <string-array name="subscription_traffic_unit_entries">
-        <item>@string/subscription_traffic_unit_binary</item>
-        <item>@string/subscription_traffic_unit_decimal</item>
-    </string-array>
-
-    <string-array name="core_profiler_mode_entries">
-        <item>@string/core_profiler_mode_cpu</item>
-        <item>@string/core_profiler_mode_trace</item>
-    </string-array>
-
     <string-array name="int_array_3">
         <item>0</item>
         <item>1</item>
@@ -917,7 +907,6 @@
         <item>@string/spoof_app_none</item>
         <item>Happ</item>
         <item>v2RayTun</item>
-        <item>Incy</item>
     </string-array>
 
     <string-array name="ssh_auth_type">
@@ -1509,32 +1498,5 @@
         <item>0</item>
         <item>1</item>
         <item>2</item>
-    </string-array>
-
-    <string-array name="subscription_banner_layout_entry">
-        <item>@string/subscription_banner_announcements</item>
-        <item>@string/subscription_banner_announcement_urls</item>
-        <item>@string/subscription_banner_traffic_text</item>
-        <item>@string/subscription_banner_traffic_bar</item>
-        <item>@string/subscription_banner_clickable</item>
-    </string-array>
-    <string-array name="subscription_banner_layout_value" translatable="false">
-        <item>announcements</item>
-        <item>announcement_urls</item>
-        <item>traffic_text</item>
-        <item>traffic_bar</item>
-        <item>clickable</item>
-    </string-array>
-    <string-array name="subscription_routing_interval_entries">
-        <item>@string/subscription_routing_interval_12_hours</item>
-        <item>@string/subscription_routing_interval_24_hours</item>
-        <item>@string/subscription_routing_interval_3_days</item>
-        <item>@string/subscription_routing_interval_7_days</item>
-    </string-array>
-    <string-array name="subscription_routing_interval_values" translatable="false">
-        <item>43200</item>
-        <item>86400</item>
-        <item>259200</item>
-        <item>604800</item>
     </string-array>
 </resources>

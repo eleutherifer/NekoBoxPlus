@@ -71,10 +71,4 @@
         app:title="@string/filter_regex"
         app:useSimpleSummaryProvider="true" />
 
-    <moe.matsuri.nb4a.ui.MaterialSwitchPreference
-        app:defaultValue="false"
-        app:icon="@drawable/ic_baseline_security_24"
-        app:key="proxySetSkipInsecureProfiles"
-        app:title="@string/proxy_set_skip_insecure_profiles" />
-
 </PreferenceScreen>

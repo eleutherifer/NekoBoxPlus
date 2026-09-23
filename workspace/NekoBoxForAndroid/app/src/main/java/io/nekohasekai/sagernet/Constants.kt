@@ -25,15 +25,10 @@ object Key {
     const val APP_LANGUAGE = "appLanguage"
     const val CHANGE_ICON = "changeIcon"
     const val USE_TOOLBAR = "useToolbar"
-    const val TOOLBAR_LAYOUT = "toolbarLayout"
-    const val CONFIGURE_TOOLBAR_LAYOUT = "configureToolbarLayout"
     const val SHOW_PROFILE_COUNT_ON_TABS = "showProfileCountOnTabs"
-    const val TAB_DOUBLE_TAP_TO_NAVIGATE = "tabDoubleTapToNavigate"
-    const val SHORT_PROFILE_PROTOCOL_INFO = "shortProfileProtocolInfo"
     const val DONT_HIGHLIGHT_INSECURE_PROFILES = "dontHighlightInsecureProfiles"
     const val SHOW_BOTTOM_BAR_IN_SETTINGS = "showBottomBarInSettings"
     const val COMPACT_STATS_BAR = "compactStatsBar"
-    const val LEGACY_MAIN_VIEW = "legacyMainView"
     const val AUTOMATIC_CONNECTION_CHECK = "automaticConnectionCheck"
     const val ENABLE_GROUP_UPDATE_DIALOG = "enableGroupUpdateDialog"
     const val OPEN_GROUP_SETTINGS_ON_LONG_PRESS = "openGroupSettingsOnLongPress"
@@ -44,7 +39,6 @@ object Key {
     const val CERT_PROVIDER = "certProvider"
     const val GLOBAL_CUSTOM_CONFIG = "globalCustomConfig"
     const val PREVIEW_SING_BOX_CONFIG = "previewSingBoxConfig"
-    const val KILL_BACKGROUND_PROCESS = "killBackgroundProcess"
 
     const val REMOTE_DNS = "remoteDns"
     const val REMOTE_DNS_DEADLINE = "remoteDnsDeadline"
@@ -104,7 +98,6 @@ object Key {
     const val ALLOW_ACCESS = "allowAccess"
     const val SPEED_INTERVAL = "speedInterval"
     const val PROFILE_TRAFFIC_UPDATE_INTERVAL = "profileTrafficUpdateInterval"
-    const val SUBSCRIPTION_TRAFFIC_UNIT = "subscriptionTrafficUnit"
     const val SHOW_DIRECT_SPEED = "showDirectSpeed"
     const val PERSISTENT_STATUS_NOTIFICATION = "persistentStatusNotification"
 
@@ -141,7 +134,6 @@ object Key {
     const val LOG_LEVEL = "logLevel"
     const val LOG_BUF_SIZE = "logBufSize"
     const val ENABLE_CORE_PROFILING = "enableCoreProfiling"
-    const val CORE_PROFILER_MODE = "coreProfilerMode"
     const val CONNECTION_GUARD = "connectionGuard"
     const val CORE_RECOVERY_EXPECTED_STOP = "coreRecoveryExpectedStop"
     const val OVERLOAD_WATCHDOG = "overloadWatchdog"
@@ -299,10 +291,6 @@ object Key {
     const val SUBSCRIPTION_HWID_ENABLED = "subscriptionHwidEnabled"
     const val SUBSCRIPTION_SPOOF_APP = "subscriptionSpoofApp"
     const val SUBSCRIPTION_SERVER_DNS = "subscriptionServerDns"
-    const val SUBSCRIPTION_BANNER_LAYOUT = "subscriptionBannerLayout"
-    const val SUBSCRIPTION_ROUTING_ENABLED = "subscriptionRoutingEnabled"
-    const val SUBSCRIPTION_ROUTING_INTERVAL = "subscriptionRoutingInterval"
-    const val SUBSCRIPTION_IMPORT_ROUTING = "subscriptionImportRouting"
 
     //
 
@@ -326,11 +314,6 @@ object Key {
     const val WEBDAV_PATH = "webdavPath"
 
     const val GLOBAL_MODE = "globalMode"
-}
-
-object CoreProfilerMode {
-    const val CPU = 0
-    const val TRACE = 1
 }
 
 object TunImplementation {
@@ -388,7 +371,6 @@ object SpoofApp {
     const val NONE = 0
     const val HAPP = 1
     const val V2RAY_TUN = 2
-    const val INCY = 3
 }
 
 object Action {

@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"io"
 	"net"
-	"sync"
 
 	"github.com/sagernet/sing-vmess"
 	"github.com/sagernet/sing/common/auth"
@@ -24,17 +23,6 @@ type Service[T comparable] struct {
 	userFlow map[T]string
 	logger   logger.Logger
 	handler  Handler
-
-	connections  map[T]map[*trackedConnection[T]]struct{}
-	userRevision uint64
-	userAccess   sync.RWMutex
-}
-
-type trackedConnection[T comparable] struct {
-	net.Conn
-	service *Service[T]
-	user    T
-	once    sync.Once
 }
 
 type Handler interface {
@@ -44,9 +32,8 @@ type Handler interface {
 
 func NewService[T comparable](logger logger.Logger, handler Handler) *Service[T] {
 	return &Service[T]{
-		logger:      logger,
-		handler:     handler,
-		connections: make(map[T]map[*trackedConnection[T]]struct{}),
+		logger:  logger,
+		handler: handler,
 	}
 }
 
@@ -61,23 +48,8 @@ func (s *Service[T]) UpdateUsers(userList []T, userUUIDList []string, userFlowLi
 		userMap[userID] = userName
 		userFlowMap[userName] = userFlowList[i]
 	}
-	s.userAccess.Lock()
 	s.userMap = userMap
 	s.userFlow = userFlowMap
-	s.userRevision++
-	var removedConnections []*trackedConnection[T]
-	for user, connections := range s.connections {
-		if _, loaded := userFlowMap[user]; !loaded {
-			for connection := range connections {
-				removedConnections = append(removedConnections, connection)
-			}
-			delete(s.connections, user)
-		}
-	}
-	s.userAccess.Unlock()
-	for _, connection := range removedConnections {
-		_ = connection.Close()
-	}
 }
 
 func (s *Service[T]) NewConnection(ctx context.Context, conn net.Conn, source M.Socksaddr, onClose N.CloseHandlerFunc) error {
@@ -85,32 +57,20 @@ func (s *Service[T]) NewConnection(ctx context.Context, conn net.Conn, source M.
 	if err != nil {
 		return err
 	}
-	user, userFlow, userRevision, loaded := s.lookupUser(request.UUID)
+	user, loaded := s.userMap[request.UUID]
 	if !loaded {
 		return E.New("unknown UUID: ", uuid.FromBytesOrNil(request.UUID[:]))
 	}
 	ctx = auth.ContextWithUser(ctx, user)
+	userFlow := s.userFlow[user]
 	if request.Flow == FlowVision && request.Command == vmess.NetworkUDP {
 		return E.New(FlowVision, " flow does not support UDP")
 	} else if request.Flow != userFlow {
 		return E.New("flow mismatch: expected ", flowName(userFlow), ", but got ", flowName(request.Flow))
 	}
 
-	trackedConn, loaded := s.trackConnection(user, userRevision, conn)
-	if !loaded {
-		return E.New("user configuration changed during handshake")
-	}
-	handedOff := false
-	defer func() {
-		if !handedOff {
-			trackedConn.remove()
-		}
-	}()
-	conn = trackedConn
-
 	if request.Command == vmess.CommandUDP {
-		s.handler.NewPacketConnectionEx(ctx, &serverPacketConn{ExtendedConn: bufio.NewExtendedConn(conn), destination: request.Destination}, source, request.Destination, trackedConn.onClose(onClose))
-		handedOff = true
+		s.handler.NewPacketConnectionEx(ctx, &serverPacketConn{ExtendedConn: bufio.NewExtendedConn(conn), destination: request.Destination}, source, request.Destination, onClose)
 		return nil
 	}
 	responseConn := &serverConn{ExtendedConn: bufio.NewExtendedConn(conn)}
@@ -127,71 +87,13 @@ func (s *Service[T]) NewConnection(ctx context.Context, conn net.Conn, source M.
 	}
 	switch request.Command {
 	case vmess.CommandTCP:
-		s.handler.NewConnectionEx(ctx, conn, source, request.Destination, trackedConn.onClose(onClose))
-		handedOff = true
+		s.handler.NewConnectionEx(ctx, conn, source, request.Destination, onClose)
 		return nil
 	case vmess.CommandMux:
 		return vmess.HandleMuxConnection(ctx, conn, source, s.handler)
 	default:
 		return E.New("unknown command: ", request.Command)
 	}
-}
-
-func (s *Service[T]) lookupUser(userID [16]byte) (T, string, uint64, bool) {
-	s.userAccess.RLock()
-	defer s.userAccess.RUnlock()
-	user, loaded := s.userMap[userID]
-	if !loaded {
-		var zero T
-		return zero, "", 0, false
-	}
-	return user, s.userFlow[user], s.userRevision, true
-}
-
-func (s *Service[T]) trackConnection(user T, revision uint64, conn net.Conn) (*trackedConnection[T], bool) {
-	s.userAccess.Lock()
-	defer s.userAccess.Unlock()
-	if revision != s.userRevision {
-		return nil, false
-	}
-	trackedConn := &trackedConnection[T]{
-		Conn:    conn,
-		service: s,
-		user:    user,
-	}
-	connections := s.connections[user]
-	if connections == nil {
-		connections = make(map[*trackedConnection[T]]struct{})
-		s.connections[user] = connections
-	}
-	connections[trackedConn] = struct{}{}
-	return trackedConn, true
-}
-
-func (c *trackedConnection[T]) remove() {
-	c.once.Do(func() {
-		c.service.userAccess.Lock()
-		connections := c.service.connections[c.user]
-		delete(connections, c)
-		if len(connections) == 0 {
-			delete(c.service.connections, c.user)
-		}
-		c.service.userAccess.Unlock()
-	})
-}
-
-func (c *trackedConnection[T]) onClose(parent N.CloseHandlerFunc) N.CloseHandlerFunc {
-	return N.OnceClose(func(err error) {
-		c.remove()
-		if parent != nil {
-			parent(err)
-		}
-	})
-}
-
-func (c *trackedConnection[T]) Close() error {
-	c.remove()
-	return c.Conn.Close()
 }
 
 func flowName(value string) string {

@@ -216,42 +216,34 @@
 
         </io.nekohasekai.sagernet.widget.StatsBar>
 
-        <io.nekohasekai.sagernet.widget.FabCluster
-            android:id="@+id/fabCluster"
+        <io.nekohasekai.sagernet.widget.ServiceButton
+            android:id="@+id/fab"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:clipChildren="false"
-            android:clipToPadding="false"
+            android:elevation="6dp"
+            android:nextFocusDown="@+id/stats"
             android:translationZ="12dp"
+            app:backgroundTint="?attr/colorPrimary"
             app:layout_anchor="@id/stats"
-            app:layout_anchorGravity="top|center_horizontal">
+            app:layout_behavior="io.nekohasekai.sagernet.widget.FabAnchorBehavior"
+            app:pressedTranslationZ="6dp"
+            app:srcCompat="@drawable/ic_service_idle"
+            app:tint="?attr/colorOnPrimary" />
 
-            <io.nekohasekai.sagernet.widget.ServiceButton
-                android:id="@+id/fab"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:elevation="6dp"
-                android:nextFocusDown="@+id/stats"
-                app:backgroundTint="?attr/colorPrimary"
-                app:pressedTranslationZ="6dp"
-                app:srcCompat="@drawable/ic_service_idle"
-                app:tint="?attr/colorOnPrimary" />
-
-            <!-- We double trackThickness as half of it will be invisible -->
-            <com.google.android.material.progressindicator.CircularProgressIndicator
-                android:id="@+id/fabProgress"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:max="1"
-                android:translationZ="13dp"
-                android:visibility="invisible"
-                app:indicatorColor="?attr/colorPrimary"
-                app:trackCornerRadius="@dimen/mtrl_progress_track_thickness"
-                app:trackThickness="8dp" />
-
-        </io.nekohasekai.sagernet.widget.FabCluster>
+        <!-- We double trackThickness as half of it will be invisible -->
+        <com.google.android.material.progressindicator.CircularProgressIndicator
+            android:id="@+id/fabProgress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:max="1"
+            android:translationZ="13dp"
+            android:visibility="invisible"
+            app:indicatorColor="?attr/colorPrimary"
+            app:layout_anchor="@id/fab"
+            app:layout_anchorGravity="center"
+            app:layout_behavior="io.nekohasekai.sagernet.widget.FabProgressBehavior"
+            app:trackCornerRadius="@dimen/mtrl_progress_track_thickness"
+            app:trackThickness="8dp" />
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 

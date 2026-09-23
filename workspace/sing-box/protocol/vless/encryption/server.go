@@ -225,7 +225,7 @@ func (i *ServerInstance) Handshake(conn net.Conn, fallback *[]byte) (*CommonConn
 				rand.Read(noises)
 				_, err = DecodeHeader(noises)
 			}
-			_ = writeFull(conn, noises) // make client do new handshake
+			conn.Write(noises) // make client do new handshake
 			return nil, E.New("expired ticket")
 		}
 		if _, loaded := s.NfsKeys.LoadOrStore([32]byte(nfsKey), true); loaded { // prevents bad client also
@@ -304,7 +304,7 @@ func (i *ServerInstance) Handshake(conn net.Conn, fallback *[]byte) (*CommonConn
 	paddingLens[0] = pfsKeyExchangeLength + encryptedTicketLength + paddingLens[0]
 	for i, l := range paddingLens { // sends padding in a fragmented way, to create variable traffic pattern, before inner VLESS flow takes control
 		if l > 0 {
-			if err := writeFull(conn, serverHello[:l]); err != nil {
+			if _, err := conn.Write(serverHello[:l]); err != nil {
 				return nil, err
 			}
 			serverHello = serverHello[l:]

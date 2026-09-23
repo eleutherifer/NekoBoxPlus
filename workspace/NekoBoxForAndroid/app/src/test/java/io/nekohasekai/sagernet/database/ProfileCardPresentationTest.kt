@@ -13,7 +13,6 @@ import io.nekohasekai.sagernet.fmt.ssh.SSHBean
 import io.nekohasekai.sagernet.fmt.v2ray.VMessBean
 import io.nekohasekai.sagernet.fmt.wireguard.AmneziaWGBean
 import moe.matsuri.nb4a.proxy.anytls.AnyTLSBean
-import moe.matsuri.nb4a.proxy.config.ConfigBean
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -38,16 +37,6 @@ class ProfileCardPresentationTest {
         this.security = security
         this.vlessEncryption = vlessEncryption
         this.allowInsecure = allowInsecure
-    }
-
-    private fun vmess(
-        network: String,
-        security: String,
-        vlessEncryption: String = "",
-    ) = profile(VMessBean()) {
-        type = network
-        this.security = security
-        this.vlessEncryption = vlessEncryption
     }
 
     @Test
@@ -166,79 +155,6 @@ class ProfileCardPresentationTest {
             "AmneziaWG 3.0",
             profile(AmneziaWGBean()) { peerPersistentKeepalive = "22-30" }.profileCardType(),
         )
-    }
-
-    @Test
-    fun shortCardUsesCompactV2RayDetails() {
-        assertEquals(
-            "Sh.S",
-            profile(ShadowsocksBean()) { method = "aes-256-gcm" }.profileCardType(true),
-        )
-        assertEquals("SSR", profile(ShadowsocksRBean()).profileCardType(true))
-        assertEquals("VL.TCP", vless("tcp", "none").profileCardType(true))
-        assertEquals("VL.WS.TLS", vless("ws", "TLS").profileCardType(true))
-        assertEquals("VL.XHTTP.R", vless("xhttp", "Reality").profileCardType(true))
-        assertEquals(
-            "VL.HTTPUp.R*",
-            vless("httpupgrade", "reality", "mlkem768x25519plus").profileCardType(true),
-        )
-        assertEquals("VM.gRPC.TLS", vmess("grpc", "tls").profileCardType(true))
-        assertEquals(
-            "AWG",
-            profile(AmneziaWGBean()) { contentPaddingAddition = "10-20" }.profileCardType(true),
-        )
-        assertEquals(
-            "vless",
-            profile(ConfigBean()) {
-                type = 1
-                config = """{"type":"vless-outbound"}"""
-            }.profileCardType(true),
-        )
-    }
-
-    @Test
-    fun shortCardMarksEncryptionOnlyForVless() {
-        val encryption = "mlkem768x25519plus.native.0rtt.padding.public-key"
-
-        assertEquals("VL.TCP*", vless("", "none", encryption).profileCardType(true))
-        assertEquals("VM.TCP", vmess("", "none", encryption).profileCardType(true))
-    }
-
-    @Test
-    fun everyBuiltInShortCardTypeFitsFiveCharacters() {
-        val builtInTypes = listOf(
-            ProxyEntity.TYPE_SOCKS,
-            ProxyEntity.TYPE_HTTP,
-            ProxyEntity.TYPE_SS,
-            ProxyEntity.TYPE_SSR,
-            ProxyEntity.TYPE_VMESS,
-            ProxyEntity.TYPE_TROJAN,
-            ProxyEntity.TYPE_TROJAN_GO,
-            ProxyEntity.TYPE_MIERU,
-            ProxyEntity.TYPE_NAIVE,
-            ProxyEntity.TYPE_HYSTERIA,
-            ProxyEntity.TYPE_SSH,
-            ProxyEntity.TYPE_WG,
-            ProxyEntity.TYPE_AWG,
-            ProxyEntity.TYPE_TUIC,
-            ProxyEntity.TYPE_JUICITY,
-            ProxyEntity.TYPE_SNELL,
-            ProxyEntity.TYPE_MASTERDNSVPN,
-            ProxyEntity.TYPE_BYEDPI,
-            ProxyEntity.TYPE_SHADOWTLS,
-            ProxyEntity.TYPE_ANYTLS,
-            ProxyEntity.TYPE_TRUST_TUNNEL,
-            ProxyEntity.TYPE_MASQUE,
-            ProxyEntity.TYPE_DIRECT,
-            ProxyEntity.TYPE_TAILSCALE,
-            ProxyEntity.TYPE_PROXY_SET,
-            ProxyEntity.TYPE_CHAIN,
-        )
-
-        builtInTypes.forEach { type ->
-            val label = ProxyEntity(type = type).profileCardType(true)
-            assertTrue("$type produced $label", label.length <= 5)
-        }
     }
 
     @Test

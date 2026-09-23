@@ -150,22 +150,6 @@ func GenerateChacha20Poly1305Key(b []byte) []byte {
 	return key
 }
 
-func ReaderOverhead(security byte, option byte) int {
-	switch security {
-	case SecurityTypeNone:
-		if option&RequestOptionChunkStream != 0 && option&RequestOptionAuthenticatedLength != 0 {
-			return 2 + CipherOverhead
-		}
-	case SecurityTypeLegacy:
-		if option&RequestOptionChunkStream != 0 {
-			return 4
-		}
-	case SecurityTypeAes128Gcm, SecurityTypeChacha20Poly1305:
-		return CipherOverhead
-	}
-	return 0
-}
-
 func CreateReader(upstream io.Reader, streamReader io.Reader, requestKey []byte, requestNonce []byte, key []byte, nonce []byte, security byte, option byte) io.Reader {
 	switch security {
 	case SecurityTypeNone:

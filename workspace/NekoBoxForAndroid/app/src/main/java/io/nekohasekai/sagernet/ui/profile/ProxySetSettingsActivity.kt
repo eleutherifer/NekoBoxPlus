@@ -29,7 +29,6 @@ import io.nekohasekai.sagernet.database.SagerDatabase
 import io.nekohasekai.sagernet.databinding.LayoutAddEntityBinding
 import io.nekohasekai.sagernet.databinding.LayoutProfileBinding
 import io.nekohasekai.sagernet.fmt.internal.ProxySetBean
-import io.nekohasekai.sagernet.fmt.internal.filterInsecureProfiles
 import io.nekohasekai.sagernet.ktx.FixedLinearLayoutManager
 import io.nekohasekai.sagernet.ktx.onMainDispatcher
 import io.nekohasekai.sagernet.ktx.runOnDefaultDispatcher
@@ -52,7 +51,6 @@ class ProxySetSettingsActivity : ProfileSettingsActivity<ProxySetBean>(R.layout.
         private const val KEY_TYPE = "proxySetType"
         private const val KEY_GROUP = "proxySetGroup"
         private const val KEY_GROUP_FILTER = "proxySetGroupFilterNotRegex"
-        private const val KEY_SKIP_INSECURE = "proxySetSkipInsecureProfiles"
     }
 
     override fun createEntity() = ProxySetBean()
@@ -72,7 +70,6 @@ class ProxySetSettingsActivity : ProfileSettingsActivity<ProxySetBean>(R.layout.
         DataStore.profileCacheStore.putString(KEY_TYPE, type.toString())
         DataStore.profileCacheStore.putString(KEY_GROUP, groupId.toString())
         DataStore.profileCacheStore.putString(KEY_GROUP_FILTER, groupFilterNotRegex)
-        DataStore.profileCacheStore.putBoolean(KEY_SKIP_INSECURE, skipInsecureProfiles)
     }
 
     override fun ProxySetBean.serialize() {
@@ -87,8 +84,6 @@ class ProxySetSettingsActivity : ProfileSettingsActivity<ProxySetBean>(R.layout.
         type = DataStore.profileCacheStore.getString(KEY_TYPE)?.toIntOrNull() ?: ProxySetBean.TYPE_LIST
         groupId = DataStore.profileCacheStore.getString(KEY_GROUP)?.toLongOrNull() ?: 0L
         groupFilterNotRegex = DataStore.profileCacheStore.getString(KEY_GROUP_FILTER) ?: ""
-        skipInsecureProfiles =
-            DataStore.profileCacheStore.getBoolean(KEY_SKIP_INSECURE) ?: false
         proxies = proxyList.map { it.id }
         initializeDefaultValues()
     }
@@ -132,10 +127,6 @@ class ProxySetSettingsActivity : ProfileSettingsActivity<ProxySetBean>(R.layout.
             true
         }
         findPreference<Preference>(KEY_GROUP_FILTER)!!.setOnPreferenceChangeListener { _, _ ->
-            this@ProxySetSettingsActivity.window.decorView.post { updateDefaultOutboundSummary() }
-            true
-        }
-        findPreference<Preference>(KEY_SKIP_INSECURE)!!.setOnPreferenceChangeListener { _, _ ->
             this@ProxySetSettingsActivity.window.decorView.post { updateDefaultOutboundSummary() }
             true
         }
@@ -243,19 +234,14 @@ class ProxySetSettingsActivity : ProfileSettingsActivity<ProxySetBean>(R.layout.
     }
 
     private fun selectableDefaultOutbounds(): List<ProxyEntity> {
-        val skipInsecureProfiles =
-            DataStore.profileCacheStore.getBoolean(KEY_SKIP_INSECURE) ?: false
-        val filterBean = ProxySetBean().apply {
-            this.skipInsecureProfiles = skipInsecureProfiles
-        }
         if (currentCollectType() != ProxySetBean.TYPE_GROUP) {
-            return filterBean.filterInsecureProfiles(proxyList, DataStore.globalAllowInsecure)
+            return proxyList
         }
         val groupId = DataStore.profileCacheStore.getString(KEY_GROUP)?.toLongOrNull() ?: 0L
         val filter = DataStore.profileCacheStore.getString(KEY_GROUP_FILTER)
             ?.takeIf { it.isNotBlank() }
             ?.let { runCatching { it.toRegex() }.getOrNull() }
-        val profiles = SagerDatabase.proxyDao.getByGroup(groupId).filter { profile ->
+        return SagerDatabase.proxyDao.getByGroup(groupId).filter { profile ->
             if (profile.id == DataStore.editingId) return@filter false
             if (profile.type == ProxyEntity.TYPE_PROXY_SET) return@filter false
             if (profile.type == ProxyEntity.TYPE_CHAIN) return@filter false
@@ -263,7 +249,6 @@ class ProxySetSettingsActivity : ProfileSettingsActivity<ProxySetBean>(R.layout.
             if (profile.containsByeDPI()) return@filter false
             filter == null || filter.containsMatchIn(profile.displayName())
         }
-        return filterBean.filterInsecureProfiles(profiles, DataStore.globalAllowInsecure)
     }
 
     private fun updateDefaultOutboundSummary() {
@@ -427,7 +412,7 @@ class ProxySetSettingsActivity : ProfileSettingsActivity<ProxySetBean>(R.layout.
 
         fun bind(proxyEntity: ProxyEntity) {
             profileName.text = proxyEntity.displayName()
-            profileType.text = proxyEntity.profileCardType(DataStore.shortProfileProtocolInfo)
+            profileType.text = proxyEntity.profileCardType()
             profileType.setTextColor(getProtocolColor(proxyEntity.type))
             profileCard.bindProfileSecurity(
                 proxyEntity,

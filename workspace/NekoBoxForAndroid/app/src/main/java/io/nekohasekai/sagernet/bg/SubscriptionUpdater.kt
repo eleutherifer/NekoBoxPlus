@@ -16,8 +16,6 @@ import io.nekohasekai.sagernet.group.GroupUpdater
 import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ktx.app
 import io.nekohasekai.sagernet.ktx.preferSmallIcon
-import io.nekohasekai.sagernet.routing.SubscriptionRoutingIntervals
-import io.nekohasekai.sagernet.routing.SubscriptionRoutingRepository
 import java.util.concurrent.TimeUnit
 
 object SubscriptionUpdater {
@@ -26,11 +24,7 @@ object SubscriptionUpdater {
 
     suspend fun reconfigureUpdater() {
         val subscriptions = SagerDatabase.groupDao.subscriptions()
-            .filter {
-                val subscription = it.subscription!!
-                subscription.autoUpdate ||
-                    (subscription.routingEnabled && subscription.autoRoutingUrl.isNotBlank())
-            }
+            .filter { it.subscription!!.autoUpdate }
         syncBootReceiverEnabled(subscriptions.isNotEmpty())
         if (subscriptions.isEmpty()) {
             RemoteWorkManager.getInstance(app).cancelUniqueWork(WORK_NAME)
@@ -38,27 +32,12 @@ object SubscriptionUpdater {
         }
 
         val schedule = SubscriptionUpdateSchedulePolicy.schedule(
-            subscriptions = subscriptions.flatMap {
+            subscriptions = subscriptions.map {
                 val subscription = it.subscription!!
-                buildList {
-                    if (subscription.autoUpdate) {
-                        add(
-                            SubscriptionUpdateSchedulePolicy.SubscriptionState(
-                                autoUpdateDelayMinutes = subscription.autoUpdateDelay,
-                                lastUpdatedSeconds = subscription.lastUpdated,
-                            ),
-                        )
-                    }
-                    if (subscription.routingEnabled && subscription.autoRoutingUrl.isNotBlank()) {
-                        add(
-                            SubscriptionUpdateSchedulePolicy.SubscriptionState(
-                                autoUpdateDelayMinutes =
-                                    SubscriptionRoutingIntervals.normalize(subscription.routingUpdateInterval) / 60,
-                                lastUpdatedSeconds = subscription.routingLastUpdated.toInt(),
-                            ),
-                        )
-                    }
-                }
+                SubscriptionUpdateSchedulePolicy.SubscriptionState(
+                    autoUpdateDelayMinutes = subscription.autoUpdateDelay,
+                    lastUpdatedSeconds = subscription.lastUpdated,
+                )
             },
             nowSeconds = System.currentTimeMillis() / 1000L,
         ) ?: return
@@ -84,11 +63,7 @@ object SubscriptionUpdater {
     suspend fun syncBootReceiverEnabled() {
         syncBootReceiverEnabled(
             SagerDatabase.groupDao.subscriptions()
-                .any {
-                    val subscription = it.subscription!!
-                    subscription.autoUpdate ||
-                        (subscription.routingEnabled && subscription.autoRoutingUrl.isNotBlank())
-                }
+                .any { it.subscription!!.autoUpdate }
         )
     }
 
@@ -114,40 +89,30 @@ object SubscriptionUpdater {
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
 
         override suspend fun doWork(): Result {
-            val subscriptions = SagerDatabase.groupDao.subscriptions()
+            var subscriptions =
+                SagerDatabase.groupDao.subscriptions().filter { it.subscription!!.autoUpdate }
+            if (!DataStore.serviceState.connected) {
+                Logs.d("work: not connected")
+                subscriptions = subscriptions.filter { !it.subscription!!.updateWhenConnectedOnly }
+            }
 
             if (subscriptions.isNotEmpty()) for (profile in subscriptions) {
                 val subscription = profile.subscription!!
 
-                val now = System.currentTimeMillis() / 1000L
-                val subscriptionDue =
-                    subscription.autoUpdate &&
-                        (DataStore.serviceState.connected || !subscription.updateWhenConnectedOnly) &&
-                        now - subscription.lastUpdated >= subscription.autoUpdateDelay.toLong() * 60L
-                if (subscriptionDue) {
-                    Logs.d("work: updating " + profile.displayName())
-                    notification.setContentText(
-                        applicationContext.getString(
-                            R.string.subscription_update_message,
-                            profile.displayName(),
-                        ),
-                    )
-                    nm.notify(2, notification.build())
-                    GroupUpdater.executeUpdate(profile, false)
+                if (((System.currentTimeMillis() / 1000).toInt() - subscription.lastUpdated) < subscription.autoUpdateDelay * 60) {
+                    Logs.d("work: not updating " + profile.displayName())
+                    continue
                 }
+                Logs.d("work: updating " + profile.displayName())
 
-                val routingDue =
-                    subscription.routingEnabled &&
-                        subscription.autoRoutingUrl.isNotBlank() &&
-                        now - subscription.routingLastUpdated >=
-                        SubscriptionRoutingIntervals.normalize(subscription.routingUpdateInterval)
-                if (routingDue) {
-                    runCatching {
-                        if (SubscriptionRoutingRepository.refreshAutoRouting(profile)) {
-                            SagerDatabase.groupDao.updateGroup(profile)
-                        }
-                    }.onFailure(Logs::w)
-                }
+                notification.setContentText(
+                    applicationContext.getString(
+                        R.string.subscription_update_message, profile.displayName()
+                    )
+                )
+                nm.notify(2, notification.build())
+
+                GroupUpdater.executeUpdate(profile, false)
             }
 
             nm.cancel(2)

@@ -89,12 +89,11 @@ type BoxInstance struct {
 	access sync.Mutex
 
 	*box.Box
-	ctx          context.Context
-	cancel       context.CancelFunc
-	state        int
-	closeDone    chan struct{}
-	closeErr     error
-	hasAmneziaWG bool
+	ctx       context.Context
+	cancel    context.CancelFunc
+	state     int
+	closeDone chan struct{}
+	closeErr  error
 
 	v2api        *boxapi.SbV2rayServer
 	selector     *group.Selector
@@ -116,22 +115,6 @@ func NewSingBoxInstance(config string, localTransport LocalDNSTransport) (b *Box
 	return newSingBoxInstance(config, localTransport, false)
 }
 
-func NewSingBoxInstanceWithPaths(
-	config string,
-	localTransport LocalDNSTransport,
-	routingAssetsPath string,
-	routingCachePath string,
-) (b *BoxInstance, err error) {
-	return newSingBoxInstanceWithRoutingPaths(
-		config,
-		localTransport,
-		false,
-		false,
-		routingAssetsPath,
-		routingCachePath,
-	)
-}
-
 func newSingBoxInstance(config string, localTransport LocalDNSTransport, forTest bool) (b *BoxInstance, err error) {
 	return newSingBoxInstanceWithProtect(config, localTransport, forTest, false)
 }
@@ -142,65 +125,10 @@ func newSingBoxInstanceWithProtect(
 	forTest bool,
 	strictProtect bool,
 ) (b *BoxInstance, err error) {
-	return newSingBoxInstanceWithProtectContext(
-		context.Background(),
-		config,
-		localTransport,
-		forTest,
-		strictProtect,
-	)
-}
-
-func newSingBoxInstanceWithProtectContext(
-	parentCtx context.Context,
-	config string,
-	localTransport LocalDNSTransport,
-	forTest bool,
-	strictProtect bool,
-) (b *BoxInstance, err error) {
-	return newSingBoxInstanceWithRoutingPathsContext(
-		parentCtx,
-		config,
-		localTransport,
-		forTest,
-		strictProtect,
-		"",
-		"",
-	)
-}
-
-func newSingBoxInstanceWithRoutingPaths(
-	config string,
-	localTransport LocalDNSTransport,
-	forTest bool,
-	strictProtect bool,
-	routingAssetsPath string,
-	routingCachePath string,
-) (b *BoxInstance, err error) {
-	return newSingBoxInstanceWithRoutingPathsContext(
-		context.Background(),
-		config,
-		localTransport,
-		forTest,
-		strictProtect,
-		routingAssetsPath,
-		routingCachePath,
-	)
-}
-
-func newSingBoxInstanceWithRoutingPathsContext(
-	parentCtx context.Context,
-	config string,
-	localTransport LocalDNSTransport,
-	forTest bool,
-	strictProtect bool,
-	routingAssetsPath string,
-	routingCachePath string,
-) (b *BoxInstance, err error) {
 	defer device.DeferPanicToError("NewSingBoxInstance", func(err_ error) { err = err_ })
 
 	// create box context
-	ctx, cancel := context.WithCancel(parentCtx)
+	ctx, cancel := context.WithCancel(context.Background())
 	ctx = box.Context(ctx,
 		nekoboxAndroidInboundRegistry(), nekoboxAndroidOutboundRegistry(), nekoboxAndroidEndpointRegistry(),
 		nekoboxAndroidDNSTransportRegistry(localTransport), nekoboxAndroidServiceRegistry(),
@@ -224,20 +152,8 @@ func newSingBoxInstanceWithRoutingPathsContext(
 		cancel()
 		return nil, fmt.Errorf("validate config: %w", err)
 	}
-	hasAmneziaWG := false
-	for _, endpoint := range options.Endpoints {
-		if endpoint.Type == constant.TypeAwg {
-			hasAmneziaWG = true
-			break
-		}
-	}
 	waitForAssetExtraction()
-	var loadedRoutingResources bool
-	if routingAssetsPath != "" && routingCachePath != "" {
-		loadedRoutingResources, err = prepareRoutingRuleSetsWithPaths(&options, routingAssetsPath, routingCachePath)
-	} else {
-		loadedRoutingResources, err = prepareRoutingRuleSets(&options)
-	}
+	loadedRoutingResources, err := prepareRoutingRuleSets(&options)
 	if loadedRoutingResources {
 		debug.FreeOSMemory()
 	}
@@ -296,7 +212,6 @@ func newSingBoxInstanceWithRoutingPathsContext(
 		logWriter:    platformLogWriter,
 		forTest:      forTest,
 		localDNS:     localTransport,
-		hasAmneziaWG: hasAmneziaWG,
 	}
 
 	// selector

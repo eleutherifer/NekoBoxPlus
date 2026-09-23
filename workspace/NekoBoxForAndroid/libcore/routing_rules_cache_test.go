@@ -205,29 +205,6 @@ func TestPrepareRoutingRuleSetsSynthesizesDNSOnlyDefinitions(t *testing.T) {
 	assertRoutingRulesCacheKeys(t, cacheDir, routingRuleGeosite, []string{"geosite:test"})
 }
 
-func TestPrepareRoutingRuleSetsWithPathsUsesIsolatedCache(t *testing.T) {
-	defaultCacheDir, _ := configureRoutingRulesTest(t)
-	assetsDir := t.TempDir()
-	cacheDir := t.TempDir()
-	writeRoutingRulesTestAssets(t, assetsDir, "subscription-geoip", "subscription-geosite")
-
-	options := routingRulesTestOptions(false)
-	cachePath := filepath.Join(cacheDir, routingRulesCacheFileName)
-	loaded, err := prepareRoutingRuleSetsWithPaths(&options, assetsDir, cachePath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !loaded {
-		t.Fatal("expected isolated resources to be loaded")
-	}
-	if _, err := os.Stat(cachePath); err != nil {
-		t.Fatalf("isolated cache was not created: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(defaultCacheDir, routingRulesCacheFileName)); !os.IsNotExist(err) {
-		t.Fatalf("default cache was unexpectedly touched: %v", err)
-	}
-}
-
 func configureRoutingRulesTest(t *testing.T) (string, string) {
 	t.Helper()
 	oldTempPath := tempPath

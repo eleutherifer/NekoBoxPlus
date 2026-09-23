@@ -57,7 +57,7 @@ index 1952150..107cd53 100644
  
  // ClientHelloInfo contains information from a ClientHello message in order to
 diff --git a/handshake_messages.go b/handshake_messages.go
-index 5c7c87b..23807de 100644
+index 7919c1c..673a2d8 100644
 --- a/handshake_messages.go
 +++ b/handshake_messages.go
 @@ -7,9 +7,10 @@ package tls
@@ -80,7 +80,7 @@ index 5c7c87b..23807de 100644
  	// extensions are only populated on the server-side of a handshake
  	extensions []uint16
  
-@@ -318,6 +320,17 @@ func (m *clientHelloMsg) marshalMsgReorderOuterExts(echInner bool, outerExts []u
+@@ -317,6 +319,17 @@ func (m *clientHelloMsg) marshalMsgReorderOuterExts(echInner bool, outerExts []u
  			})
  		}
  	}
@@ -98,7 +98,7 @@ index 5c7c87b..23807de 100644
  	// [uTLS SECTION BEGIN]
  	// reorder OuterExtensions according to their order in the spec
  	if echInner && outerExts != nil {
-@@ -691,6 +704,12 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
+@@ -690,6 +703,12 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
  				}
  				m.pskBinders = append(m.pskBinders, binder)
  			}
@@ -126,7 +126,7 @@ index b71d97c..8f5aab7 100644
  		m.encryptedClientHello = randomBytes(rand.Intn(50)+1, rand)
  	}
 diff --git a/u_common.go b/u_common.go
-index ad4ced7..e12389c 100644
+index ad4ced7..dbd46d7 100644
 --- a/u_common.go
 +++ b/u_common.go
 @@ -602,7 +602,7 @@ var (
@@ -138,14 +138,17 @@ index ad4ced7..e12389c 100644
  	HelloFirefox_55   = ClientHelloID{helloFirefox, "55", nil, nil}
  	HelloFirefox_56   = ClientHelloID{helloFirefox, "56", nil, nil}
  	HelloFirefox_63   = ClientHelloID{helloFirefox, "63", nil, nil}
-@@ -611,6 +611,7 @@ var (
+@@ -611,8 +611,9 @@ var (
  	HelloFirefox_102  = ClientHelloID{helloFirefox, "102", nil, nil}
  	HelloFirefox_105  = ClientHelloID{helloFirefox, "105", nil, nil}
  	HelloFirefox_120  = ClientHelloID{helloFirefox, "120", nil, nil}
 +	HelloFirefox_148  = ClientHelloID{helloFirefox, "148", nil, nil}
  
- 	HelloChrome_Auto        = HelloChrome_133
+-	HelloChrome_Auto        = HelloChrome_133
++	HelloChrome_Auto        = HelloChrome_144_TA_PQS
  	HelloChrome_58          = ClientHelloID{helloChrome, "58", nil, nil}
+ 	HelloChrome_62          = ClientHelloID{helloChrome, "62", nil, nil}
+ 	HelloChrome_70          = ClientHelloID{helloChrome, "70", nil, nil}
 @@ -644,6 +645,10 @@ var (
  	HelloChrome_131 = ClientHelloID{helloChrome, "131", nil, nil}
  	// Chrome w/ New ALPS codepoint
@@ -763,10 +766,10 @@ index 7fcf0d6..17469ef 100644
  					if err != nil {
  						return fmt.Errorf("unsupported Curve in KeyShareExtension: %v."+
 diff --git a/u_public.go b/u_public.go
-index 8fb573b..ee9ab54 100644
+index d9443b5..e4fe376 100644
 --- a/u_public.go
 +++ b/u_public.go
-@@ -384,6 +384,7 @@ type PubClientHelloMsg struct {
+@@ -368,6 +368,7 @@ type PubClientHelloMsg struct {
  	PskIdentities                    []PskIdentity
  	PskBinders                       [][]byte
  	QuicTransportParameters          []byte
@@ -774,7 +777,7 @@ index 8fb573b..ee9ab54 100644
  
  	cachedPrivateHello   *clientHelloMsg // todo: further optimize to reduce clientHelloMsg construction
  	encryptedClientHello []byte
-@@ -422,6 +423,7 @@ func (chm *PubClientHelloMsg) getPrivatePtr() *clientHelloMsg {
+@@ -406,6 +407,7 @@ func (chm *PubClientHelloMsg) getPrivatePtr() *clientHelloMsg {
  			pskIdentities:           PskIdentities(chm.PskIdentities).ToPrivate(),
  			pskBinders:              chm.PskBinders,
  			quicTransportParameters: chm.QuicTransportParameters,
@@ -782,7 +785,7 @@ index 8fb573b..ee9ab54 100644
  			encryptedClientHello:    chm.encryptedClientHello,
  
  			nextProtoNeg: chm.NextProtoNeg,
-@@ -473,6 +475,7 @@ func (chm *clientHelloMsg) getPublicPtr() *PubClientHelloMsg {
+@@ -457,6 +459,7 @@ func (chm *clientHelloMsg) getPublicPtr() *PubClientHelloMsg {
  			PskIdentities:                    pskIdentities(chm.pskIdentities).ToPublic(),
  			PskBinders:                       chm.pskBinders,
  			QuicTransportParameters:          chm.quicTransportParameters,
@@ -790,7 +793,7 @@ index 8fb573b..ee9ab54 100644
  			cachedPrivateHello:               chm,
  			encryptedClientHello:             chm.encryptedClientHello,
  		}
-@@ -632,6 +635,21 @@ type KeyShare struct {
+@@ -616,6 +619,21 @@ type KeyShare struct {
  	Data  []byte  `json:"key_exchange,omitempty"` // optional
  }
  
@@ -813,10 +816,10 @@ index 8fb573b..ee9ab54 100644
  	return keyShare{group: ks.Group, data: ks.Data}
  }
 diff --git a/u_tls_extensions.go b/u_tls_extensions.go
-index 77ee10c..5db94b5 100644
+index c6e9ab8..6a4483c 100644
 --- a/u_tls_extensions.go
 +++ b/u_tls_extensions.go
-@@ -1704,6 +1704,48 @@ func (e *RenegotiationInfoExtension) writeToUConn(uc *UConn) error {
+@@ -1700,6 +1700,48 @@ func (e *RenegotiationInfoExtension) writeToUConn(uc *UConn) error {
  	return nil
  }
  

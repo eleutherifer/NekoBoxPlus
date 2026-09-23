@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.text.format.Formatter
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
@@ -25,12 +26,12 @@ import io.nekohasekai.sagernet.fmt.KryoConverters
 import io.nekohasekai.sagernet.fmt.toUniversalLink
 import io.nekohasekai.sagernet.group.GroupUpdater
 import io.nekohasekai.sagernet.ktx.*
-import io.nekohasekai.sagernet.utils.SubscriptionTrafficFormatter
 import io.nekohasekai.sagernet.widget.ListListener
 import io.nekohasekai.sagernet.widget.QRCodeDialog
 import io.nekohasekai.sagernet.widget.UndoSnackbarManager
 import kotlinx.coroutines.delay
 import moe.matsuri.nb4a.utils.Util
+import moe.matsuri.nb4a.utils.toBytesString
 import java.lang.NumberFormatException
 import java.util.*
 
@@ -42,10 +43,6 @@ class GroupFragment : ToolbarFragment(R.layout.layout_group),
     lateinit var layoutManager: LinearLayoutManager
     lateinit var groupAdapter: GroupAdapter
     lateinit var undoManager: UndoSnackbarManager<ProxyGroup>
-
-    fun refreshSubscriptionTrafficUnits() {
-        if (::groupAdapter.isInitialized) groupAdapter.notifyDataSetChanged()
-    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -653,23 +650,17 @@ class GroupFragment : ToolbarFragment(R.layout.layout_group),
                 groupTraffic.isVisible = true
                 groupTraffic.text = if (subscription.bytesRemaining > 0L) {
                     app.getString(
-                        R.string.subscription_traffic,
-                        SubscriptionTrafficFormatter.format(
-                            subscription.bytesUsed,
-                            DataStore.subscriptionTrafficUnit,
-                        ),
-                        SubscriptionTrafficFormatter.format(
-                            subscription.bytesRemaining,
-                            DataStore.subscriptionTrafficUnit,
-                        ),
+                        R.string.subscription_traffic, Formatter.formatFileSize(
+                            app, subscription.bytesUsed
+                        ), Formatter.formatFileSize(
+                            app, subscription.bytesRemaining
+                        )
                     )
                 } else {
                     app.getString(
-                        R.string.subscription_used,
-                        SubscriptionTrafficFormatter.format(
-                            subscription.bytesUsed,
-                            DataStore.subscriptionTrafficUnit,
-                        ),
+                        R.string.subscription_used, Formatter.formatFileSize(
+                            app, subscription.bytesUsed
+                        )
                     )
                 }
                 groupStatus.setPadding(0)
@@ -696,23 +687,11 @@ class GroupFragment : ToolbarFragment(R.layout.layout_group),
                         text += if (remain > 0) {
                             getString(
                                 R.string.subscription_traffic,
-                                SubscriptionTrafficFormatter.format(
-                                    used,
-                                    DataStore.subscriptionTrafficUnit,
-                                ),
-                                SubscriptionTrafficFormatter.format(
-                                    remain,
-                                    DataStore.subscriptionTrafficUnit,
-                                ),
+                                used.toBytesString(),
+                                remain.toBytesString()
                             )
                         } else {
-                            getString(
-                                R.string.subscription_used,
-                                SubscriptionTrafficFormatter.format(
-                                    used,
-                                    DataStore.subscriptionTrafficUnit,
-                                ),
-                            )
+                            getString(R.string.subscription_used, used.toBytesString())
                         }
                     }
                     get("expire=([0-9]+)")?.apply {

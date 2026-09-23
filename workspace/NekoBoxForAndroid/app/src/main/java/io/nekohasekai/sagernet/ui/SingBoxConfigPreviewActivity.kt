@@ -119,15 +119,7 @@ class SingBoxConfigPreviewActivity : ThemedActivity() {
                             getString(R.string.preview_sing_box_config_empty),
                             copyable = false,
                         )
-                    PreviewContent(
-                        prettyConfig(
-                            buildConfig(
-                                profile,
-                                showSubscriptionRoutingUnavailable = false,
-                            ).config,
-                        ),
-                        copyable = true,
-                    )
+                    PreviewContent(prettyConfig(buildConfig(profile).config), copyable = true)
                 }.getOrElse {
                     PreviewContent(
                         getString(R.string.preview_sing_box_config_failed, it.readableMessage),

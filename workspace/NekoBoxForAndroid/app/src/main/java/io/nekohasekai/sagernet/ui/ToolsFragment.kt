@@ -12,15 +12,6 @@ import io.nekohasekai.sagernet.widget.ListListener
 
 class ToolsFragment : ToolbarFragment(R.layout.layout_tools) {
 
-    companion object {
-        private const val ARG_INITIAL_PAGE = "initialPage"
-        private const val PAGE_BACKUP = 1
-
-        fun backupPanel() = ToolsFragment().apply {
-            arguments = Bundle().apply { putInt(ARG_INITIAL_PAGE, PAGE_BACKUP) }
-        }
-    }
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         toolbar.setTitle(R.string.menu_tools)
@@ -39,10 +30,6 @@ class ToolsFragment : ToolbarFragment(R.layout.layout_tools) {
                 true
             }
         }.attach()
-        binding.toolsPager.setCurrentItem(
-            arguments?.getInt(ARG_INITIAL_PAGE, 0) ?: 0,
-            false,
-        )
     }
 
     inner class ToolsAdapter(val tools: List<Fragment>) : FragmentStateAdapter(this) {

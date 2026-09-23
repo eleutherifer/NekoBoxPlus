@@ -270,23 +270,22 @@ func (h *vlessDialer) DialContext(ctx context.Context, network string, destinati
 }
 
 func (h *vlessDialer) prepareEnhancedVisionConn(conn net.Conn, baseConn net.Conn) (net.Conn, net.Conn, bool, error) {
-	encrypted := h.encryption != nil
-	fullRandomEncryption := encrypted && h.encryption.IsFullRandomXorMode()
-	canDirect := canDirectEnhancedVision(encrypted, fullRandomEncryption, h.transport != nil)
-	if encrypted {
-		encryptionConn := findEncryptionLayer(conn)
-		if encryptionConn == nil {
-			return conn, nil, false, E.New("Vision: failed to find encryption layer")
-		}
-		return newVisionConnWrapper(conn, encryptionConn), encryptionConn, canDirect, nil
-	}
+	fullRandomEncryption := h.encryption != nil && h.encryption.IsFullRandomXorMode()
+	canSplice := canSpliceEnhancedVision(fullRandomEncryption, h.transport != nil)
 	if baseConn != nil && !isVisionTLSConn(baseConn) {
 		baseConn = nil
 	}
 	if baseConn != nil {
-		return newVisionConnWrapper(conn, baseConn), baseConn, canDirect, nil
+		return newVisionConnWrapper(conn, baseConn), baseConn, canSplice, nil
 	}
-	return conn, nil, false, E.New("Vision requires either TLS/Reality or Encryption")
+	if h.encryption == nil {
+		return conn, nil, false, E.New("Vision requires either TLS/Reality or Encryption")
+	}
+	encryptionConn := findEncryptionLayer(conn)
+	if encryptionConn == nil {
+		return conn, nil, false, E.New("Vision: failed to find encryption layer")
+	}
+	return newVisionConnWrapper(conn, encryptionConn), encryptionConn, canSplice, nil
 }
 
 func (h *vlessDialer) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {

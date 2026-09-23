@@ -89,20 +89,13 @@ func (t *GroupURLTester) Test(config, tag string) (latency int32, err error) {
 	if t == nil || !t.destination.IsValid() {
 		return -1, errors.New("group URLTester is not initialized")
 	}
-	ctx, cancel := context.WithTimeout(
-		context.Background(),
-		groupURLTestProfileBudget(t.timeout, t.attempts, t.pauseMillis),
-	)
-	defer cancel()
-	return runGroupURLTestOperation(ctx, func() (int32, error) {
-		return runGroupURLTestStartRetry(ctx, func() (int32, error) {
-			return t.testProfile(ctx, config, tag)
-		})
+	return runGroupURLTestStartRetry(func() (int32, error) {
+		return t.testProfile(config, tag)
 	})
 }
 
-func (t *GroupURLTester) testProfile(ctx context.Context, config, tag string) (latency int32, err error) {
-	instance, err := newSingBoxInstanceWithProtectContext(ctx, config, t.localTransport, true, true)
+func (t *GroupURLTester) testProfile(config, tag string) (latency int32, err error) {
+	instance, err := newSingBoxInstanceWithProtect(config, t.localTransport, true, true)
 	if err != nil {
 		return -1, fmt.Errorf("create group URLTest service: %w", err)
 	}
@@ -122,7 +115,7 @@ func (t *GroupURLTester) testProfile(ctx context.Context, config, tag string) (l
 	if err != nil {
 		return -1, err
 	}
-	latency, err = t.testWithRetry(ctx, instance, detour)
+	latency, err = t.testWithRetry(instance, detour)
 	if errors.Is(err, context.DeadlineExceeded) {
 		closeSynchronously = false
 		instance.closeURLTestAsync()
@@ -130,31 +123,13 @@ func (t *GroupURLTester) testProfile(ctx context.Context, config, tag string) (l
 	return latency, err
 }
 
-func groupURLTestProfileBudget(timeout time.Duration, attempts int32, pauseMillis int32) time.Duration {
-	attempts = min(max(attempts, 1), 5)
-	pause := time.Duration(max(pauseMillis, 0)) * time.Millisecond
-	return timeout*time.Duration(attempts) + pause*time.Duration(attempts-1)
-}
-
-func runGroupURLTestOperation(ctx context.Context, test func() (int32, error)) (int32, error) {
-	latency, err := runURLTestAsync(ctx, "group URLTest profile", test)
-	if err != nil {
-		return -1, err
-	}
-	return latency, nil
-}
-
-func runGroupURLTestStartRetry(ctx context.Context, test func() (int32, error)) (int32, error) {
+func runGroupURLTestStartRetry(test func() (int32, error)) (int32, error) {
 	for attempt := range 2 {
 		latency, err := test()
 		if err == nil || !errors.Is(err, errGroupURLTestStart) || attempt == 1 {
 			return latency, err
 		}
-		select {
-		case <-ctx.Done():
-			return -1, context.Cause(ctx)
-		case <-time.After(probeRetryDelay):
-		}
+		time.Sleep(probeRetryDelay)
 	}
 	panic("unreachable")
 }
@@ -174,8 +149,8 @@ func (b *BoxInstance) urlTestOutbound(tag string) (adapter.Outbound, error) {
 	return detour, nil
 }
 
-func (t *GroupURLTester) testWithRetry(ctx context.Context, instance *BoxInstance, detour N.Dialer) (int32, error) {
-	return runURLTestAttempts(ctx, int32(t.timeout/time.Millisecond), t.attempts, t.pauseMillis, func(ctx context.Context) (int32, error) {
+func (t *GroupURLTester) testWithRetry(instance *BoxInstance, detour N.Dialer) (int32, error) {
+	return runURLTestAttempts(instance.ctx, int32(t.timeout/time.Millisecond), t.attempts, t.pauseMillis, func(ctx context.Context) (int32, error) {
 		return t.testOnce(ctx, instance, detour)
 	})
 }

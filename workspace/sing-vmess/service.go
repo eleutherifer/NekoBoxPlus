@@ -13,7 +13,6 @@ import (
 	"io"
 	"math"
 	"net"
-	"sync"
 	"time"
 	"unsafe"
 
@@ -55,17 +54,6 @@ type Service[U comparable] struct {
 	alterIdMap           map[[16]byte]legacyUserEntry[U]
 	alterIdUpdateTask    *time.Ticker
 	alterIdUpdateDone    chan struct{}
-	connections          map[U]map[*trackedConnection[U]]struct{}
-	userRevision         uint64
-
-	userAccess sync.RWMutex
-}
-
-type trackedConnection[U comparable] struct {
-	net.Conn
-	service *Service[U]
-	user    U
-	once    sync.Once
 }
 
 type legacyUserEntry[U comparable] struct {
@@ -79,7 +67,6 @@ func NewService[U comparable](handler Handler, options ...ServiceOption) *Servic
 		replayFilter: replay.NewSimple(time.Second * 120),
 		handler:      handler,
 		time:         time.Now,
-		connections:  make(map[U]map[*trackedConnection[U]]struct{}),
 	}
 	anyService := (*Service[string])(unsafe.Pointer(service))
 	for _, option := range options {
@@ -116,35 +103,17 @@ func (s *Service[U]) UpdateUsers(userList []U, userIdList []string, alterIdList 
 			userAlterIds[user] = alterIds
 		}
 	}
-	s.userAccess.Lock()
 	s.userKey = userKeyMap
 	s.userIdCipher = userIdCipherMap
 	s.alterIds = userAlterIds
 	s.alterIdUpdateTime = make(map[U]int64)
-	s.generateLegacyKeysLocked()
-	s.userRevision++
-	var removedConnections []*trackedConnection[U]
-	for user, connections := range s.connections {
-		if _, loaded := userKeyMap[user]; !loaded {
-			for connection := range connections {
-				removedConnections = append(removedConnections, connection)
-			}
-			delete(s.connections, user)
-		}
-	}
-	s.userAccess.Unlock()
-	for _, connection := range removedConnections {
-		_ = connection.Close()
-	}
+	s.generateLegacyKeys()
 	return nil
 }
 
 func (s *Service[U]) Start() error {
 	const updateInterval = 10 * time.Second
-	s.userAccess.RLock()
-	hasAlterIds := len(s.alterIds) > 0
-	s.userAccess.RUnlock()
-	if hasAlterIds {
+	if len(s.alterIds) > 0 {
 		s.alterIdUpdateTask = time.NewTicker(updateInterval)
 		s.alterIdUpdateDone = make(chan struct{})
 		go s.loopGenerateLegacyKeys()
@@ -167,13 +136,11 @@ func (s *Service[U]) loopGenerateLegacyKeys() {
 			return
 		case <-s.alterIdUpdateTask.C:
 		}
-		s.userAccess.Lock()
-		s.generateLegacyKeysLocked()
-		s.userAccess.Unlock()
+		s.generateLegacyKeys()
 	}
 }
 
-func (s *Service[U]) generateLegacyKeysLocked() {
+func (s *Service[U]) generateLegacyKeys() {
 	nowSec := s.time().Unix()
 	endSec := nowSec + CacheDurationSeconds
 	var hashValue [16]byte
@@ -205,10 +172,7 @@ func (s *Service[U]) NewConnection(ctx context.Context, conn net.Conn, source M.
 	const headerLenBufferLen = 2 + CipherOverhead
 	const aeadMinHeaderLen = 16 + headerLenBufferLen + 8 + CipherOverhead + 42
 	minHeaderLen := aeadMinHeaderLen
-	s.userAccess.RLock()
-	hasAlterIds := len(s.alterIds) > 0
-	s.userAccess.RUnlock()
-	if hasAlterIds {
+	if len(s.alterIds) > 0 {
 		minHeaderLen = 16 + 38
 	}
 
@@ -234,9 +198,6 @@ func (s *Service[U]) NewConnection(ctx context.Context, conn net.Conn, source M.
 	var decodedId [16]byte
 	var user U
 	var found bool
-	var cmdKey [16]byte
-	var userRevision uint64
-	s.userAccess.RLock()
 	for currUser, userIdBlock := range s.userIdCipher {
 		userIdBlock.Decrypt(decodedId[:], authId)
 		timestamp := int64(binary.BigEndian.Uint64(decodedId[:]))
@@ -245,11 +206,9 @@ func (s *Service[U]) NewConnection(ctx context.Context, conn net.Conn, source M.
 			continue
 		}
 		if math.Abs(math.Abs(float64(timestamp))-float64(time.Now().Unix())) > 120 {
-			s.userAccess.RUnlock()
 			return ErrBadTimestamp
 		}
 		if !s.replayFilter.Check(decodedId[:]) {
-			s.userAccess.RUnlock()
 			return ErrReplay
 		}
 		user = currUser
@@ -269,14 +228,11 @@ func (s *Service[U]) NewConnection(ctx context.Context, conn net.Conn, source M.
 		}
 	}
 	if !found {
-		s.userAccess.RUnlock()
 		return ErrBadRequest
 	}
 
 	ctx = auth.ContextWithUser(ctx, user)
-	cmdKey = s.userKey[user]
-	userRevision = s.userRevision
-	s.userAccess.RUnlock()
+	cmdKey := s.userKey[user]
 	var headerReader io.Reader
 	var headerBuffer []byte
 
@@ -387,12 +343,8 @@ func (s *Service[U]) NewConnection(ctx context.Context, conn net.Conn, source M.
 	if option&RequestOptionChunkStream != 0 && command == CommandTCP || command == CommandMux {
 		reader = bufio.NewChunkReader(reader, ReadChunkSize)
 	}
-	trackedConn, loaded := s.trackConnection(user, userRevision, conn)
-	if !loaded {
-		return ErrBadRequest
-	}
 	rawConn := rawServerConn{
-		Conn:           trackedConn,
+		Conn:           conn,
 		legacyProtocol: legacyProtocol,
 		requestKey:     requestBodyKey,
 		requestNonce:   requestBodyNonce,
@@ -404,62 +356,15 @@ func (s *Service[U]) NewConnection(ctx context.Context, conn net.Conn, source M.
 
 	switch command {
 	case CommandTCP:
-		s.handler.NewConnectionEx(ctx, &serverConn{rawConn}, source, destination, trackedConn.onClose(onClose))
+		s.handler.NewConnectionEx(ctx, &serverConn{rawConn}, source, destination, onClose)
 	case CommandUDP:
-		s.handler.NewPacketConnectionEx(ctx, &serverPacketConn{rawConn, destination}, source, destination, trackedConn.onClose(onClose))
+		s.handler.NewPacketConnectionEx(ctx, &serverPacketConn{rawConn, destination}, source, destination, onClose)
 	case CommandMux:
-		defer trackedConn.remove()
 		return HandleMuxConnection(ctx, &serverConn{rawConn}, source, s.handler)
 	default:
 		return E.New("unknown command: ", command)
 	}
 	return nil
-}
-
-func (s *Service[U]) trackConnection(user U, revision uint64, conn net.Conn) (*trackedConnection[U], bool) {
-	s.userAccess.Lock()
-	defer s.userAccess.Unlock()
-	if revision != s.userRevision {
-		return nil, false
-	}
-	trackedConn := &trackedConnection[U]{
-		Conn:    conn,
-		service: s,
-		user:    user,
-	}
-	connections := s.connections[user]
-	if connections == nil {
-		connections = make(map[*trackedConnection[U]]struct{})
-		s.connections[user] = connections
-	}
-	connections[trackedConn] = struct{}{}
-	return trackedConn, true
-}
-
-func (c *trackedConnection[U]) remove() {
-	c.once.Do(func() {
-		c.service.userAccess.Lock()
-		connections := c.service.connections[c.user]
-		delete(connections, c)
-		if len(connections) == 0 {
-			delete(c.service.connections, c.user)
-		}
-		c.service.userAccess.Unlock()
-	})
-}
-
-func (c *trackedConnection[U]) onClose(parent N.CloseHandlerFunc) N.CloseHandlerFunc {
-	return N.OnceClose(func(err error) {
-		c.remove()
-		if parent != nil {
-			parent(err)
-		}
-	})
-}
-
-func (c *trackedConnection[U]) Close() error {
-	c.remove()
-	return c.Conn.Close()
 }
 
 var _ N.EarlyWriter = (*rawServerConn)(nil)
@@ -537,10 +442,6 @@ func (c *rawServerConn) FrontHeadroom() int {
 
 func (c *rawServerConn) RearHeadroom() int {
 	return MaxRearHeadroom
-}
-
-func (c *rawServerConn) ReaderOverhead() int {
-	return ReaderOverhead(c.security, c.option)
 }
 
 func (c *rawServerConn) NeedHandshakeForWrite() bool {

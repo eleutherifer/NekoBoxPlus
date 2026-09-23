@@ -36,7 +36,7 @@ interface ISagerNetService {
   boolean hasCoreProfilerSnapshot();
   void performLibcoreGcSweep();
   void triggerLibcoreCrash(String crashType);
-  void startCoreProfiling(int mode);
+  void startCoreProfiling();
   void stopCoreProfiling();
   void writeCoreProfilerSnapshot(String outputDir);
   void deleteCoreProfilerSnapshot();

@@ -104,26 +104,4 @@ class RawUpdaterTest {
         assertEquals("body", responseOrBodyHeader("", "body"))
         assertEquals("body", responseOrBodyHeader("   ", "body"))
     }
-
-    @Test
-    fun `reads banner and support metadata from body headers`() {
-        val headers = parseXraySubscriptionBodyHeaders(
-            """
-                # announce: base64:U2NoZWR1bGVkIG1haW50ZW5hbmNl
-                # announce-url: https://status.example.com
-                # support-url: https://support.example.com
-                # support-email: support@example.com
-                # profile-web-page-url: https://account.example.com
-                # homepage: https://example.com
-                vless://example
-            """.trimIndent(),
-        )
-
-        assertEquals("base64:U2NoZWR1bGVkIG1haW50ZW5hbmNl", headers.announcement)
-        assertEquals("https://status.example.com", headers.announcementUrl)
-        assertEquals("https://support.example.com", headers.supportUrl)
-        assertEquals("support@example.com", headers.supportEmail)
-        assertEquals("https://account.example.com", headers.profileWebPageUrl)
-        assertEquals("https://example.com", headers.homepage)
-    }
 }

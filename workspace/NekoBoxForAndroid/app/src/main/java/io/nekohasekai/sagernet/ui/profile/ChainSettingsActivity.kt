@@ -330,7 +330,7 @@ class ChainSettingsActivity : ProfileSettingsActivity<ChainBean>(R.layout.layout
         fun bind(proxyEntity: ProxyEntity) {
 
             profileName.text = proxyEntity.displayName()
-            profileType.text = proxyEntity.profileCardType(DataStore.shortProfileProtocolInfo)
+            profileType.text = proxyEntity.profileCardType()
             profileType.setTextColor(getProtocolColor(proxyEntity.type))
             profileCard.bindProfileSecurity(
                 proxyEntity,

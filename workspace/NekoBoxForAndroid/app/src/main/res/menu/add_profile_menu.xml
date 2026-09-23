@@ -1,11 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
     <item
         android:id="@+id/action_search"
         android:title="@android:string/search_go"
         app:actionViewClass="androidx.appcompat.widget.SearchView"
         app:showAsAction="always" />
+
+    <item
+        android:id="@+id/action_toolbar_update_subscription"
+        android:icon="@drawable/ic_baseline_update_24"
+        android:title="@string/update_current_subscription"
+        android:visible="false"
+        app:showAsAction="always"
+        tools:ignore="AlwaysShowAction" />
+
+    <item
+        android:id="@+id/action_toolbar_connection_icmp_ping"
+        android:icon="@drawable/ic_baseline_network_ping_24"
+        android:title="@string/connection_test_icmp_ping"
+        android:visible="false"
+        app:showAsAction="always"
+        tools:ignore="AlwaysShowAction" />
+
+    <item
+        android:id="@+id/action_toolbar_connection_tcp_ping"
+        android:icon="@drawable/ic_baseline_speed_24"
+        android:title="@string/connection_test_tcp_ping"
+        android:visible="false"
+        app:showAsAction="always"
+        tools:ignore="AlwaysShowAction" />
+
+    <item
+        android:id="@+id/action_toolbar_connection_url_test"
+        android:icon="@drawable/ic_baseline_shutter_speed_24"
+        android:title="@string/connection_test_url_test"
+        android:visible="false"
+        app:showAsAction="always"
+        tools:ignore="AlwaysShowAction" />
+
+    <item
+        android:id="@+id/action_toolbar_connection_test_delete_unavailable"
+        android:icon="@drawable/baseline_delete_sweep_24"
+        android:title="@string/connection_test_delete_unavailable"
+        android:visible="false"
+        app:showAsAction="always"
+        tools:ignore="AlwaysShowAction" />
 
     <item
         android:id="@+id/action_add"
@@ -125,9 +166,7 @@
             <item
                 android:id="@+id/action_update_subscription"
                 android:title="@string/update_current_subscription" />
-            <item
-                android:id="@+id/action_statistics_menu"
-                android:title="@string/statistics">
+            <item android:title="@string/statistics">
                 <menu>
                     <item
                         android:id="@+id/action_clear_traffic_statistics"
@@ -137,9 +176,7 @@
                         android:title="@string/connection_test_clear_results" />
                 </menu>
             </item>
-            <item
-                android:id="@+id/action_delete_menu"
-                android:title="@string/delete">
+            <item android:title="@string/delete">
                 <menu>
                     <item
                         android:id="@+id/action_remove_duplicate"
@@ -222,9 +259,6 @@
                         <item
                             android:id="@+id/action_layout_compact"
                             android:title="@string/layout_compact" />
-                        <item
-                            android:id="@+id/action_layout_alternate"
-                            android:title="@string/layout_alternate" />
                     </group>
                 </menu>
             </item>

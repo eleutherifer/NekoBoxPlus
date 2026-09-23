@@ -156,7 +156,6 @@ object RoutingImportManager {
     private fun RoutingProfileFormat.label(context: Context) = context.getString(
         when (this) {
             RoutingProfileFormat.HAPP -> R.string.routing_format_happ
-            RoutingProfileFormat.V2RAY_TUN -> R.string.routing_format_v2ray_tun
             RoutingProfileFormat.INCY -> R.string.routing_format_incy
             RoutingProfileFormat.NEKOBOX_PLUS -> R.string.routing_format_nekobox_plus
         },

@@ -60,19 +60,19 @@ func (c *CommonConn) Write(b []byte) (int, error) {
 	defer c.writeAccess.Unlock()
 	outBytes := OutBytesPool.Get().([]byte)
 	defer OutBytesPool.Put(outBytes)
-	written := 0
-	for written < len(b) {
-		chunk := b[written:]
-		if len(chunk) > 8192 {
-			chunk = chunk[:8192] // for avoiding another copy() in peer's Read()
+	for n := 0; n < len(b); {
+		b := b[n:]
+		if len(b) > 8192 {
+			b = b[:8192] // for avoiding another copy() in peer's Read()
 		}
-		headerAndData := outBytes[:5+len(chunk)+16]
-		EncodeHeader(headerAndData, len(chunk)+16)
+		n += len(b)
+		headerAndData := outBytes[:5+len(b)+16]
+		EncodeHeader(headerAndData, len(b)+16)
 		max := false
 		if bytes.Equal(c.AEAD.Nonce[:], MaxNonce) {
 			max = true
 		}
-		c.AEAD.Seal(headerAndData[:5], nil, chunk, headerAndData[:5])
+		c.AEAD.Seal(headerAndData[:5], nil, b, headerAndData[:5])
 		if max {
 			c.AEAD = NewAEAD(headerAndData, c.UnitedKey, c.UseAES)
 		}
@@ -80,28 +80,11 @@ func (c *CommonConn) Write(b []byte) (int, error) {
 			headerAndData = append(c.PreWrite, headerAndData...)
 			c.PreWrite = nil
 		}
-		if err := writeFull(c.Conn, headerAndData); err != nil {
-			return written, err
-		}
-		written += len(chunk)
-	}
-	return written, nil
-}
-
-func writeFull(writer io.Writer, data []byte) error {
-	for len(data) > 0 {
-		n, err := writer.Write(data)
-		if n > 0 {
-			data = data[n:]
-		}
-		if err != nil {
-			return err
-		}
-		if n == 0 {
-			return io.ErrShortWrite
+		if _, err := c.Conn.Write(headerAndData); err != nil {
+			return 0, err
 		}
 	}
-	return nil
+	return len(b), nil
 }
 
 func (c *CommonConn) Read(b []byte) (int, error) {
@@ -125,7 +108,7 @@ func (c *CommonConn) Read(b []byte) (int, error) {
 			return 0, err
 		}
 		if _, err := c.PeerAEAD.Open(c.PeerPadding[:0], nil, c.PeerPadding, nil); err != nil {
-			return 0, E.Cause(err, "decrypt server handshake padding")
+			return 0, err
 		}
 		c.PeerPadding = nil
 	}
@@ -169,7 +152,7 @@ func (c *CommonConn) Read(b []byte) (int, error) {
 		c.PeerAEAD = newAEAD
 	}
 	if err != nil {
-		return 0, E.Cause(err, "decrypt peer record")
+		return 0, err
 	}
 	if len(dst) > len(b) {
 		c.input.Reset(dst[copy(b, dst):])

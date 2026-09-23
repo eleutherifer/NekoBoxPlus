@@ -10,7 +10,6 @@ import io.nekohasekai.sagernet.CONNECTION_GROUP_TEST_URL
 import io.nekohasekai.sagernet.CONNECTION_IP_RESOLVE_URL
 import io.nekohasekai.sagernet.CONNECTION_TEST_URL
 import io.nekohasekai.sagernet.CertProvider
-import io.nekohasekai.sagernet.CoreProfilerMode
 import io.nekohasekai.sagernet.ExclaveFragmentationMethod
 import io.nekohasekai.sagernet.IPv6Mode
 import io.nekohasekai.sagernet.Key
@@ -31,10 +30,8 @@ import io.nekohasekai.sagernet.ktx.positiveStringToIntCompat
 import io.nekohasekai.sagernet.ktx.string
 import io.nekohasekai.sagernet.ktx.stringSet
 import io.nekohasekai.sagernet.ktx.stringToInt
-import io.nekohasekai.sagernet.utils.SubscriptionTrafficUnit
 import io.nekohasekai.sagernet.ktx.stringToIntIfExists
 import io.nekohasekai.sagernet.ktx.stringToLong
-import io.nekohasekai.sagernet.ui.LegacyMainViewPolicy
 import moe.matsuri.nb4a.TempDatabase
 import moe.matsuri.nb4a.utils.NGUtil.isPureIpAddress
 import moe.matsuri.nb4a.utils.Util
@@ -43,7 +40,6 @@ import java.io.File
 object DataStore : OnPreferenceDataStoreChangeListener {
     private const val DEVICE_LOCAL_PREFERENCES = "device_local"
     private const val BATTERY_OPTIMIZATION_PROMPT_ASKED = "batteryOptimizationPromptAsked"
-    private const val LAST_STARTED_VERSION_CODE = "lastStartedVersionCode"
     const val CLASH_API_HOST = "127.0.0.1"
     const val CLASH_API_DASHBOARD_HOST = "core"
     const val CLASH_API_PORT = 9090
@@ -81,20 +77,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
         get() = deviceLocalPreferences.getBoolean(BATTERY_OPTIMIZATION_PROMPT_ASKED, false)
         set(value) = deviceLocalPreferences.edit {
             putBoolean(BATTERY_OPTIMIZATION_PROMPT_ASKED, value)
-        }
-
-    var lastStartedVersionCode: Int?
-        get() = if (deviceLocalPreferences.contains(LAST_STARTED_VERSION_CODE)) {
-            deviceLocalPreferences.getInt(LAST_STARTED_VERSION_CODE, 0)
-        } else {
-            null
-        }
-        set(value) = deviceLocalPreferences.edit(commit = true) {
-            if (value == null) {
-                remove(LAST_STARTED_VERSION_CODE)
-            } else {
-                putInt(LAST_STARTED_VERSION_CODE, value)
-            }
         }
 
     // last used, but may not be running
@@ -211,16 +193,10 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var nightTheme by configurationStore.stringToInt(Key.NIGHT_THEME)
     var appLanguage by configurationStore.string(Key.APP_LANGUAGE) { "" }
     var useToolbar by configurationStore.boolean(Key.USE_TOOLBAR)
-    var toolbarLayout by configurationStore.string(Key.TOOLBAR_LAYOUT) { "" }
     var showProfileCountOnTabs by configurationStore.boolean(Key.SHOW_PROFILE_COUNT_ON_TABS)
-    var tabDoubleTapToNavigate by configurationStore.boolean(Key.TAB_DOUBLE_TAP_TO_NAVIGATE) { true }
-    var shortProfileProtocolInfo by configurationStore.boolean(Key.SHORT_PROFILE_PROTOCOL_INFO)
     var dontHighlightInsecureProfiles by configurationStore.boolean(Key.DONT_HIGHLIGHT_INSECURE_PROFILES)
     var showBottomBarInSettings by configurationStore.boolean(Key.SHOW_BOTTOM_BAR_IN_SETTINGS)
     var compactStatsBar by configurationStore.boolean(Key.COMPACT_STATS_BAR)
-    var legacyMainView by configurationStore.boolean(Key.LEGACY_MAIN_VIEW) {
-        LegacyMainViewPolicy.defaultEnabled()
-    }
     var automaticConnectionCheck by configurationStore.boolean(Key.AUTOMATIC_CONNECTION_CHECK) { true }
     var enableGroupUpdateDialog by configurationStore.boolean(Key.ENABLE_GROUP_UPDATE_DIALOG) { true }
     var openGroupSettingsOnLongPress by configurationStore.boolean(Key.OPEN_GROUP_SETTINGS_ON_LONG_PRESS) { true }
@@ -237,9 +213,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var allowAccess by configurationStore.boolean(Key.ALLOW_ACCESS)
     var speedInterval by configurationStore.stringToInt(Key.SPEED_INTERVAL)
     var profileTrafficUpdateInterval by configurationStore.stringToInt(Key.PROFILE_TRAFFIC_UPDATE_INTERVAL)
-    var subscriptionTrafficUnit by configurationStore.stringToInt(Key.SUBSCRIPTION_TRAFFIC_UNIT) {
-        SubscriptionTrafficUnit.DECIMAL
-    }
     var showGroupInNotification by configurationStore.boolean("showGroupInNotification")
     var persistentStatusNotification by configurationStore.boolean(Key.PERSISTENT_STATUS_NOTIFICATION)
 
@@ -272,7 +245,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var logLevel by configurationStore.stringToInt(Key.LOG_LEVEL)
     var logBufSize by configurationStore.int(Key.LOG_BUF_SIZE) { 0 }
     var enableCoreProfiling by configurationStore.boolean(Key.ENABLE_CORE_PROFILING)
-    var coreProfilerMode by configurationStore.stringToInt(Key.CORE_PROFILER_MODE) { CoreProfilerMode.CPU }
     var connectionGuard by configurationStore.boolean(Key.CONNECTION_GUARD) { false }
     var coreRecoveryExpectedStop by configurationStore.boolean(Key.CORE_RECOVERY_EXPECTED_STOP) { true }
     var overloadWatchdog by configurationStore.boolean(Key.OVERLOAD_WATCHDOG) { false }
@@ -403,8 +375,8 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var connectionGroupTestURL by configurationStore.string(Key.CONNECTION_GROUP_TEST_URL) { CONNECTION_GROUP_TEST_URL }
     var connectionIPResolveURL by configurationStore.string(Key.CONNECTION_IP_RESOLVE_URL) { CONNECTION_IP_RESOLVE_URL }
     var connectionTestConcurrent by configurationStore.positiveStringToIntCompat(Key.CONNECTION_TEST_CONCURRENT) { 5 }
-    var connectionTestTimeout by configurationStore.positiveStringToIntCompat(Key.CONNECTION_TEST_TIMEOUT) { 10000 }
-    var connectionGroupTestTimeout by configurationStore.positiveStringToIntCompat(Key.CONNECTION_GROUP_TEST_TIMEOUT) { 4500 }
+    var connectionTestTimeout by configurationStore.positiveStringToIntCompat(Key.CONNECTION_TEST_TIMEOUT) { 5000 }
+    var connectionGroupTestTimeout by configurationStore.positiveStringToIntCompat(Key.CONNECTION_GROUP_TEST_TIMEOUT) { 3000 }
     var connectionTestAttempts by configurationStore.stringToInt(Key.CONNECTION_TEST_ATTEMPTS) { 1 }
     var connectionTestPause by configurationStore.positiveStringToIntCompat(Key.CONNECTION_TEST_PAUSE) { 50 }
     var connectionTestHardened by configurationStore.boolean(Key.CONNECTION_TEST_HARDENED)
@@ -603,9 +575,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var subscriptionHwidEnabled by profileCacheStore.boolean(Key.SUBSCRIPTION_HWID_ENABLED)
     var subscriptionSpoofApp by profileCacheStore.stringToInt(Key.SUBSCRIPTION_SPOOF_APP) { 0 }
     var subscriptionServerDns by profileCacheStore.string(Key.SUBSCRIPTION_SERVER_DNS)
-    var subscriptionBannerLayout by profileCacheStore.stringSet(Key.SUBSCRIPTION_BANNER_LAYOUT)
-    var subscriptionRoutingEnabled by profileCacheStore.boolean(Key.SUBSCRIPTION_ROUTING_ENABLED)
-    var subscriptionRoutingInterval by profileCacheStore.stringToInt(Key.SUBSCRIPTION_ROUTING_INTERVAL) { 86400 }
 
     var rulesFirstCreate by profileCacheStore.boolean("rulesFirstCreate")
     var proxyAppsFirstSetup by configurationStore.boolean("proxyAppsFirstSetup")

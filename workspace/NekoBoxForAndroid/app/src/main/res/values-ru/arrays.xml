@@ -1014,7 +1014,6 @@
         <item>@string/spoof_app_none</item>
         <item>Happ</item>
         <item>v2RayTun</item>
-        <item>Incy</item>
     </string-array>
 
     <string-array name="ssh_auth_type">
@@ -1390,12 +1389,5 @@
         <item>0</item>
         <item>1</item>
         <item>2</item>
-    </string-array>
-    <string-array name="subscription_banner_layout_entry">
-        <item>@string/subscription_banner_announcements</item>
-        <item>@string/subscription_banner_announcement_urls</item>
-        <item>@string/subscription_banner_traffic_text</item>
-        <item>@string/subscription_banner_traffic_bar</item>
-        <item>@string/subscription_banner_clickable</item>
     </string-array>
 </resources>

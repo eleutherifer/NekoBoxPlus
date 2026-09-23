@@ -27,14 +27,6 @@ public class SubscriptionBean extends Serializable {
     public Boolean hwidEnabled;
     public Integer spoofApp;
     public String serverDnsResolver;
-    public Integer bannerLayout;
-    public Boolean routingEnabled;
-    public String routingPayload;
-    public String routingFormat;
-    public String autoRoutingUrl;
-    public Integer routingUpdateInterval;
-    public Long routingLastUpdated;
-    public Boolean routingOff;
 
     // SIP008
 
@@ -51,19 +43,13 @@ public class SubscriptionBean extends Serializable {
     // https://github.com/crossutility/Quantumult/blob/master/extra-subscription-feature.md
 
     public String subscriptionUserinfo;
-    public String announcement;
-    public String announcementUrl;
-    public String supportUrl;
-    public String supportEmail;
-    public String profileWebPageUrl;
-    public String homepage;
 
     public SubscriptionBean() {
     }
 
     @Override
     public void serializeToBuffer(ByteBufferOutput output) {
-        output.writeInt(6);
+        output.writeInt(4);
 
         output.writeInt(type);
 
@@ -89,28 +75,10 @@ public class SubscriptionBean extends Serializable {
 
         // v4
         output.writeString(serverDnsResolver);
-
-        // v5
-        output.writeInt(bannerLayout);
-        output.writeString(announcement);
-        output.writeString(announcementUrl);
-        output.writeString(supportUrl);
-        output.writeString(supportEmail);
-        output.writeString(profileWebPageUrl);
-        output.writeString(homepage);
-
-        // v6
-        output.writeBoolean(routingEnabled);
-        output.writeString(routingPayload);
-        output.writeString(routingFormat);
-        output.writeString(autoRoutingUrl);
-        output.writeInt(routingUpdateInterval);
-        output.writeLong(routingLastUpdated);
-        output.writeBoolean(routingOff);
     }
 
     public void serializeForShare(ByteBufferOutput output) {
-        output.writeInt(1);
+        output.writeInt(0);
 
         output.writeInt(type);
 
@@ -120,9 +88,6 @@ public class SubscriptionBean extends Serializable {
         output.writeBoolean(deduplication);
         output.writeBoolean(updateWhenConnectedOnly);
         output.writeString(customUserAgent);
-
-        // v1
-        output.writeInt(bannerLayout);
     }
 
     @Override
@@ -156,26 +121,6 @@ public class SubscriptionBean extends Serializable {
         if (version >= 4) {
             serverDnsResolver = input.readString();
         }
-
-        // v5
-        if (version >= 5) {
-            bannerLayout = input.readInt();
-            announcement = input.readString();
-            announcementUrl = input.readString();
-            supportUrl = input.readString();
-            supportEmail = input.readString();
-            profileWebPageUrl = input.readString();
-            homepage = input.readString();
-        }
-        if (version >= 6) {
-            routingEnabled = input.readBoolean();
-            routingPayload = input.readString();
-            routingFormat = input.readString();
-            autoRoutingUrl = input.readString();
-            routingUpdateInterval = input.readInt();
-            routingLastUpdated = input.readLong();
-            routingOff = input.readBoolean();
-        }
     }
 
     public void deserializeFromShare(ByteBufferInput input) {
@@ -187,10 +132,6 @@ public class SubscriptionBean extends Serializable {
         deduplication = input.readBoolean();
         updateWhenConnectedOnly = input.readBoolean();
         customUserAgent = input.readString();
-
-        if (version >= 1) {
-            bannerLayout = input.readInt();
-        }
     }
 
     @Override
@@ -210,20 +151,6 @@ public class SubscriptionBean extends Serializable {
         if (hwidEnabled == null) hwidEnabled = false;
         if (spoofApp == null) spoofApp = 0;
         if (serverDnsResolver == null) serverDnsResolver = "";
-        if (bannerLayout == null) bannerLayout = 31;
-        if (announcement == null) announcement = "";
-        if (announcementUrl == null) announcementUrl = "";
-        if (supportUrl == null) supportUrl = "";
-        if (supportEmail == null) supportEmail = "";
-        if (profileWebPageUrl == null) profileWebPageUrl = "";
-        if (homepage == null) homepage = "";
-        if (routingEnabled == null) routingEnabled = false;
-        if (routingPayload == null) routingPayload = "";
-        if (routingFormat == null) routingFormat = "";
-        if (autoRoutingUrl == null) autoRoutingUrl = "";
-        if (routingUpdateInterval == null) routingUpdateInterval = 86400;
-        if (routingLastUpdated == null) routingLastUpdated = 0L;
-        if (routingOff == null) routingOff = false;
 
         if (bytesUsed == null) bytesUsed = 0L;
         if (bytesRemaining == null) bytesRemaining = 0L;

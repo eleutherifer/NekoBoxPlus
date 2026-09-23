@@ -496,11 +496,11 @@ class BaseService {
             }
         }
 
-        override fun startCoreProfiling(mode: Int) {
+        override fun startCoreProfiling() {
             if (data?.proxy?.isInitialized() != true) {
                 error("Core is not started yet")
             }
-            Libcore.startCoreProfiling(mode)
+            Libcore.startCoreProfiling()
         }
 
         override fun stopCoreProfiling() {
@@ -1260,7 +1260,7 @@ class BaseService {
                         }
                         DataStore.currentProfile = profile.id
                         if (DataStore.enableCoreProfiling) {
-                            Libcore.startCoreProfiling(DataStore.coreProfilerMode)
+                            Libcore.startCoreProfiling()
                         }
                         data.changeState(State.Connected)
                         data.pendingRestartOrigin = ServiceRestartOrigin.Manual

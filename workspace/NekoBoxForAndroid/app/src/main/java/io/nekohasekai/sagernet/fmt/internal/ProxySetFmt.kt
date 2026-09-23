@@ -1,23 +1,12 @@
 package io.nekohasekai.sagernet.fmt.internal
 
-import io.nekohasekai.sagernet.database.ProxyEntity
-import io.nekohasekai.sagernet.database.isInsecureProfile
 import moe.matsuri.nb4a.SingBoxOptions
-
-fun ProxySetBean.filterInsecureProfiles(
-    profiles: List<ProxyEntity>,
-    globalAllowInsecure: Boolean,
-): List<ProxyEntity> {
-    if (!skipInsecureProfiles) return profiles
-    return profiles.filterNot { it.isInsecureProfile(globalAllowInsecure) }
-}
 
 fun buildSingBoxOutboundProxySetBean(
     bean: ProxySetBean,
     outboundsByProfileId: Map<Long, String>,
 ): SingBoxOptions.Outbound {
     val outbounds = outboundsByProfileId.values.toList()
-    require(outbounds.isNotEmpty()) { "Proxy set has no eligible profiles" }
     if (bean.mode == ProxySetBean.MODE_SELECTOR) {
         return SingBoxOptions.Outbound_SelectorOptions().apply {
             type = "selector"
