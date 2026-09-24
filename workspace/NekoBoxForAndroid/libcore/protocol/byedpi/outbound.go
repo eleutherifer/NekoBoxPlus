@@ -177,14 +177,11 @@ func privateHandshake(
 		_ = conn.SetDeadline(deadline)
 	}
 	_, err := socks.ClientHandshake5(conn, command, destination, "", "")
-	if !stopCancellation() {
-		if contextErr := ctx.Err(); contextErr != nil {
-			err = contextErr
-		}
+	if !stopCancellation() && err == nil {
+		err = ctx.Err()
 	}
 	if err == nil {
 		_ = conn.SetDeadline(time.Time{})
-		return nil
 	}
-	return fmt.Errorf("ByeDPI SOCKS handshake: %w", err)
+	return err
 }

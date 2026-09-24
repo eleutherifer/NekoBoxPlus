@@ -49,8 +49,6 @@ int byedpi_android_control_mode(void) {
 }
 
 int byedpi_android_receive_client(int control_fd, int *stream_fd, int *udp_fd) {
-    *stream_fd = -1;
-    *udp_fd = -1;
     uint8_t command = 0;
     struct iovec iov = {
         .iov_base = &command,
@@ -71,29 +69,22 @@ int byedpi_android_receive_client(int control_fd, int *stream_fd, int *udp_fd) {
         return -1;
     }
     struct cmsghdr *header = CMSG_FIRSTHDR(&message);
-    size_t descriptor_count = 0;
-    int *descriptors = NULL;
-    if (header != NULL &&
-            header->cmsg_level == SOL_SOCKET &&
-            header->cmsg_type == SCM_RIGHTS &&
-            header->cmsg_len >= CMSG_LEN(0) &&
-            header->cmsg_len <= sizeof(control)) {
-        descriptor_count =
-            (header->cmsg_len - CMSG_LEN(0)) / sizeof(int);
-        descriptors = (int *)CMSG_DATA(header);
+    if (header == NULL || header->cmsg_level != SOL_SOCKET ||
+            header->cmsg_type != SCM_RIGHTS) {
+        return -1;
     }
-    if ((message.msg_flags & (MSG_TRUNC | MSG_CTRUNC)) != 0 ||
-            (command != 1 && command != 2) ||
-            descriptors == NULL ||
-            descriptor_count != (command == 2 ? 2 : 1) ||
-            CMSG_NXTHDR(&message, header) != NULL) {
+    size_t descriptor_count =
+        (header->cmsg_len - CMSG_LEN(0)) / sizeof(int);
+    int *descriptors = (int *)CMSG_DATA(header);
+    size_t expected_count = command == 2 ? 2 : 1;
+    if (descriptor_count != expected_count) {
         for (size_t i = 0; i < descriptor_count; i++) {
             close(descriptors[i]);
         }
         return 1;
     }
     *stream_fd = descriptors[0];
-    *udp_fd = command == 2 ? descriptors[1] : -1;
+    *udp_fd = expected_count == 2 ? descriptors[1] : -1;
     return 0;
 }
 
@@ -161,9 +152,7 @@ struct byedpi_runner *byedpi_runner_start(int argc, char **argv) {
     runner->event_fd = -1;
     runner->private_mode = 1;
     int control_pair[2];
-    if (socketpair(
-            AF_UNIX, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC,
-            0, control_pair) != 0) {
+    if (socketpair(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0, control_pair) != 0) {
         free(runner);
         return NULL;
     }
@@ -216,19 +205,13 @@ int byedpi_runner_open_connection(
     if (runner == NULL || stream_fd == NULL || udp_fd == NULL) {
         return -1;
     }
-    *stream_fd = -1;
-    *udp_fd = -1;
     int stream_pair[2] = {-1, -1};
     int datagram_pair[2] = {-1, -1};
-    if (socketpair(
-            AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC,
-            0, stream_pair) != 0) {
+    if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, stream_pair) != 0) {
         return -1;
     }
     if (with_udp &&
-            socketpair(
-                AF_UNIX, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC,
-                0, datagram_pair) != 0) {
+            socketpair(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0, datagram_pair) != 0) {
         close(stream_pair[0]);
         close(stream_pair[1]);
         return -1;

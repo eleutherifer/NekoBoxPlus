@@ -704,31 +704,28 @@ static int on_accept(struct poolhd *pool, struct eval *val, int et)
 #ifdef ANDROID_APP
 static int on_android_control(struct poolhd *pool, struct eval *val, int et)
 {
-    while (1) {
-        int client_fd = -1;
-        int udp_fd = -1;
-        int result = byedpi_android_receive_client(
-            val->fd, &client_fd, &udp_fd);
-        if (result > 0) {
-            return 0;
-        }
-        if (result < 0) {
-            pool->brk = true;
-            return 0;
-        }
-        struct eval *client = add_event(
-            pool, &on_request, client_fd, POLLIN);
-        if (!client) {
-            close(client_fd);
-            if (udp_fd >= 0) {
-                close(udp_fd);
-            }
-            continue;
-        }
-        client->addr.in.sin_family = AF_INET;
-        client->addr.in.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-        client->injected_udp_fd = udp_fd;
+    int client_fd = -1;
+    int udp_fd = -1;
+    int result = byedpi_android_receive_client(val->fd, &client_fd, &udp_fd);
+    if (result > 0) {
+        return 0;
     }
+    if (result < 0) {
+        pool->brk = true;
+        return 0;
+    }
+    struct eval *client = add_event(pool, &on_request, client_fd, POLLIN);
+    if (!client) {
+        close(client_fd);
+        if (udp_fd >= 0) {
+            close(udp_fd);
+        }
+        return 0;
+    }
+    client->addr.in.sin_family = AF_INET;
+    client->addr.in.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    client->injected_udp_fd = udp_fd;
+    return 0;
 }
 #endif
 

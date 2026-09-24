@@ -279,45 +279,42 @@ index 5b96d3c..21b6999 100644
      }
      struct s5_req s5r = { 
          .ver = 0x05 
-@@ -659,6 +701,37 @@ static int on_accept(struct poolhd *pool, struct eval *val, int et)
+@@ -659,6 +701,34 @@ static int on_accept(struct poolhd *pool, struct eval *val, int et)
      return 0;
  }
  
 +#ifdef ANDROID_APP
 +static int on_android_control(struct poolhd *pool, struct eval *val, int et)
 +{
-+    while (1) {
-+        int client_fd = -1;
-+        int udp_fd = -1;
-+        int result = byedpi_android_receive_client(
-+            val->fd, &client_fd, &udp_fd);
-+        if (result > 0) {
-+            return 0;
-+        }
-+        if (result < 0) {
-+            pool->brk = true;
-+            return 0;
-+        }
-+        struct eval *client = add_event(
-+            pool, &on_request, client_fd, POLLIN);
-+        if (!client) {
-+            close(client_fd);
-+            if (udp_fd >= 0) {
-+                close(udp_fd);
-+            }
-+            continue;
-+        }
-+        client->addr.in.sin_family = AF_INET;
-+        client->addr.in.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-+        client->injected_udp_fd = udp_fd;
++    int client_fd = -1;
++    int udp_fd = -1;
++    int result = byedpi_android_receive_client(val->fd, &client_fd, &udp_fd);
++    if (result > 0) {
++        return 0;
 +    }
++    if (result < 0) {
++        pool->brk = true;
++        return 0;
++    }
++    struct eval *client = add_event(pool, &on_request, client_fd, POLLIN);
++    if (!client) {
++        close(client_fd);
++        if (udp_fd >= 0) {
++            close(udp_fd);
++        }
++        return 0;
++    }
++    client->addr.in.sin_family = AF_INET;
++    client->addr.in.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
++    client->injected_udp_fd = udp_fd;
++    return 0;
 +}
 +#endif
 +
  
  int on_tunnel(struct poolhd *pool, struct eval *val, int etype)
  {
-@@ -1015,13 +1088,22 @@ int on_ignore(struct poolhd *pool, struct eval *val, int etype)
+@@ -1015,13 +1085,22 @@ int on_ignore(struct poolhd *pool, struct eval *val, int etype)
  int start_event_loop(int srvfd)
  {
      server_fd = srvfd;
@@ -341,7 +338,7 @@ index 5b96d3c..21b6999 100644
          destroy_pool(pool);
          close(srvfd);
          return -1;
-@@ -1036,6 +1118,12 @@ int start_event_loop(int srvfd)
+@@ -1036,6 +1115,12 @@ int start_event_loop(int srvfd)
  
  int listen_socket(const union sockaddr_u *srv)
  {
