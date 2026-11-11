@@ -1,6 +1,6 @@
 [Тема на 4pda.to](https://4pda.to/forum/index.php?showtopic=1121122)
 
-Разработчик NekoBox+ выкладывает `.apk`-файлы и `patches.tar.gz` в упомянутой теме на `4pda.to` и не планирует переносить разработку на GitHub.  
+Разработчик NekoBox+ выкладывает `.apk`-файлы и `patches.tar.gz` (или `patches.zip`) в упомянутой теме на `4pda.to` и не планирует переносить разработку на GitHub.  
 
 Если вам просто нужен готовый откомпилированный оригинальный подписанный автором NekoBox+, то скачивайте его с упомянутой темы.
 
@@ -14,7 +14,7 @@
 
 # Скрипты в этом репозитории
 
-`.github/workflows/ingest.yml` — триггер на `push patches.tar.gz` и `patches.zip`, распаковывает архив в `patches/`, гоняет `prepare-workspace.sh`, затем удаляет и `patches/` и `patches.tar.gz` (`patches.zip`) с диска, архив коммитится при загрузке, а этим же прогоном его удаление уходит в тот же коммит, что добавляет `workspace/`. В репозитории остаётся только `workspace/`.  
+`.github/workflows/ingest.yml` — триггер на `push patches.tar.gz` и `push patches.zip`, распаковывает архив в `patches/`, гоняет `prepare-workspace.sh`, затем удаляет и `patches/` и `patches.tar.gz` (`patches.zip`) с диска, архив коммитится при загрузке, а этим же прогоном его удаление уходит в тот же коммит, что добавляет `workspace/`. В репозитории остаётся только `workspace/`.  
 Архив `patches.tar.gz` (или `patches.zip`) нужно брать из темы на `4pda.to` по ссылке выше.
 
 `.github/workflows/build.yml` — чекаут → тулчейн → `build-and-package.sh` → релиз
