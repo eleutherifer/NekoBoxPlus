@@ -54,8 +54,8 @@ diff --git a/src/internal/cpu/cpu_arm64_hwcap.go b/src/internal/cpu/cpu_arm64_hw
  	hwcap_AES     = 1 << 3
  	hwcap_PMULL   = 1 << 4
  	hwcap_SHA1    = 1 << 5
-@@ -36,6 +38,114 @@
- 	hwcap_DIT     = 1 << 24
+@@ -37,6 +39,114 @@
+ 	hwcap_SB      = 1 << 29
  )
  
 +func arm64HWCAPFromCPUInfo(data []byte) uint {

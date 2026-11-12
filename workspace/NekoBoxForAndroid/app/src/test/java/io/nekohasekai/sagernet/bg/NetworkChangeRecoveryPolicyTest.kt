@@ -6,6 +6,28 @@ import org.junit.Test
 
 class NetworkChangeRecoveryPolicyTest {
     @Test
+    fun wifiToCellularReconnectsWithResetDisabledAndDelayedInterface() {
+        val policy = NetworkChangeRecoveryPolicy()
+        policy.onNetworkChanged("wlan0", 100, false, true, false)
+        assertFalse(policy.onNetworkChanged(null, 101, false, true, false).reconnect)
+        val recovered = policy.onNetworkChanged("rmnet0", 101, false, true, false)
+        assertTrue(recovered.reconnect)
+        assertFalse(recovered.reset)
+        assertFalse(policy.onNetworkChanged("rmnet0", 101, false, true, false).reconnect)
+    }
+
+    @Test
+    fun directWifiToCellularRespectsReconnectSetting() {
+        for (enabled in listOf(true, false)) {
+            val policy = NetworkChangeRecoveryPolicy()
+            policy.onNetworkChanged("wlan0", 100, false, enabled, false)
+            val switched = policy.onNetworkChanged("rmnet0", 101, false, enabled, false)
+            org.junit.Assert.assertEquals(enabled, switched.reconnect)
+            assertFalse(switched.reset)
+        }
+    }
+
+    @Test
     fun resetsAfterLossWithoutReconnectEnabled() {
         val policy = NetworkChangeRecoveryPolicy()
         policy.onNetworkChanged("wlan0", 1, false, false, true)

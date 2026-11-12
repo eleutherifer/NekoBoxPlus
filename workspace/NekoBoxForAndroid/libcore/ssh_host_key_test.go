@@ -136,3 +136,33 @@ func TestFetchSSHHostKeyReportsHandshakeFailure(t *testing.T) {
 		t.Fatal("expected handshake failure")
 	}
 }
+
+func TestFetchSSHHostKeyCancellationInterruptsHandshake(t *testing.T) {
+	ctx, cancel := context.WithCancelCause(t.Context())
+	defer cancel(nil)
+	cause := errors.New("fetch canceled")
+	dialContext := func(context.Context, string, string) (net.Conn, error) {
+		client, server := net.Pipe()
+		t.Cleanup(func() { _ = server.Close() })
+		go func() {
+			// Reading the SSH version proves the handshake has started.
+			data := make([]byte, 256)
+			_, _ = server.Read(data)
+			cancel(cause)
+		}()
+		return client, nil
+	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		key, err := fetchSSHHostKey(ctx, "example.com:22", dialContext)
+		if key != "" || !errors.Is(err, cause) {
+			t.Errorf("expected cancellation without key, got %q, %v", key, err)
+		}
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("cancellation did not interrupt SSH handshake")
+	}
+}

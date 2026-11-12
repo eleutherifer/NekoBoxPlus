@@ -13,6 +13,21 @@ import org.junit.Test
 class CustomDnsConfigBuilderTest {
 
     @Test
+    fun customBootstrapDoesNotInheritTrafficStrategy() {
+        for (configured in listOf("", "auto", "prefer_ipv6", "ipv4_only", "ipv6_only")) {
+            val options = buildCustomDnsServerOptions(
+                CustomDnsServerEntity(
+                    tag = "dns-custom", type = "https", server = "dns.example",
+                    domainResolver = "dns-direct", domainStrategy = configured,
+                ),
+                TAG_DIRECT,
+            ).asMap()
+            val resolver = options["domain_resolver"] as Map<*, *>
+            assertEquals(connectionDnsStrategy(configured), resolver["strategy"])
+        }
+    }
+
+    @Test
     fun customHttpsServerBuildsTypedOptions() {
         val server = buildCustomDnsServerOptions(
             CustomDnsServerEntity(

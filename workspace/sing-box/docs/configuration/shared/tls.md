@@ -814,3 +814,23 @@ A hexadecimal string with zero to eight digits.
 The maximum time difference between the server and the client.
 
 Check disabled if empty.
+
+#### key_share_policy
+
+REALITY client key-share policy. `preserve` (the default, also used when omitted)
+keeps the selected uTLS fingerprint unchanged. Current Xray servers reject older
+fingerprints without an X25519MLKEM768 share before the optional X25519 share.
+
+Set `reality.key_share_policy` to `ensure_hybrid` to adapt the key-share and
+supported-group extensions for these servers. This changes the wire fingerprint;
+it does not replace the selected browser fingerprint. TLS 1.3 key-share and
+supported-group extensions are required. This setting affects only REALITY clients.
+
+#### mldsa65_verify
+
+Optional REALITY ML-DSA-65 verification public key, encoded as unpadded base64url
+(1952 decoded bytes). Obtain it from the Xray server administrator. When set,
+REALITY authentication requires both its existing HMAC certificate authentication
+and a valid ML-DSA-65 signature binding the client and server handshake transcripts.
+Missing or incorrect signatures fail authentication. When omitted, existing
+HMAC-only authentication remains available.

@@ -55,6 +55,10 @@ internal data class GlobalSettingItem(
 internal fun globalSettingsFor(groupId: String): List<GlobalSettingItem> =
     GLOBAL_SETTINGS[groupId].orEmpty()
 
+@StringRes
+internal fun globalSettingTitle(key: String): Int? =
+    GLOBAL_SETTINGS.values.asSequence().flatten().firstOrNull { it.key == key }?.title
+
 internal fun maskedSecretSummary(value: String, notSet: String): String =
     value.takeIf(String::isNotEmpty)?.let { "*".repeat(it.length) } ?: notSet
 
@@ -480,6 +484,7 @@ private val GLOBAL_SETTINGS: Map<String, List<GlobalSettingItem>> = mapOf(
         action("resetClashApiSecret", R.drawable.ic_settings_password, R.string.reset_clash_api_secret, R.string.reset_clash_api_secret_summary),
     ),
     "others" to listOf(
+        list("realityHybridBehavior", R.drawable.ic_baseline_fingerprint_24, R.string.reality_hybrid_behavior, R.array.reality_hybrid_entries, R.array.reality_hybrid_values),
         list("subscriptionXrayBalancers", R.drawable.ic_baseline_shuffle_24, R.string.subscription_xray_balancers, R.array.subscription_xray_balancers_entries, R.array.int_array_2),
         sw("hysteria2DisableChromeParrot", R.drawable.ic_baseline_visibility_off_24, R.string.hysteria2_disable_chrome_parrot, R.string.hysteria2_disable_chrome_parrot_summary),
         sw("globalAllowInsecure", R.drawable.ic_action_lock_open, R.string.global_allow_insecure),

@@ -6,7 +6,7 @@ ARG BOOTSTRAP_GO_VERSION=1.26.6
 FROM debian:${DEBIAN_VERSION} AS go-builder
 
 ARG TARGETARCH
-ARG GO_VERSION=1.27.1
+ARG GO_VERSION=1.27.3
 ARG BOOTSTRAP_GO_VERSION=1.26.6
 ARG GO_PATCH_DIR=buildScript/lib/core/go-runtime-patches
 
@@ -40,7 +40,7 @@ RUN set -eux; \
     tar -C /tmp/go-src --strip-components=1 -xzf /tmp/go-src.tar.gz; \
     for patch_file in /tmp/go-runtime-patches/*.patch; do \
       echo "Applying ${patch_file}"; \
-      patch -p1 < "${patch_file}"; \
+      patch --batch --fuzz=0 -p1 < "${patch_file}"; \
     done; \
     cd src; \
     ./make.bash; \
@@ -51,7 +51,7 @@ RUN set -eux; \
 
 FROM debian:${DEBIAN_VERSION}
 
-ARG GO_VERSION=1.27.1
+ARG GO_VERSION=1.27.3
 ARG ANDROID_CMDLINE_TOOLS_VERSION=11076708
 ARG ADBLOCK_RUST_TOOLCHAIN=1.97.0
 

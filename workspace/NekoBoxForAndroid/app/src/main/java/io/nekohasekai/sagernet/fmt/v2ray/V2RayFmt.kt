@@ -254,6 +254,8 @@ private fun clashXhttpDownloadTlsToJson(downloadSettings: Map<*, *>): JSONObject
         val reality = JSONObject().put("enabled", true)
         putClashXhttpField(reality, realityOpts, "public-key", "public_key")
         putClashXhttpField(reality, realityOpts, "short-id", "short_id")
+        putClashXhttpField(reality, realityOpts, "mldsa65-verify", "mldsa65_verify")
+        putClashXhttpField(reality, realityOpts, "key-share-policy", "key_share_policy")
         tls.put("reality", reality)
     }
     return tls
@@ -568,6 +570,7 @@ fun StandardV2RayBean.parseDuckSoft(url: HttpUrl, resolvedName: String? = url.fr
             url.queryParameter("sid")?.let {
                 realityShortId = it
             }
+            url.queryParameter("pqv")?.let { realityMLDSA65Verify = it }
             if (!realityPubKey.isNullOrBlank()) {
                 security = "reality"
             }
@@ -985,6 +988,7 @@ fun StandardV2RayBean.toUriVMessVLESSTrojan(isTrojan: Boolean): String {
                     builder.setQueryParameter("security", "reality")
                     builder.addQueryParameter("pbk", realityPubKey)
                     builder.addQueryParameter("sid", realityShortId)
+                    if (!realityMLDSA65Verify.isNullOrBlank()) builder.addQueryParameter("pqv", realityMLDSA65Verify)
                 }
             }
         }
@@ -1309,6 +1313,8 @@ fun buildSingBoxOutboundTLS(bean: StandardV2RayBean): OutboundTLSOptions? {
                 enabled = true
                 public_key = bean.realityPubKey
                 short_id = bean.realityShortId
+                key_share_policy = bean.realityKeySharePolicy.takeIf { !it.isNullOrBlank() }
+                mldsa65_verify = bean.realityMLDSA65Verify.takeIf { !it.isNullOrBlank() }
             }
             if (fp.isNullOrBlank()) fp = "chrome"
         }

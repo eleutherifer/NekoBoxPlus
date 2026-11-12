@@ -67,11 +67,11 @@ func fetchSSHHostKey(
 	}
 	defer conn.Close()
 
-	if deadline, ok := ctx.Deadline(); ok {
-		if err := conn.SetDeadline(deadline); err != nil {
-			return "", fmt.Errorf("set SSH connection deadline: %w", err)
-		}
-	}
+	// Let the context own timeout ordering: a socket deadline can fire before
+	// the context timer records its cause, losing the public timeout error.
+	// Closing also interrupts a handshake canceled without a deadline.
+	stopClose := context.AfterFunc(ctx, func() { _ = conn.Close() })
+	defer stopClose()
 
 	var hostKey string
 	config := &ssh.ClientConfig{

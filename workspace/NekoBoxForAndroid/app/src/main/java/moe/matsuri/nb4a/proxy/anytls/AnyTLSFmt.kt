@@ -39,6 +39,8 @@ fun buildSingBoxOutboundAnyTLSBean(bean: AnyTLSBean): SingBoxOptions.Outbound_An
                     enabled = true
                     public_key = bean.realityPubKey
                     short_id = bean.realityShortId
+                    key_share_policy = bean.realityKeySharePolicy.takeIf { !it.isNullOrBlank() }
+                    mldsa65_verify = bean.realityMLDSA65Verify.takeIf { !it.isNullOrBlank() }
                 }
                 if (fingerprint.isNullOrBlank()) {
                     fingerprint = "chrome"

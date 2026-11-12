@@ -109,6 +109,8 @@ internal fun StandardV2RayProfileSettingsScreen(
                     R.array.utls_fingerprint_entry, R.array.utls_fingerprint_value))
                 add(t(R.drawable.ic_baseline_vpn_key_24, R.string.reality_public_key, "realityPubKey"))
                 add(t(R.drawable.ic_baseline_texture_24, R.string.reality_short_id, "realityShortId"))
+                add(t(R.drawable.ic_baseline_vpn_key_24, R.string.reality_mldsa65_verify, "realityMLDSA65Verify"))
+                add(l(R.drawable.ic_baseline_fingerprint_24, R.string.reality_key_share_policy, "realityKeySharePolicy", R.array.reality_policy_entries, R.array.reality_policy_values))
             }
 
             add(c(R.string.mux_preference))

@@ -96,6 +96,8 @@ class TileService : BaseTileService(), SagerConnection.Callback {
         }
     }
 
+    // The Intent overload is used only below API 34; lint flags it even in this guarded branch.
+    @android.annotation.SuppressLint("StartActivityAndCollapseDeprecated")
     @Suppress("DEPRECATION")
     private fun requestStart() {
         // Share the main app's direct-start path when no permission prompts are

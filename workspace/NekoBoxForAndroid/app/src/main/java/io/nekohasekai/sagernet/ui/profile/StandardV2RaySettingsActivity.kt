@@ -37,6 +37,8 @@ abstract class StandardV2RaySettingsActivity : ProfileSettingsActivity<StandardV
     private val allowInsecure = pbm.add(PreferenceBinding(Type.Bool, "allowInsecure"))
     private val utlsFingerprint = pbm.add(PreferenceBinding(Type.Text, "utlsFingerprint"))
     private val realityPubKey = pbm.add(PreferenceBinding(Type.Text, "realityPubKey"))
+    private val realityKeySharePolicy = pbm.add(PreferenceBinding(Type.Text, "realityKeySharePolicy"))
+    private val realityMLDSA65Verify = pbm.add(PreferenceBinding(Type.Text, "realityMLDSA65Verify"))
     private val realityShortId = pbm.add(PreferenceBinding(Type.Text, "realityShortId"))
 
     private val enableECH = pbm.add(PreferenceBinding(Type.Bool, "enableECH"))

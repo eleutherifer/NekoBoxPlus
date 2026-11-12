@@ -64,7 +64,7 @@ if [ -f "buildScript/lib/core/get_source_env.sh" ]; then
 	source "buildScript/lib/core/get_source_env.sh"
 fi
 
-GO_VERSION="${GO_VERSION:-1.27.1}"
+GO_VERSION="${GO_VERSION:-1.27.3}"
 BOOTSTRAP_GO_VERSION="${BOOTSTRAP_GO_VERSION:-1.26.6}"
 GO_PATCH_DIR="${GO_PATCH_DIR:-buildScript/lib/core/go-runtime-patches}"
 DOCKERFILE="${DOCKERFILE:-buildScript/lib/core/Dockerfile}"

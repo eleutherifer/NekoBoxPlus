@@ -30,6 +30,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -40,9 +41,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.nekohasekai.sagernet.R
+import io.nekohasekai.sagernet.SagerNet
 
 @Composable
 fun BackupScreen(
+    thrBusy: Boolean,
+    thrReport: io.nekohasekai.sagernet.backup.throne.ThrExportReport?,
+    onThrExport: (BackupSelection) -> Unit,
+    onThrShare: (BackupSelection) -> Unit,
+    onDismissThrReport: () -> Unit,
     gitConfigured: Boolean,
     gitOperationInProgress: Boolean,
     onShare: (BackupSelection) -> Unit,
@@ -111,6 +118,8 @@ fun BackupScreen(
             }
         }
 
+        ThrBackupCard(thrBusy, onThrExport, onThrShare)
+
         BackupCard {
             Text(
                 text = stringResource(R.string.backup_webdav),
@@ -163,6 +172,73 @@ fun BackupScreen(
                 }
             }
         }
+    }
+
+    thrReport?.let { report ->
+        var details by rememberSaveable(report) { mutableStateOf(false) }
+        val omissions = remember(report) { report.omissions.sortedBy { it.kind == "profile" } }
+        val warnings = omissions.map { omission ->
+            val kind = when (omission.kind) {
+                "profile" -> R.string.thr_item_profile
+                "rule" -> R.string.thr_item_rule
+                "group" -> R.string.thr_item_group
+                else -> R.string.thr_item_setting
+            }
+            val reason = when (omission.reason) {
+                "profile_type" -> R.string.thr_reason_profile_type
+                "missing_target" -> R.string.thr_reason_missing_target
+                "urltest_wrapper" -> R.string.thr_reason_urltest
+                "custom_json" -> R.string.thr_reason_custom
+                "dns_rule", "dns_override" -> R.string.thr_reason_dns
+                "subscription_options" -> R.string.thr_reason_subscription
+                "subscription_routing" -> R.string.thr_reason_subscription_routing
+                "masque_provisioning" -> R.string.thr_reason_masque
+                "unsupported_setting" -> R.string.thr_reason_setting
+                else -> R.string.thr_reason_options
+            }
+            val label = omission.entityName?.takeIf { it.isNotBlank() } ?: when (omission.kind) {
+                "profile" -> stringResource(R.string.thr_unnamed_profile)
+                "rule" -> stringResource(R.string.thr_unnamed_rule)
+                "group" -> stringResource(R.string.group_default)
+                else -> null
+            }
+            val field = omission.key?.let { key ->
+                if (omission.kind == "setting") {
+                    globalSettingTitle(key)?.let { stringResource(it) } ?: readableSettingKey(key)
+                } else key
+            }
+            stringResource(R.string.thr_report_item, stringResource(kind),
+                listOfNotNull(label, field).joinToString(" / "), stringResource(reason))
+        }
+        AlertDialog(
+            onDismissRequest = onDismissThrReport,
+            title = { Text(stringResource(R.string.thr_report)) },
+            text = {
+                LazyColumn(Modifier.heightIn(max = 400.dp)) {
+                    item {
+                        Text(stringResource(R.string.thr_report_summary, report.profiles, report.routes,
+                            report.settings, report.omissions.size))
+                    }
+                    if (warnings.isNotEmpty()) {
+                        item {
+                            TextButton(onClick = { details = !details }) { Text(stringResource(R.string.thr_details)) }
+                        }
+                        if (details) items(warnings) { warning ->
+                            Text(warning, modifier = Modifier.padding(vertical = 4.dp))
+                        }
+                    }
+                }
+            },
+            dismissButton = {
+                if (warnings.isNotEmpty()) {
+                    TextButton(onClick = { SagerNet.trySetPrimaryClip(warnings.joinToString("\n")) }) {
+                        Icon(painterResource(R.drawable.ic_baseline_content_copy_24), contentDescription = null)
+                        Text(stringResource(R.string.thr_copy_warnings), modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = onDismissThrReport) { Text(stringResource(android.R.string.ok)) } },
+        )
     }
 
     gitRestoreOptions?.let { options ->
@@ -322,3 +398,42 @@ private fun BackupButton(
         }
     }
 }
+
+@Composable
+private fun ThrBackupCard(
+    busy: Boolean,
+    onExport: (BackupSelection) -> Unit,
+    onShare: (BackupSelection) -> Unit,
+) {
+    var profiles by rememberSaveable { mutableStateOf(true) }
+    var routes by rememberSaveable { mutableStateOf(true) }
+    var settings by rememberSaveable { mutableStateOf(true) }
+    val enabled = !busy && (profiles || routes || settings)
+    BackupCard {
+        Column(Modifier.padding(16.dp)) {
+            Text(stringResource(R.string.thr_backup), style = MaterialTheme.typography.titleLarge)
+            BackupCheckbox(profiles, R.string.backup_groups_and_configurations, { profiles = it })
+            BackupCheckbox(routes, R.string.backup_rules, { routes = it })
+            BackupCheckbox(settings, R.string.backup_settings, { settings = it })
+            Text(stringResource(R.string.thr_summary), style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 8.dp))
+            BackupButton(R.string.action_export_file, R.drawable.ic_baseline_save_24, enabled) {
+                onExport(BackupSelection(profiles, routes, settings))
+            }
+            androidx.compose.material3.OutlinedButton(
+                onClick = { onShare(BackupSelection(profiles, routes, settings)) },
+                enabled = enabled,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp).tvFocusTarget(enabled),
+            ) {
+                Icon(painterResource(R.drawable.ic_social_share), contentDescription = null)
+                Text(stringResource(R.string.share), modifier = Modifier.padding(start = 8.dp))
+            }
+        }
+    }
+}
+
+// Old or internal preferences may have no entry in the current settings screen.
+internal fun readableSettingKey(key: String): String = key
+    .replace('_', ' ')
+    .replace(Regex("(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])"), " ")
+    .replaceFirstChar { it.titlecase() }

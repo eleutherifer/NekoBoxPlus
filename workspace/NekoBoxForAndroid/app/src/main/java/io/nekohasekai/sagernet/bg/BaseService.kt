@@ -1173,26 +1173,21 @@ class BaseService {
             val networkChangeRecoveryPolicy = NetworkChangeRecoveryPolicy()
             val recovery = data.connectionRecovery
 
-            fun handleNetworkUpdate(network: Network?) {
+            fun handleNetworkUpdate(snapshot: DefaultNetworkListener.Snapshot?) {
+                val network = snapshot?.network
                 recovery?.network(network != null)
                 SagerNet.underlyingNetwork = network
                 SagerNet.application.nativeInterface.syncNetworkState(network)
                 DataStore.vpnService?.updateUnderlyingNetwork()
-                val link = network?.let { current -> SagerNet.connectivity.getLinkProperties(current) }
-                val capabilities = network?.let { current ->
-                    SagerNet.connectivity.getNetworkCapabilities(current)
-                }
-                val currentName = link?.interfaceName
+                val currentName = snapshot?.interfaceName
                 upstreamInterfaceName = currentName
                 val decision = networkChangeRecoveryPolicy.onNetworkChanged(
                     interfaceName = currentName,
                     networkHandle = network?.networkHandle,
-                    isVpnNetwork = isVpnNetwork(network),
+                    isVpnNetwork = snapshot?.isVpnNetwork == true,
                     reconnectEnabled = DataStore.networkChangeReconnect,
                     resetEnabled = DataStore.networkChangeResetConnections,
-                    validated = capabilities?.hasCapability(
-                        NetworkCapabilities.NET_CAPABILITY_VALIDATED,
-                    ),
+                    validated = snapshot?.validated,
                 )
                 if (decision.reconnect || decision.reset) {
                     Logs.d(
@@ -1215,11 +1210,11 @@ class BaseService {
                 }
             }
 
-            DefaultNetworkListener.start(this) {
+            DefaultNetworkListener.startSnapshots(this) {
                 handleNetworkUpdate(it)
             }
             runCatching {
-                DefaultNetworkListener.get()
+                DefaultNetworkListener.getSnapshot()
             }.onSuccess { network ->
                 handleNetworkUpdate(network)
             }.onFailure { error ->

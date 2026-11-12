@@ -9,6 +9,7 @@ import (
 	"net"
 	"reflect"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unsafe"
 
@@ -20,27 +21,28 @@ import (
 	N "github.com/sagernet/sing/common/network"
 )
 
-var tlsRegistry []func(conn net.Conn) (loaded bool, netConn net.Conn, reflectType reflect.Type, reflectPointer uintptr)
+var tlsRegistry []func(conn net.Conn) (loaded bool, netConn net.Conn, reflectType reflect.Type, reflectPointer unsafe.Pointer)
 
 func init() {
-	tlsRegistry = append(tlsRegistry, func(conn net.Conn) (loaded bool, netConn net.Conn, reflectType reflect.Type, reflectPointer uintptr) {
+	tlsRegistry = append(tlsRegistry, func(conn net.Conn) (loaded bool, netConn net.Conn, reflectType reflect.Type, reflectPointer unsafe.Pointer) {
 		tlsConn, loaded := N.CastReader[*tls.Conn](conn)
 		if !loaded {
 			return
 		}
-		return true, tlsConn.NetConn(), reflect.TypeOf(tlsConn).Elem(), uintptr(unsafe.Pointer(tlsConn))
+		return true, tlsConn.NetConn(), reflect.TypeOf(tlsConn).Elem(), unsafe.Pointer(tlsConn)
 	})
 }
 
 const xrayChunkSize = 8192
 
 type VisionConn struct {
+	directClose atomic.Bool
 	net.Conn
 	reader      *bufio.ChunkReader
 	writer      N.VectorisedWriter
 	writeAccess sync.Mutex
 	input       *bytes.Reader
-	rawInput    *bytes.Buffer
+	rawInput    **bytes.Buffer
 	netConn     net.Conn
 	logger      logger.Logger
 
@@ -66,7 +68,7 @@ func NewVisionConn(conn net.Conn, tlsConn net.Conn, userUUID [16]byte, logger lo
 	var (
 		loaded         bool
 		reflectType    reflect.Type
-		reflectPointer uintptr
+		reflectPointer unsafe.Pointer
 		netConn        net.Conn
 	)
 	for _, tlsCreator := range tlsRegistry {
@@ -79,13 +81,12 @@ func NewVisionConn(conn net.Conn, tlsConn net.Conn, userUUID [16]byte, logger lo
 		return nil, E.New("vision: not a valid supported TLS connection: ", reflect.TypeOf(tlsConn))
 	}
 	input, _ := reflectType.FieldByName("input")
-	rawInput, _ := reflectType.FieldByName("rawInput")
 	return &VisionConn{
 		Conn:     conn,
 		reader:   bufio.NewChunkReader(conn, xrayChunkSize),
 		writer:   bufio.NewVectorisedWriter(conn),
-		input:    (*bytes.Reader)(unsafe.Pointer(reflectPointer + input.Offset)),
-		rawInput: (*bytes.Buffer)(unsafe.Pointer(reflectPointer + rawInput.Offset)),
+		input:    (*bytes.Reader)(unsafe.Add(reflectPointer, input.Offset)),
+		rawInput: visionRawInput(reflectType, reflectPointer),
 		netConn:  netConn,
 		logger:   logger,
 
@@ -146,6 +147,7 @@ func (c *VisionConn) Read(p []byte) (n int, err error) {
 			} else if c.currentCommand == commandPaddingDirect {
 				c.withinPaddingBuffers = false
 				c.directRead = true
+				c.directClose.Store(true)
 
 				inputBuffer, err := io.ReadAll(c.input)
 				if err != nil {
@@ -153,7 +155,7 @@ func (c *VisionConn) Read(p []byte) (n int, err error) {
 				}
 				buffers = append(buffers, buf.As(inputBuffer))
 
-				rawInputBuffer, err := io.ReadAll(c.rawInput)
+				rawInputBuffer, err := readVisionRawInput(c.rawInput)
 				if err != nil {
 					return 0, err
 				}
@@ -204,6 +206,7 @@ func (c *VisionConn) Write(p []byte) (n int, err error) {
 				var command byte = commandPaddingEnd
 				if c.enableXTLS {
 					c.directWrite = true
+					c.directClose.Store(true)
 					specIndex = i
 					command = commandPaddingDirect
 				}
@@ -386,4 +389,27 @@ func (c *VisionConn) NeedAdditionalReadDeadline() bool {
 
 func (c *VisionConn) Upstream() any {
 	return c.Conn
+}
+
+func (c *VisionConn) Close() error {
+	if c.directClose.Load() {
+		return c.netConn.Close()
+	}
+	return c.Conn.Close()
+}
+
+// Keep the field address: newer TLS implementations allocate rawInput lazily.
+func visionRawInput(typ reflect.Type, pointer unsafe.Pointer) **bytes.Buffer {
+	field, _ := typ.FieldByName("rawInput")
+	if field.Type.Kind() == reflect.Pointer {
+		return (**bytes.Buffer)(unsafe.Add(pointer, field.Offset))
+	}
+	raw := (*bytes.Buffer)(unsafe.Add(pointer, field.Offset))
+	return &raw
+}
+func readVisionRawInput(raw **bytes.Buffer) ([]byte, error) {
+	if raw == nil || *raw == nil {
+		return nil, nil
+	}
+	return io.ReadAll(*raw)
 }

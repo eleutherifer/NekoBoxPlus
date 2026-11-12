@@ -2089,4 +2089,37 @@
     <string name="navigation_drawer_open">Открыть меню навигации</string>
     <string name="dashboard_sort_current">Сортировка: %1$s</string>
     <string name="dashboard_test_failure_detail">Ошибка проверки: %1$s</string>
+    <string name="reality_hybrid_behavior">Поведение Reality X25519MLKEM768</string>
+    <string name="reality_mldsa65_verify">Ключ проверки REALITY ML-DSA-65</string>
+    <string name="reality_key_share_policy">Политика ключей REALITY (может переопределяться глобально)</string>
+    <string name="reality_policy_preserve">Сохранять исходные ключи</string>
+    <string name="reality_policy_ensure_hybrid">Обеспечивать наличие гибридного ключа</string>
+
+    <!-- One-way Throne migration export -->
+    <string name="thr_backup">Экспорт в Throne (.thrbackup)</string>
+    <string name="thr_summary">Создайте резервную копию для перехода в ThroneForAndroid. Неподдерживаемые данные будут пропущены и перечислены в отчёте о совместимости.</string>
+    <string name="thr_report">Отчёт об экспорте в Throne</string>
+    <string name="thr_report_summary">Экспортировано: профилей — %1$d, групп маршрутизации — %2$d, настроек — %3$d. Замечаний о совместимости: %4$d.</string>
+    <string name="thr_copy_warnings">Копировать все предупреждения</string>
+    <string name="thr_unnamed_rule">Правило без имени</string>
+    <string name="thr_unnamed_profile">Профиль без имени</string>
+    <string name="thr_details">Показать / скрыть подробности</string>
+    <string name="thr_report_item">%1$s %2$s: %3$s</string>
+    <string name="thr_item_profile">Профиль</string>
+    <string name="thr_item_rule">Правило</string>
+    <string name="thr_item_group">Группа</string>
+    <string name="thr_item_setting">Настройка</string>
+    <string name="thr_reason_profile_type">Пропущен: неподдерживаемый тип профиля.</string>
+    <string name="thr_reason_missing_target">Пропущено или очищено: связанный профиль не экспортирован.</string>
+    <string name="thr_reason_urltest">Обёртка URLTest пропущена; поддерживаемые вложенные профили экспортированы отдельно.</string>
+    <string name="thr_reason_custom">Пропущено: невозможно точно перенести произвольный JSON.</string>
+    <string name="thr_reason_dns">Неподдерживаемое правило DNS или поведение DNS для правила пропущено.</string>
+    <string name="thr_reason_subscription">Неподдерживаемые параметры обновления подписки пропущены.</string>
+    <string name="thr_reason_subscription_routing">Встроенная маршрутизация подписки пропущена; URL подписки сохранён.</string>
+    <string name="thr_reason_masque">Пропущен: MASQUE требует автоматического создания учётных данных или не содержит полных данных узла.</string>
+    <string name="thr_reason_setting">Неподдерживаемая настройка пропущена.</string>
+    <string name="thr_reason_options">Пропущено: невозможно точно перенести параметры подключения или условия правила.</string>
+    <string name="thr_failed">Не удалось экспортировать резервную копию Throne.</string>
+    <string name="thr_tun_protection">Защита TUN (неизвестные приложения)</string>
+    <string name="thr_common_routes">Общие правила</string>
 </resources>

@@ -12,10 +12,11 @@ package io.nekohasekai.sagernet.utils
  * retained when our own VPN (a self-VPN callback) appears, and null is published
  * only once the last usable physical candidate disappears.
  *
- * A usable candidate is promoted only when Android announces it through
- * `onAvailable`. Later capability refreshes update metadata without changing
- * the selected network. Older candidates remain available as fallbacks if the
- * selected network is later lost or becomes unusable.
+ * A usable candidate is promoted when Android announces it through
+ * `onAvailable`, or when that announcement's delayed metadata arrives. Later
+ * capability refreshes of older candidates do not replace the selected network.
+ * Older candidates remain available as fallbacks if the selected network is lost
+ * or becomes unusable.
  */
 class PhysicalNetworkSelector<K : Any> {
     /** Metadata describing one connectivity candidate. */
@@ -36,6 +37,13 @@ class PhysicalNetworkSelector<K : Any> {
                     !isTunInterface
     }
 
+    private var announcedKey: K? = null
+
+    /** Remember the replacement even when its callback metadata is not ready yet. */
+    fun announce(key: K) {
+        announcedKey = key
+    }
+
     private val candidates = LinkedHashMap<K, Candidate<K>>()
 
     /** The currently selected usable physical candidate, or null if none. */
@@ -50,6 +58,7 @@ class PhysicalNetworkSelector<K : Any> {
      * candidate changed (including to/from null).
      */
     fun available(candidate: Candidate<K>): Boolean {
+        announce(candidate.key)
         candidates[candidate.key] = candidate
         val previous = selected?.key
         selected =
@@ -64,8 +73,8 @@ class PhysicalNetworkSelector<K : Any> {
     /**
      * Refresh [candidate] without treating the callback as a default-network
      * change. A usable candidate may be selected here only when no selection
-     * exists, which handles platforms where capabilities become readable after
-     * `onAvailable`.
+     * exists or it is the latest announced replacement. This handles metadata
+     * arriving after `onAvailable`.
      */
     fun capabilitiesChanged(candidate: Candidate<K>): Boolean {
         candidates[candidate.key] = candidate
@@ -74,6 +83,7 @@ class PhysicalNetworkSelector<K : Any> {
             when {
                 selected?.key == candidate.key && candidate.isUsable -> candidate
                 selected?.key == candidate.key -> firstUsableCandidate()
+                announcedKey == candidate.key && candidate.isUsable -> candidate
                 selected == null && candidate.isUsable -> candidate
                 else -> selected
             }
@@ -84,11 +94,14 @@ class PhysicalNetworkSelector<K : Any> {
      * Remove [key]. Returns true when the selected physical candidate changed.
      */
     fun remove(key: K): Boolean {
+        if (announcedKey == key) announcedKey = null
         if (candidates.remove(key) == null) return false
+        if (selected?.key != key) return false
         return recompute()
     }
 
     fun clear() {
+        announcedKey = null
         candidates.clear()
         selected = null
     }

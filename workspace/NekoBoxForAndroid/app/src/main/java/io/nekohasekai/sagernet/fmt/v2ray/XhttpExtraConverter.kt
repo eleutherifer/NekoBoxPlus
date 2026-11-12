@@ -175,6 +175,8 @@ object XhttpExtraConverter {
                                     put("enabled", true)
                                     convertField(realitySettings, this, "publicKey", "public_key")
                                     convertField(realitySettings, this, "shortId", "short_id")
+                                    convertField(realitySettings, this, "mldsa65Verify", "mldsa65_verify")
+                                    realitySettings.optString("password")?.takeIf { it.isNotBlank() }?.let { put("public_key", it) }
                                 }
                                 tls.put("reality", reality)
                                 realitySettings.optString("fingerprint")?.let { fp ->
@@ -247,6 +249,7 @@ object XhttpExtraConverter {
                         convertField(tls, realitySettings, "server_name", "serverName")
                         convertField(reality, realitySettings, "public_key", "publicKey")
                         convertField(reality, realitySettings, "short_id", "shortId")
+                        convertField(reality, realitySettings, "mldsa65_verify", "mldsa65Verify")
                         tls.optNonNullJSONObject("utls")?.let { utls ->
                             convertField(utls, realitySettings, "fingerprint", "fingerprint")
                         }

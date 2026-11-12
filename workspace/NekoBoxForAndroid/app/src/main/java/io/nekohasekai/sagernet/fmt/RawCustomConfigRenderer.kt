@@ -17,6 +17,7 @@ internal object RawCustomConfigRenderer {
         proxy: ProxyEntity,
         forTest: Boolean,
         dnsDefaults: UrlTestDnsDefaults,
+        realityBehavior: String = "preserve",
     ): ConfigBuildResult? {
         if (proxy.type != TYPE_CONFIG) return null
         val bean = proxy.requireBean() as ConfigBean
@@ -41,6 +42,12 @@ internal object RawCustomConfigRenderer {
                 if (injectUrlTestDnsIfMissing(map, dns.asMap())) config = gson.toJson(map)
             }
         }
+        @Suppress("UNCHECKED_CAST")
+        val effective = gson.fromJson(config, MutableMap::class.java) as MutableMap<String, Any?>
+        val before = gson.toJson(effective)
+        applyRealityCompatibility(effective, realityBehavior)
+        val after = gson.toJson(effective)
+        if (before != after) config = after
         return ConfigBuildResult(
             config = config,
             externalIndex = emptyList(),

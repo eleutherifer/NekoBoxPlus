@@ -38,6 +38,8 @@ public class AnyTLSBean extends AbstractBean {
     public String echConfig;
     public String realityPubKey;
     public String realityShortId;
+    public String realityKeySharePolicy;
+    public String realityMLDSA65Verify;
 
     @Override
     public void initializeDefaultValues() {
@@ -52,11 +54,13 @@ public class AnyTLSBean extends AbstractBean {
         if (echConfig == null) echConfig = "";
         if (realityPubKey == null) realityPubKey = "";
         if (realityShortId == null) realityShortId = "";
+        if (realityKeySharePolicy == null) realityKeySharePolicy = "";
+        if (realityMLDSA65Verify == null) realityMLDSA65Verify = "";
     }
 
     @Override
     public void serialize(ByteBufferOutput output) {
-        output.writeInt(2);
+        output.writeInt(3);
         super.serialize(output);
         output.writeString(password);
         output.writeString(sni);
@@ -67,6 +71,8 @@ public class AnyTLSBean extends AbstractBean {
         output.writeString(echConfig);
         output.writeString(realityPubKey);
         output.writeString(realityShortId);
+        output.writeString(realityKeySharePolicy);
+        output.writeString(realityMLDSA65Verify);
         output.writeString(clientMetadata);
     }
 
@@ -84,6 +90,10 @@ public class AnyTLSBean extends AbstractBean {
         if (version >= 1) {
             realityPubKey = input.readString();
             realityShortId = input.readString();
+            if (version >= 3) {
+                realityKeySharePolicy = input.readString();
+                realityMLDSA65Verify = input.readString();
+            }
         } else {
             realityPubKey = "";
             realityShortId = "";

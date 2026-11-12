@@ -1441,4 +1441,10 @@
         <item>@string/subscription_banner_expiration_time</item>
         <item>@string/subscription_banner_clickable</item>
     </string-array>
+<string-array name="reality_hybrid_entries"><item>Не изменять</item><item>Дополнять неподдерживаемые</item><item>Заменять неподдерживаемые на Chrome</item></string-array>
+    <string-array name="reality_policy_entries">
+        <item>@string/auto</item>
+        <item>@string/reality_policy_preserve</item>
+        <item>@string/reality_policy_ensure_hybrid</item>
+    </string-array>
 </resources>

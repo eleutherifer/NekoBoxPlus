@@ -1,6 +1,7 @@
 package io.nekohasekai.sagernet.utils
 
 import android.net.ConnectivityManager
+import android.net.LinkProperties
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
@@ -17,14 +18,21 @@ import kotlinx.coroutines.runBlocking
 import java.net.UnknownHostException
 
 object DefaultNetworkListener {
+    data class Snapshot(
+        val network: Network,
+        val interfaceName: String?,
+        val validated: Boolean?,
+        val isVpnNetwork: Boolean,
+    )
+
     private sealed class NetworkMessage {
         class Start(
             val key: Any,
-            val listener: (Network?) -> Unit,
+            val listener: (Snapshot?) -> Unit,
         ) : NetworkMessage()
 
         class Get : NetworkMessage() {
-            val response = CompletableDeferred<Network>()
+            val response = CompletableDeferred<Snapshot>()
         }
 
         class Stop(
@@ -37,6 +45,12 @@ object DefaultNetworkListener {
 
         class CapabilitiesChanged(
             val network: Network,
+            val capabilities: NetworkCapabilities,
+        ) : NetworkMessage()
+
+        class LinkChanged(
+            val network: Network,
+            val properties: LinkProperties,
         ) : NetworkMessage()
 
         class Lost(
@@ -46,20 +60,33 @@ object DefaultNetworkListener {
 
     private val networkActor =
         AppGraph.applicationScope.actor<NetworkMessage>(AppGraph.dispatchers.default) {
-            val listeners = mutableMapOf<Any, (Network?) -> Unit>()
+            val listeners = mutableMapOf<Any, (Snapshot?) -> Unit>()
             val selector = PhysicalNetworkSelector<Network>()
             val pendingRequests = arrayListOf<NetworkMessage.Get>()
 
-            fun currentNetwork(): Network? = selector.selected?.key
+            val capabilities = mutableMapOf<Network, NetworkCapabilities>()
+            val links = mutableMapOf<Network, LinkProperties>()
+            val announced = mutableSetOf<Network>()
+
+            fun currentNetwork(): Snapshot? = selector.selected?.key?.let { network ->
+                snapshot(network, capabilities[network], links[network])
+            }
 
             // Publish the (possibly null) selected physical network to every
             // listener, completing pending get() requests first when non-null.
-            fun publish(network: Network?) {
+            fun publish(network: Snapshot?) {
                 if (network != null) {
                     pendingRequests.forEach { it.response.complete(network) }
                     pendingRequests.clear()
                 }
                 listeners.values.forEach { it(network) }
+            }
+
+            fun refresh(network: Network) {
+                val caps = capabilities[network] ?: return
+                val link = links[network] ?: return
+                val changed = selector.capabilitiesChanged(candidateFor(network, caps, link))
+                if (changed || selector.selected?.key == network) publish(currentNetwork())
             }
 
             for (message in channel) {
@@ -87,32 +114,47 @@ object DefaultNetworkListener {
                             listeners.remove(message.key) != null && listeners.isEmpty()
                         ) {
                             selector.clear()
+                            capabilities.clear()
+                            links.clear()
+                            announced.clear()
                             if (registered) unregister()
                         }
                     }
 
                     is NetworkMessage.Available -> {
-                        val candidate = candidateFor(message.network)
-                        if (candidate != null && selector.available(candidate)) {
-                            publish(selector.selected?.key)
+                        announced += message.network
+                        selector.announce(message.network)
+                        // Before O, initial capability/link callbacks are not guaranteed.
+                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+                            SagerNet.connectivity.getNetworkCapabilities(message.network)?.let {
+                                capabilities[message.network] = it
+                            }
+                            SagerNet.connectivity.getLinkProperties(message.network)?.let {
+                                links[message.network] = it
+                            }
                         }
+                        refresh(message.network)
                     }
 
                     is NetworkMessage.CapabilitiesChanged -> {
-                        val candidate = candidateFor(message.network)
-                        if (candidate != null) {
-                            val changed = selector.capabilitiesChanged(candidate)
-                            val selected = selector.selected
-                            if (changed || selected?.key == message.network) {
-                                publish(selected?.key)
-                            }
+                        if (message.network in announced) {
+                            capabilities[message.network] = message.capabilities
+                            refresh(message.network)
+                        }
+                    }
+
+                    is NetworkMessage.LinkChanged -> {
+                        if (message.network in announced) {
+                            links[message.network] = message.properties
+                            refresh(message.network)
                         }
                     }
 
                     is NetworkMessage.Lost -> {
-                        val changed = selector.remove(message.network)
-                        // Publish null only once the last usable physical candidate is gone.
-                        if (changed) publish(selector.selected?.key)
+                        announced -= message.network
+                        capabilities.remove(message.network)
+                        links.remove(message.network)
+                        if (selector.remove(message.network)) publish(currentNetwork())
                     }
                 }
             }
@@ -121,11 +163,22 @@ object DefaultNetworkListener {
     suspend fun start(
         key: Any,
         listener: (Network?) -> Unit,
-    ) = networkActor.send(NetworkMessage.Start(key, listener))
+    ) = startSnapshots(key) { listener(it?.network) }
 
-    suspend fun get(): Network =
+    suspend fun startSnapshots(key: Any, listener: (Snapshot?) -> Unit) =
+        networkActor.send(NetworkMessage.Start(key, listener))
+
+    suspend fun get(): Network = getSnapshot().network
+
+    suspend fun getSnapshot(): Snapshot =
         if (fallback) {
-            activeNetworkOrThrow()
+            activeNetworkOrThrow().let { network ->
+                snapshot(
+                    network,
+                    SagerNet.connectivity.getNetworkCapabilities(network),
+                    SagerNet.connectivity.getLinkProperties(network),
+                )
+            }
         } else {
             NetworkMessage.Get().run {
                 networkActor.send(this)
@@ -153,8 +206,14 @@ object DefaultNetworkListener {
         override fun onCapabilitiesChanged(
             network: Network,
             networkCapabilities: NetworkCapabilities,
-        ) { // it's a good idea to refresh capabilities
-            runBlocking { networkActor.send(NetworkMessage.CapabilitiesChanged(network)) }
+        ) {
+            runBlocking {
+                networkActor.send(NetworkMessage.CapabilitiesChanged(network, NetworkCapabilities(networkCapabilities)))
+            }
+        }
+
+        override fun onLinkPropertiesChanged(network: Network, linkProperties: LinkProperties) {
+            runBlocking { networkActor.send(NetworkMessage.LinkChanged(network, linkProperties)) }
         }
 
         override fun onLost(network: Network) = runBlocking { networkActor.send(NetworkMessage.Lost(network)) }
@@ -264,14 +323,25 @@ object DefaultNetworkListener {
     private fun candidateFor(network: Network): PhysicalNetworkSelector.Candidate<Network>? {
         val capabilities = SagerNet.connectivity.getNetworkCapabilities(network) ?: return null
         val linkProperties = SagerNet.connectivity.getLinkProperties(network)
-        val interfaceName = linkProperties?.interfaceName
-        return PhysicalNetworkSelector.Candidate(
+        return candidateFor(network, capabilities, linkProperties)
+    }
+
+    private fun snapshot(network: Network, capabilities: NetworkCapabilities?, link: LinkProperties?) =
+        Snapshot(
+            network,
+            link?.interfaceName,
+            capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED),
+            capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true ||
+                link?.interfaceName?.startsWith("tun") == true,
+        )
+
+    private fun candidateFor(network: Network, capabilities: NetworkCapabilities, link: LinkProperties?) =
+        PhysicalNetworkSelector.Candidate(
             key = network,
             hasInternet = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET),
             notRestricted = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED),
             notVpn = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN),
             isVpnTransport = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN),
-            isTunInterface = interfaceName != null && interfaceName.startsWith("tun"),
+            isTunInterface = link?.interfaceName?.startsWith("tun") == true,
         )
-    }
 }

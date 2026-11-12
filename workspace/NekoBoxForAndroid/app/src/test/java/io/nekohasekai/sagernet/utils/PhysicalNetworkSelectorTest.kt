@@ -36,6 +36,60 @@ class PhysicalNetworkSelectorTest {
     )
 
     @Test
+    fun delayedCellularSelectionRequestsReconnectForEitherLossOrder() {
+        for (loseWifiFirst in listOf(true, false)) {
+            val selector = PhysicalNetworkSelector<Int>()
+            val recovery = io.nekohasekai.sagernet.bg.NetworkChangeRecoveryPolicy()
+            fun update() = recovery.onNetworkChanged(
+                interfaceName = when (selector.selected?.key) {
+                    1 -> "wlan0"
+                    2 -> "rmnet0"
+                    else -> null
+                },
+                networkHandle = selector.selected?.key?.toLong(),
+                isVpnNetwork = false,
+                reconnectEnabled = true,
+                resetEnabled = false,
+            )
+            selector.available(physical(1))
+            assertFalse(update().reconnect)
+            selector.announce(2) // No capabilities or link properties yet.
+            if (loseWifiFirst) {
+                assertTrue(selector.remove(1))
+                assertFalse(update().reconnect)
+            }
+            assertTrue(selector.capabilitiesChanged(physical(2)))
+            assertTrue(update().reconnect)
+            assertFalse(update().reconnect)
+            if (!loseWifiFirst) assertFalse(selector.remove(1))
+            assertEquals(2, selector.selected?.key)
+        }
+    }
+
+    @Test
+    fun delayedReplacementMetadataPromotesCellularWithoutWifiLoss() {
+        val selector = PhysicalNetworkSelector<Int>()
+        selector.available(physical(1))
+        selector.announce(2)
+        assertEquals(1, selector.selected?.key)
+        assertTrue(selector.capabilitiesChanged(physical(2)))
+        assertEquals(2, selector.selected?.key)
+        assertFalse(selector.capabilitiesChanged(physical(1)))
+        assertFalse(selector.remove(1))
+        assertEquals(2, selector.selected?.key)
+    }
+
+    @Test
+    fun losingUnrelatedCandidateDoesNotRevertReplacement() {
+        val selector = PhysicalNetworkSelector<Int>()
+        selector.available(physical(1))
+        selector.available(physical(2))
+        selector.available(physical(3, isVpnTransport = true))
+        assertFalse(selector.remove(3))
+        assertEquals(2, selector.selected?.key)
+    }
+
+    @Test
     fun firstUsableCandidateIsSelected() {
         val selector = PhysicalNetworkSelector<Int>()
         assertTrue(selector.available(physical(1)))

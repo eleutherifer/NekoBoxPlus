@@ -84,6 +84,17 @@ class VlessPacketEncodingTest {
         assertEquals(StandardV2RayBean.PACKET_ENCODING_XUDP, xudp.packetEncoding)
     }
 
+    @Test
+    fun realityVerificationKeySurvivesLinkAndClone() {
+        val key = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(ByteArray(1952))
+        val bean = parseVless("vless://00000000-0000-0000-0000-000000000000@example.com:443?security=reality&pbk=test&pqv=$key")
+        bean.initializeDefaultValues()
+        assertEquals(key, bean.realityMLDSA65Verify)
+        assertEquals(key, bean.clone().realityMLDSA65Verify)
+        val uri = bean.toUriVMessVLESSTrojan(false).replaceFirst("vless://", "https://").toHttpUrl()
+        assertEquals(key, uri.queryParameter("pqv"))
+    }
+
     private fun parseVless(link: String): VMessBean {
         return parseV2Ray(link) as VMessBean
     }

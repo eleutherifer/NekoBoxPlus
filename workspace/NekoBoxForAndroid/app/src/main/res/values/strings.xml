@@ -2124,4 +2124,37 @@
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="dashboard_sort_current">Sort: %1$s</string>
     <string name="dashboard_test_failure_detail">Test failed: %1$s</string>
+    <string name="reality_hybrid_behavior">Reality X25519MLKEM768 behavior</string>
+    <string name="reality_mldsa65_verify">REALITY ML-DSA-65 verification key</string>
+    <string name="reality_key_share_policy">REALITY key-share policy (global behavior may override)</string>
+    <string name="reality_policy_preserve">Preserve key shares</string>
+    <string name="reality_policy_ensure_hybrid">Ensure hybrid key share</string>
+
+    <!-- One-way Throne migration export -->
+    <string name="thr_backup">Export to Throne (.thrbackup)</string>
+    <string name="thr_summary">Create a migration backup for ThroneForAndroid. Unsupported items are omitted and listed in the compatibility report.</string>
+    <string name="thr_report">Throne export report</string>
+    <string name="thr_report_summary">Exported: %1$d profiles, %2$d routing profiles, %3$d settings. Compatibility notices: %4$d.</string>
+    <string name="thr_copy_warnings">Copy all warnings</string>
+    <string name="thr_unnamed_rule">Unnamed rule</string>
+    <string name="thr_unnamed_profile">Unnamed profile</string>
+    <string name="thr_details">Show / hide details</string>
+    <string name="thr_report_item">%1$s %2$s: %3$s</string>
+    <string name="thr_item_profile">Profile</string>
+    <string name="thr_item_rule">Rule</string>
+    <string name="thr_item_group">Group</string>
+    <string name="thr_item_setting">Setting</string>
+    <string name="thr_reason_profile_type">Skipped: unsupported profile type.</string>
+    <string name="thr_reason_missing_target">Skipped or cleared: referenced profile was not exported.</string>
+    <string name="thr_reason_urltest">URLTest wrapper omitted; supported embedded profiles exported separately.</string>
+    <string name="thr_reason_custom">Skipped: custom JSON cannot be represented faithfully.</string>
+    <string name="thr_reason_dns">Unsupported DNS rule or per-rule DNS behavior omitted.</string>
+    <string name="thr_reason_subscription">Unsupported subscription refresh options omitted.</string>
+    <string name="thr_reason_subscription_routing">Embedded subscription routing omitted; subscription URL retained.</string>
+    <string name="thr_reason_masque">Skipped: MASQUE requires automatic provisioning or lacks complete peer credentials.</string>
+    <string name="thr_reason_setting">Unsupported setting omitted.</string>
+    <string name="thr_reason_options">Skipped: connection or matching options cannot be represented faithfully.</string>
+    <string name="thr_failed">Could not export the Throne backup.</string>
+    <string name="thr_tun_protection">TUN protection (Unknown apps)</string>
+    <string name="thr_common_routes">Common rules</string>
 </resources>

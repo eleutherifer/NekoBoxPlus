@@ -1,5 +1,5 @@
 diff --git a/common.go b/common.go
-index 1952150..107cd53 100644
+index 8d07364..6967e94 100644
 --- a/common.go
 +++ b/common.go
 @@ -18,7 +18,6 @@ import (
@@ -36,7 +36,7 @@ index 1952150..107cd53 100644
  )
  
  func isTLS13OnlyKeyExchange(curve CurveID) bool {
-@@ -393,6 +397,7 @@ type ClientSessionCache interface {
+@@ -397,6 +401,7 @@ type ClientSessionCache interface {
  
  // SignatureScheme identifies a signature algorithm supported by TLS. See
  // RFC 8446, Section 4.2.3.
@@ -44,7 +44,7 @@ index 1952150..107cd53 100644
  type SignatureScheme uint16
  
  const (
-@@ -417,6 +422,11 @@ const (
+@@ -421,6 +426,11 @@ const (
  	// Legacy signature and hash algorithms for TLS 1.2.
  	PKCS1WithSHA1 SignatureScheme = 0x0201
  	ECDSAWithSHA1 SignatureScheme = 0x0203
@@ -57,7 +57,7 @@ index 1952150..107cd53 100644
  
  // ClientHelloInfo contains information from a ClientHello message in order to
 diff --git a/handshake_messages.go b/handshake_messages.go
-index 7919c1c..673a2d8 100644
+index 5c7c87b..23807de 100644
 --- a/handshake_messages.go
 +++ b/handshake_messages.go
 @@ -7,9 +7,10 @@ package tls
@@ -80,7 +80,7 @@ index 7919c1c..673a2d8 100644
  	// extensions are only populated on the server-side of a handshake
  	extensions []uint16
  
-@@ -317,6 +319,17 @@ func (m *clientHelloMsg) marshalMsgReorderOuterExts(echInner bool, outerExts []u
+@@ -318,6 +320,17 @@ func (m *clientHelloMsg) marshalMsgReorderOuterExts(echInner bool, outerExts []u
  			})
  		}
  	}
@@ -98,7 +98,7 @@ index 7919c1c..673a2d8 100644
  	// [uTLS SECTION BEGIN]
  	// reorder OuterExtensions according to their order in the spec
  	if echInner && outerExts != nil {
-@@ -690,6 +703,12 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
+@@ -691,6 +704,12 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
  				}
  				m.pskBinders = append(m.pskBinders, binder)
  			}
@@ -766,10 +766,10 @@ index 7fcf0d6..17469ef 100644
  					if err != nil {
  						return fmt.Errorf("unsupported Curve in KeyShareExtension: %v."+
 diff --git a/u_public.go b/u_public.go
-index d9443b5..e4fe376 100644
+index 8fb573b..ee9ab54 100644
 --- a/u_public.go
 +++ b/u_public.go
-@@ -368,6 +368,7 @@ type PubClientHelloMsg struct {
+@@ -384,6 +384,7 @@ type PubClientHelloMsg struct {
  	PskIdentities                    []PskIdentity
  	PskBinders                       [][]byte
  	QuicTransportParameters          []byte
@@ -777,7 +777,7 @@ index d9443b5..e4fe376 100644
  
  	cachedPrivateHello   *clientHelloMsg // todo: further optimize to reduce clientHelloMsg construction
  	encryptedClientHello []byte
-@@ -406,6 +407,7 @@ func (chm *PubClientHelloMsg) getPrivatePtr() *clientHelloMsg {
+@@ -422,6 +423,7 @@ func (chm *PubClientHelloMsg) getPrivatePtr() *clientHelloMsg {
  			pskIdentities:           PskIdentities(chm.PskIdentities).ToPrivate(),
  			pskBinders:              chm.PskBinders,
  			quicTransportParameters: chm.QuicTransportParameters,
@@ -785,7 +785,7 @@ index d9443b5..e4fe376 100644
  			encryptedClientHello:    chm.encryptedClientHello,
  
  			nextProtoNeg: chm.NextProtoNeg,
-@@ -457,6 +459,7 @@ func (chm *clientHelloMsg) getPublicPtr() *PubClientHelloMsg {
+@@ -473,6 +475,7 @@ func (chm *clientHelloMsg) getPublicPtr() *PubClientHelloMsg {
  			PskIdentities:                    pskIdentities(chm.pskIdentities).ToPublic(),
  			PskBinders:                       chm.pskBinders,
  			QuicTransportParameters:          chm.quicTransportParameters,
@@ -793,7 +793,7 @@ index d9443b5..e4fe376 100644
  			cachedPrivateHello:               chm,
  			encryptedClientHello:             chm.encryptedClientHello,
  		}
-@@ -616,6 +619,21 @@ type KeyShare struct {
+@@ -632,6 +635,21 @@ type KeyShare struct {
  	Data  []byte  `json:"key_exchange,omitempty"` // optional
  }
  
@@ -816,10 +816,10 @@ index d9443b5..e4fe376 100644
  	return keyShare{group: ks.Group, data: ks.Data}
  }
 diff --git a/u_tls_extensions.go b/u_tls_extensions.go
-index c6e9ab8..6a4483c 100644
+index 77ee10c..5db94b5 100644
 --- a/u_tls_extensions.go
 +++ b/u_tls_extensions.go
-@@ -1700,6 +1700,48 @@ func (e *RenegotiationInfoExtension) writeToUConn(uc *UConn) error {
+@@ -1704,6 +1704,48 @@ func (e *RenegotiationInfoExtension) writeToUConn(uc *UConn) error {
  	return nil
  }
  
@@ -868,3 +868,30 @@ index c6e9ab8..6a4483c 100644
  /*
  FAKE EXTENSIONS
  */
+diff --git a/u_reality.go b/u_reality.go
+new file mode 100644
+index 0000000..df8a8b2
+--- /dev/null
++++ b/u_reality.go
+@@ -0,0 +1,21 @@
++package tls
++
++import (
++	"crypto/ecdh"
++	"crypto/rand"
++	"github.com/metacubex/utls/internal/mlkem"
++)
++
++// GenerateRealityHybridKeyShare installs matching private keys for a REALITY hybrid share.
++func (keys *KeySharePrivateKeys) GenerateRealityHybridKeyShare() (KeyShare, error) {
++	kem, err := mlkem.GenerateKey768()
++	if err != nil {
++		return KeyShare{}, err
++	}
++	key, err := ecdh.X25519().GenerateKey(rand.Reader)
++	if err != nil {
++		return KeyShare{}, err
++	}
++	keys.Mlkem, keys.MlkemEcdhe = kem, key
++	return KeyShare{Group: X25519MLKEM768, Data: append(kem.EncapsulationKey().Bytes(), key.PublicKey().Bytes()...)}, nil
++}

@@ -12,6 +12,18 @@ import io.nekohasekai.sagernet.fmt.AbstractBean;
 import io.nekohasekai.sagernet.fmt.KryoConverters;
 
 public class MasterDnsVPNBean extends AbstractBean {
+    public static final Creator<MasterDnsVPNBean> CREATOR = new CREATOR<MasterDnsVPNBean>() {
+        @Override
+        public MasterDnsVPNBean newInstance() {
+            return new MasterDnsVPNBean();
+        }
+
+        @Override
+        public MasterDnsVPNBean[] newArray(int size) {
+            return new MasterDnsVPNBean[size];
+        }
+    };
+
     private static final String DEFAULT_RESOLVERS = Stream.of(
             "1.1.1.1","1.0.0.1","8.8.8.8","8.8.4.4","9.9.9.9",
             "77.88.8.8","77.88.8.1","77.88.8.2","77.88.8.3","77.88.8.7","77.88.8.88"

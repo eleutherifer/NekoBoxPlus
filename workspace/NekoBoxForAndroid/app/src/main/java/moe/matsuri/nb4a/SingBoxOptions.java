@@ -2160,6 +2160,8 @@ public class SingBoxOptions {
     }
 
     public static class OutboundRealityOptions extends SingBoxOption {
+        public String key_share_policy;
+        public String mldsa65_verify;
 
         public Boolean enabled;
 

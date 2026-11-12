@@ -59,7 +59,7 @@ fun buildCustomDnsServerOptions(
         if (server.domainResolver.isNotBlank()) {
             domain_resolver = DomainResolveOptions().apply {
                 this.server = server.domainResolver.trim()
-                if (server.domainStrategy.isNotBlank() && server.domainStrategy != "auto") strategy = server.domainStrategy.trim()
+                strategy = connectionDnsStrategy(server.domainStrategy)
                 if (server.disableCache) disable_cache = true
                 if (server.rewriteTtl > 0) rewrite_ttl = server.rewriteTtl
                 if (server.clientSubnet.isNotBlank()) client_subnet = server.clientSubnet.trim()

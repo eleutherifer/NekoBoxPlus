@@ -10,9 +10,7 @@ internal fun buildDomainResolverConfig(
 ): DomainResolveOptions =
     DomainResolveOptions().apply {
         this.server = server
-        if (strategy.isNotBlank()) {
-            this.strategy = strategy
-        }
+        this.strategy = connectionDnsStrategy(strategy)
     }
 
 internal fun buildProfileServerDomainResolverConfig(

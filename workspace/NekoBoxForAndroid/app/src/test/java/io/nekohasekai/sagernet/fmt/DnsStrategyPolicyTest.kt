@@ -9,6 +9,60 @@ import org.junit.Test
 class DnsStrategyPolicyTest {
 
     @Test
+    fun connectionStrategiesSurviveStrictTrafficPolicy() {
+        for (mode in listOf(IPv6Mode.DISABLE, IPv6Mode.ONLY, IPv6Mode.ENABLE, IPv6Mode.PREFER)) {
+            for (configured in listOf("", "auto", "prefer_ipv6", "ipv4_only", "ipv6_only")) {
+                val expected = if (configured.isBlank() || configured == "auto") "prefer_ipv4" else configured
+                val resolver = buildProfileServerDomainResolverConfig(
+                    false, "", connectionDnsStrategy(configured),
+                ).asMap()
+                val dns = linkedMapOf<String, Any?>("rules" to emptyList<Any>())
+                val root = linkedMapOf<String, Any?>(
+                    "dns" to dns,
+                    "outbounds" to listOf(mapOf("domain_resolver" to resolver)),
+                )
+                root.sanitizeDNSRules114(
+                    forcedStrategy = strictDnsStrategyForIpv6Mode(mode),
+                    firstRule = buildAddressFamilyFilterDnsRule(mode)?.asMap(),
+                )
+                assertEquals(expected, resolver["strategy"])
+                assertEquals("dns-direct", resolver["server"])
+                strictDnsStrategyForIpv6Mode(mode)?.let { assertEquals(it, dns["strategy"]) }
+            }
+        }
+    }
+
+    @Test
+    fun endpointBootstrapKeepsResolverSelectionAndDualStackDefault() {
+        for (forTest in listOf(false, true)) {
+            val server = buildEndpointBootstrapDnsServer(
+                rawAddresses = listOf("https://dns.example"),
+                tag = "dns-bootstrap-1", detour = "previous-hop", forTest = forTest,
+                queryDeadline = "", remoteStrategy = "", directStrategy = "",
+            ).asMap()
+            val resolver = server["domain_resolver"] as Map<*, *>
+            assertEquals(if (forTest) "dns-local" else "dns-direct", resolver["server"])
+            assertEquals("prefer_ipv4", resolver["strategy"])
+            assertEquals("previous-hop", server["detour"])
+        }
+    }
+
+    @Test
+    fun automaticBootstrapStrategyIsExplicitForBalancerChildren() {
+        val server = buildDnsServerOptions(
+            rawAddresses = listOf("tls://one.example", "https://two.example"),
+            tagValue = "dns-direct",
+            domainResolver = buildDomainResolverConfig("dns-local"),
+        ).asMap()
+        val children = server["servers"] as List<*>
+        children.forEach { child ->
+            val resolver = (child as Map<*, *>)["domain_resolver"] as Map<*, *>
+            assertEquals("prefer_ipv4", resolver["strategy"])
+            assertEquals("dns-local", resolver["server"])
+        }
+    }
+
+    @Test
     fun tunDnsAddressesFollowIpv6Mode() {
         val ipv4Address = "172.19.0.2"
         val ipv6Address = "fdfe:dcba:9876::2"

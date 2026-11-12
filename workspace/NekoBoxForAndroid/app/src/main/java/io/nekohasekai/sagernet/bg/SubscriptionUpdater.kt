@@ -128,7 +128,18 @@ object SubscriptionUpdater {
                             profile.displayName(),
                         ),
                     )
-                    nm.notify(2, notification.build())
+                    if (android.os.Build.VERSION.SDK_INT < 33 ||
+                        androidx.core.content.ContextCompat.checkSelfPermission(
+                            applicationContext, android.Manifest.permission.POST_NOTIFICATIONS,
+                        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                    ) {
+                        try {
+                            nm.notify(2, notification.build())
+                        } catch (error: SecurityException) {
+                            // Revoking notifications must not prevent subscription updates.
+                            Logs.w(error)
+                        }
+                    }
                     GroupUpdater.executeUpdate(profile, false)
                 }
 

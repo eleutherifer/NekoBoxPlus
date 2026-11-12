@@ -1,5 +1,11 @@
 package io.nekohasekai.sagernet.ui
 
+import android.content.ClipData
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import io.nekohasekai.sagernet.backup.throne.*
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -63,6 +69,72 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 class BackupFragment : NamedFragment() {
 
+    private var thrBusy by mutableStateOf(false)
+    private var thrReport by mutableStateOf<ThrExportReport?>(null)
+    private var pendingThrSelection: ThrSelection? = null
+
+    private val saveThrBackup = registerForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
+        val selection = pendingThrSelection
+        pendingThrSelection = null
+        if (uri != null && selection != null) createThrBackup(selection, uri)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        pendingThrSelection?.let {
+            outState.putBooleanArray("thr_selection", booleanArrayOf(it.profiles, it.routes, it.settings))
+        }
+    }
+
+    private fun exportThrBackup(selection: BackupSelection) {
+        if (thrBusy || isBackupInProgress || isGitOperationInProgress) return
+        pendingThrSelection = ThrSelection(selection.configurations, selection.rules, selection.settings)
+        startFilesForResult(saveThrBackup, "Throne-backup-${java.text.SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())}.thrbackup")
+    }
+
+    private fun createThrBackup(selection: ThrSelection, destination: Uri?) {
+        if (thrBusy || isBackupInProgress || isGitOperationInProgress) return
+        val context = context ?: return
+        thrBusy = true
+        val progress = context.showBlockingProgressDialog(R.string.backup_creating)
+        backupProgressDialog = progress
+        lifecycleScope.launch {
+            var prepared: ThrExport.Prepared? = null
+            try {
+                withContext(Dispatchers.IO) {
+                    prepared = ThrExport.prepare(selection)
+                    if (destination != null) {
+                        context.contentResolver.openOutputStream(destination, "wt")?.use { out ->
+                            prepared!!.file.inputStream().use { it.copyTo(out) }
+                        } ?: error("Cannot open backup destination")
+                    }
+                }
+                val result = checkNotNull(prepared)
+                if (isAdded && view != null) {
+                    if (destination == null) {
+                        val uri = FileProvider.getUriForFile(context, BuildConfig.APPLICATION_ID + ".cache", result.file)
+                        val intent = Intent(Intent.ACTION_SEND).setType("application/octet-stream")
+                            .putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        intent.clipData = ClipData.newRawUri(result.file.name, uri)
+                        startActivity(Intent.createChooser(intent, getString(R.string.share)))
+                        // The recipient may read after returning to this app; stale shared files are cleaned on the next export.
+                        prepared = null
+                    }
+                    thrReport = result.report
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                if (isAdded && view != null) showMessage(R.string.thr_failed)
+            } finally {
+                prepared?.discard()
+                progress.dismiss()
+                if (backupProgressDialog === progress) backupProgressDialog = null
+                thrBusy = false
+            }
+        }
+    }
+
     private var isBackupInProgress = false
     private var backupProgressDialog: androidx.activity.ComponentDialog? = null
     private var pendingExportOptions: BackupOptions? = null
@@ -85,6 +157,9 @@ class BackupFragment : NamedFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        savedInstanceState?.getBooleanArray("thr_selection")?.takeIf { it.size == 3 }?.let {
+            pendingThrSelection = ThrSelection(it[0], it[1], it[2])
+        }
         childFragmentManager.setFragmentResultListener(
             BackupImportDialogFragment.RESULT_KEY,
             this,
@@ -157,6 +232,11 @@ class BackupFragment : NamedFragment() {
         setContent {
             NekoComposeTheme {
                 BackupScreen(
+                    thrBusy = thrBusy || isBackupInProgress || isGitOperationInProgress,
+                    thrReport = thrReport,
+                    onThrExport = ::exportThrBackup,
+                    onThrShare = { createThrBackup(ThrSelection(it.configurations, it.rules, it.settings), null) },
+                    onDismissThrReport = { thrReport = null },
                     gitConfigured = gitConfigured,
                     gitOperationInProgress = isGitOperationInProgress,
                     onShare = ::shareBackup,
@@ -185,7 +265,7 @@ class BackupFragment : NamedFragment() {
     }
 
     private fun exportBackup(selection: BackupSelection) {
-        if (isBackupInProgress) {
+        if (isBackupInProgress || thrBusy) {
             showMessage(R.string.backup_in_progress)
             return
         }
@@ -258,7 +338,7 @@ class BackupFragment : NamedFragment() {
     private fun gitRepository() = GitBackupRepository(app.cacheDir.resolve("git-backup-repository"))
 
     private fun beginGitOperation(@StringRes status: Int, block: (GitBackupConfig) -> Unit) {
-        if (isGitOperationInProgress) {
+        if (isGitOperationInProgress || thrBusy) {
             showMessage(R.string.git_operation_in_progress)
             return
         }
@@ -277,7 +357,7 @@ class BackupFragment : NamedFragment() {
     }
 
     private fun beginBackupOperation(block: suspend kotlinx.coroutines.CoroutineScope.() -> Unit) {
-        if (isBackupInProgress) {
+        if (isBackupInProgress || thrBusy) {
             showMessage(R.string.backup_in_progress)
             return
         }

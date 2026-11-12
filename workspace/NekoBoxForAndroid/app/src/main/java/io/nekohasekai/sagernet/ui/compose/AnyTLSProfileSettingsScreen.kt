@@ -177,6 +177,24 @@ internal fun AnyTLSProfileSettingsScreen() {
                 summary(shortId),
             ) { edit(shortIdTitle, shortId) { shortId = it; store.putString("realityShortId", it) } }
         }
+        item {
+            var verify by remember { mutableStateOf(store.getString("realityMLDSA65Verify").orEmpty()) }
+            val title = stringResource(R.string.reality_mldsa65_verify)
+            ProfileActionRow(R.drawable.ic_baseline_vpn_key_24, R.string.reality_mldsa65_verify, summary(verify)) {
+                edit(title, verify) { verify = it; store.putString("realityMLDSA65Verify", it) }
+            }
+        }
+        item {
+            var policy by remember { mutableStateOf(store.getString("realityKeySharePolicy").orEmpty()) }
+            val title = stringResource(R.string.reality_key_share_policy)
+            val labels = stringArrayResource(R.array.reality_policy_entries).toList()
+            val values = stringArrayResource(R.array.reality_policy_values)
+            ProfileActionRow(R.drawable.ic_baseline_fingerprint_24, R.string.reality_key_share_policy, labels[values.indexOf(policy).coerceAtLeast(0)]) {
+                context.showComposeSingleChoiceDialog(title = title, items = labels, selectedIndex = values.indexOf(policy).coerceAtLeast(0), negativeButton = cancel, onItemSelected = {
+                    policy = values[it]; store.putString("realityKeySharePolicy", policy)
+                })
+            }
+        }
         item { SharedDialOptions() }
         item { SharedTlsOptions() }
     }

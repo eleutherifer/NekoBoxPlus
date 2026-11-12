@@ -575,7 +575,8 @@ private fun parseAmneziaXrayContainer(xrayConfig: JSONObject): VMessBean? {
         if (streamSettings.optString("security") == "reality") {
             security = "tls"
             sni = realitySettings.optString("serverName")
-            realityPubKey = realitySettings.optString("publicKey")
+            realityPubKey = realitySettings.optString("password").ifBlank { realitySettings.optString("publicKey") }
+            realityMLDSA65Verify = realitySettings.optString("mldsa65Verify")
             realityShortId = realitySettings.optString("shortId")
             utlsFingerprint = realitySettings.optString("fingerprint", "chrome")
             path = realitySettings.optString("spiderX")

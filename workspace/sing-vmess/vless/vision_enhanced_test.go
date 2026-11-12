@@ -179,7 +179,7 @@ func TestVisionReadDirectWhenSplicingEnabled(t *testing.T) {
 		Conn:                 outerConn,
 		reader:               bufio.NewChunkReader(outerConn, xrayChunkSize),
 		input:                bytes.NewReader(nil),
-		rawInput:             &bytes.Buffer{},
+		rawInput:             func() **bytes.Buffer { b := &bytes.Buffer{}; return &b }(),
 		rawConn:              rawConn,
 		directConn:           rawConn,
 		logger:               logger.NOP(),

@@ -31,7 +31,8 @@ import io.nekohasekai.sagernet.ktx.isIpAddressV6
 import moe.matsuri.nb4a.proxy.anytls.AnyTLSBean
 import org.json.JSONArray
 import org.json.JSONObject
-import org.yaml.snakeyaml.TypeDescription
+import org.yaml.snakeyaml.LoaderOptions
+import org.yaml.snakeyaml.constructor.SafeConstructor
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.error.YAMLException
 import java.util.Locale
@@ -304,6 +305,8 @@ internal object ClashParser {
         proxy.map("reality-opts")?.let {
             bean.realityPubKey = it.value("public-key")
             bean.realityShortId = it.value("short-id")
+            bean.realityMLDSA65Verify = it.value("mldsa65-verify")
+            bean.realityKeySharePolicy = it.value("key-share-policy")
             if (bean.realityPubKey.isNotBlank()) bean.security = "reality"
         }
         proxy.map("ech-opts")?.let {
@@ -426,6 +429,8 @@ internal object ClashParser {
             utlsFingerprint = proxy.value("client-fingerprint").ifBlank { globalFingerprint }
             realityPubKey = proxy.map("reality-opts")?.value("public-key").orEmpty()
             realityShortId = proxy.map("reality-opts")?.value("short-id").orEmpty()
+            realityMLDSA65Verify = proxy.map("reality-opts")?.value("mldsa65-verify").orEmpty()
+            realityKeySharePolicy = proxy.map("reality-opts")?.value("key-share-policy").orEmpty()
             proxy.map("ech-opts")?.let {
                 if (it.boolean("enable")) echConfig = it.lines("config")
             }
@@ -720,9 +725,8 @@ internal object ClashParser {
     private fun loadYaml(text: String): Map<String, Any?>? {
         fun load(source: String): Map<String, Any?>? {
             val value =
-                Yaml()
-                    .apply { addTypeDescription(TypeDescription(String::class.java, "str")) }
-                    .loadAs(source, Map::class.java)
+                Yaml(SafeConstructor(LoaderOptions()))
+                    .load<Any>(source)
             return value.stringMap()
         }
         return try {

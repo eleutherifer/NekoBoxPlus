@@ -210,6 +210,7 @@ internal class GlobalSettingsController(
 
     private companion object {
         val RELOAD_KEYS = setOf(
+            "realityHybridBehavior",
             Key.TPROXY_TETHERING,
             Key.SPEED_INTERVAL, Key.PROFILE_TRAFFIC_UPDATE_INTERVAL, Key.TUN_UNRECOGNIZED_TRAFFIC,
             Key.TUN_SYSTEM_DNS_TRAFFIC, Key.TUN_DNS_WHITELIST, Key.TUN_DOT_WHITELIST,

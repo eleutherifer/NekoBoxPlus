@@ -177,6 +177,7 @@ object DataStore : OnPreferenceDataStoreChangeListener {
         )
 
     var appTLSVersion by configurationStore.string(Key.APP_TLS_VERSION)
+    var realityHybridBehavior by configurationStore.string("realityHybridBehavior") { "preserve" }
     var appUTLSFingerprint by configurationStore.string(Key.APP_UTLS_FINGERPRINT)
     var enableClashAPI by configurationStore.boolean(Key.ENABLE_CLASH_API) { false }
     var hideClashApi by configurationStore.boolean(Key.HIDE_CLASH_API) { true }

@@ -3,6 +3,10 @@ package io.nekohasekai.sagernet.fmt
 import io.nekohasekai.sagernet.IPv6Mode
 import moe.matsuri.nb4a.SingBoxOptions.DNSRule_DefaultOptions
 
+// Connection setup must not inherit the address-family restriction for carried traffic.
+internal fun connectionDnsStrategy(configured: String): String =
+    configured.trim().takeUnless { it.isEmpty() || it == "auto" } ?: "prefer_ipv4"
+
 internal fun dnsStrategyForIpv6Mode(configured: String, ipv6Mode: Int): String? =
     when (ipv6Mode) {
         IPv6Mode.DISABLE -> "ipv4_only"

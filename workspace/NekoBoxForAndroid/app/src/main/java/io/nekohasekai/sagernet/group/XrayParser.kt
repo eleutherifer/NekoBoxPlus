@@ -442,7 +442,8 @@ internal object XrayParser {
                 bean.security = "reality"
                 bean.sni = reality?.optString("serverName").orEmpty()
                 bean.utlsFingerprint = reality?.optString("fingerprint").orEmpty()
-                bean.realityPubKey = reality?.optString("publicKey").orEmpty()
+                bean.realityPubKey = reality?.optString("password").orEmpty().ifBlank { reality?.optString("publicKey").orEmpty() }
+                bean.realityMLDSA65Verify = reality?.optString("mldsa65Verify").orEmpty()
                 bean.realityShortId = reality?.optString("shortId").orEmpty()
             }
         }

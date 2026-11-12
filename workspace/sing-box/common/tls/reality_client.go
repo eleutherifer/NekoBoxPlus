@@ -3,7 +3,6 @@
 package tls
 
 import (
-	"bytes"
 	"context"
 	"crypto/aes"
 	"crypto/cipher"
@@ -22,10 +21,8 @@ import (
 	mRand "math/rand"
 	"net"
 	"net/http"
-	"reflect"
 	"strings"
 	"time"
-	"unsafe"
 
 	"github.com/sagernet/sing-box/adapter"
 	C "github.com/sagernet/sing-box/constant"
@@ -37,6 +34,7 @@ import (
 	"github.com/sagernet/sing/common/ntp"
 	aTLS "github.com/sagernet/sing/common/tls"
 
+	"github.com/cloudflare/circl/sign/mldsa/mldsa65"
 	utls "github.com/metacubex/utls"
 	"golang.org/x/crypto/hkdf"
 	"golang.org/x/net/http2"
@@ -45,10 +43,12 @@ import (
 var _ ConfigCompat = (*RealityClientConfig)(nil)
 
 type RealityClientConfig struct {
-	ctx       context.Context
-	uClient   *UTLSClientConfig
-	publicKey []byte
-	shortID   [8]byte
+	ctx            context.Context
+	uClient        *UTLSClientConfig
+	publicKey      []byte
+	shortID        [8]byte
+	keySharePolicy string
+	mldsa65Verify  *mldsa65.PublicKey
 }
 
 func NewRealityClient(ctx context.Context, logger logger.ContextLogger, serverAddress string, options option.OutboundTLSOptions) (Config, error) {
@@ -84,7 +84,22 @@ func newRealityClient(ctx context.Context, logger logger.ContextLogger, serverAd
 		return nil, E.New("invalid short_id")
 	}
 
-	var config Config = &RealityClientConfig{ctx, uClient.(*UTLSClientConfig), publicKey, shortID}
+	policy := options.Reality.KeySharePolicy
+	if policy != "" && policy != "preserve" && policy != "ensure_hybrid" {
+		return nil, E.New("unknown REALITY key_share_policy: ", policy)
+	}
+	var verify *mldsa65.PublicKey
+	if options.Reality.MLDSA65Verify != "" {
+		data, err := base64.RawURLEncoding.DecodeString(options.Reality.MLDSA65Verify)
+		if err != nil || len(data) != mldsa65.PublicKeySize {
+			return nil, E.New("invalid REALITY mldsa65_verify")
+		}
+		verify = new(mldsa65.PublicKey)
+		if err := verify.UnmarshalBinary(data); err != nil {
+			return nil, E.Cause(err, "invalid REALITY mldsa65_verify")
+		}
+	}
+	var config Config = &RealityClientConfig{ctx, uClient.(*UTLSClientConfig), publicKey, shortID, policy, verify}
 	if options.KernelRx || options.KernelTx {
 		if !C.IsLinux {
 			return nil, E.New("kTLS is only supported on Linux")
@@ -133,7 +148,8 @@ func (e *RealityClientConfig) Client(conn net.Conn) (Conn, error) {
 
 func (e *RealityClientConfig) ClientHandshake(ctx context.Context, conn net.Conn) (aTLS.Conn, error) {
 	verifier := &realityVerifier{
-		serverName: e.uClient.ServerName(),
+		serverName:    e.uClient.ServerName(),
+		mldsa65Verify: e.mldsa65Verify,
 	}
 	uConfig := e.uClient.config.Clone()
 	uConfig.InsecureSkipVerify = true
@@ -155,6 +171,14 @@ func (e *RealityClientConfig) ClientHandshake(ctx context.Context, conn net.Conn
 		}
 	}
 
+	if e.keySharePolicy == "ensure_hybrid" {
+		if err := ensureRealityHybrid(uConn); err != nil {
+			return nil, err
+		}
+	}
+	if err := uConn.BuildHandshakeState(); err != nil {
+		return nil, err
+	}
 	hello := uConn.HandshakeState.Hello
 	hello.SessionId = make([]byte, 32)
 	copy(hello.Raw[39:], hello.SessionId)
@@ -165,12 +189,11 @@ func (e *RealityClientConfig) ClientHandshake(ctx context.Context, conn net.Conn
 	} else {
 		nowTime = time.Now()
 	}
-	binary.BigEndian.PutUint64(hello.SessionId, uint64(nowTime.Unix()))
 
 	hello.SessionId[0] = 26
-	hello.SessionId[1] = 3
-	hello.SessionId[2] = 27
-	binary.BigEndian.PutUint32(hello.SessionId[4:], uint32(time.Now().Unix()))
+	hello.SessionId[1] = 11
+	hello.SessionId[2] = 9
+	binary.BigEndian.PutUint32(hello.SessionId[4:], uint32(nowTime.Unix()))
 	copy(hello.SessionId[8:], e.shortID[:])
 	if debug.Enabled {
 		fmt.Printf("REALITY hello.sessionId[:16]: %v\n", hello.SessionId[:16])
@@ -276,23 +299,49 @@ func (e *RealityClientConfig) Clone() Config {
 		e.uClient.Clone().(*UTLSClientConfig),
 		e.publicKey,
 		e.shortID,
+		e.keySharePolicy,
+		e.mldsa65Verify,
 	}
 }
 
 type realityVerifier struct {
 	*utls.UConn
-	serverName string
-	authKey    []byte
-	verified   bool
+	serverName    string
+	authKey       []byte
+	verified      bool
+	mldsa65Verify *mldsa65.PublicKey
 }
 
 func (c *realityVerifier) VerifyPeerCertificate(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
-	p, _ := reflect.TypeFor[utls.Conn]().FieldByName("peerCertificates")
-	certs := *(*([]*x509.Certificate))(unsafe.Add(unsafe.Pointer(c.Conn), p.Offset))
+	certs := make([]*x509.Certificate, len(rawCerts))
+	if len(certs) == 0 {
+		return E.New("empty REALITY certificate chain")
+	}
+	for i, raw := range rawCerts {
+		cert, err := x509.ParseCertificate(raw)
+		if err != nil {
+			return err
+		}
+		certs[i] = cert
+	}
 	if pub, ok := certs[0].PublicKey.(ed25519.PublicKey); ok {
 		h := hmac.New(sha512.New, c.authKey)
 		h.Write(pub)
-		if bytes.Equal(h.Sum(nil), certs[0].Signature) {
+		if hmac.Equal(h.Sum(nil), certs[0].Signature) {
+			if c.mldsa65Verify != nil {
+				h.Write(c.HandshakeState.Hello.Raw)
+				h.Write(c.HandshakeState.ServerHello.Raw)
+				valid := false
+				for _, ext := range certs[0].Extensions {
+					if ext.Id.Equal([]int{0, 0}) && mldsa65.Verify(c.mldsa65Verify, h.Sum(nil), nil, ext.Value) {
+						valid = true
+						break
+					}
+				}
+				if !valid {
+					return E.New("REALITY ML-DSA-65 verification failed")
+				}
+			}
 			c.verified = true
 			return nil
 		}
@@ -349,4 +398,54 @@ func (c *realityClientConnWrapper) ReaderReplaceable() bool {
 
 func (c *realityClientConnWrapper) WriterReplaceable() bool {
 	return false
+}
+
+// ensureRealityHybrid updates only key exchange extensions, before authenticating the hello.
+func ensureRealityHybrid(conn *utls.UConn) error {
+	var shares *utls.KeyShareExtension
+	var groups *utls.SupportedCurvesExtension
+	for _, ext := range conn.Extensions {
+		switch ext := ext.(type) {
+		case *utls.KeyShareExtension:
+			shares = ext
+		case *utls.SupportedCurvesExtension:
+			groups = ext
+		}
+	}
+	if shares == nil || groups == nil {
+		return E.New("REALITY hybrid adaptation requires TLS 1.3 key shares and supported groups")
+	}
+	keys := conn.HandshakeState.State13.KeyShareKeys
+	if keys == nil {
+		return E.New("missing REALITY key share keys")
+	}
+	var hybrid utls.KeyShare
+	for _, share := range shares.KeyShares {
+		if share.Group == utls.X25519MLKEM768 {
+			hybrid = share
+			break
+		}
+	}
+	if hybrid.Data == nil {
+		var err error
+		hybrid, err = keys.GenerateRealityHybridKeyShare()
+		if err != nil {
+			return err
+		}
+	}
+	updated := []utls.KeyShare{hybrid}
+	for _, share := range shares.KeyShares {
+		if share.Group != utls.X25519MLKEM768 {
+			updated = append(updated, share)
+		}
+	}
+	shares.KeyShares = updated
+	curves := []utls.CurveID{utls.X25519MLKEM768}
+	for _, group := range groups.Curves {
+		if group != utls.X25519MLKEM768 {
+			curves = append(curves, group)
+		}
+	}
+	groups.Curves = curves
+	return nil
 }

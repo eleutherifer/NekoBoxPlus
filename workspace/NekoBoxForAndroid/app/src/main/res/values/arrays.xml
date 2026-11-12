@@ -1641,4 +1641,12 @@
         <item>@string/subscription_xray_balancers_convert</item>
         <item>@string/subscription_xray_balancers_split</item>
     </string-array>
+<string-array name="reality_hybrid_entries"><item>Do not modify</item><item>Append to unsupported</item><item>Unsupported to Chrome</item></string-array>
+    <string-array name="reality_policy_entries">
+        <item>@string/auto</item>
+        <item>@string/reality_policy_preserve</item>
+        <item>@string/reality_policy_ensure_hybrid</item>
+    </string-array>
+<string-array name="reality_hybrid_values"><item>preserve</item><item>ensure_hybrid</item><item>chrome</item></string-array>
+<string-array name="reality_policy_values"><item></item><item>preserve</item><item>ensure_hybrid</item></string-array>
 </resources>

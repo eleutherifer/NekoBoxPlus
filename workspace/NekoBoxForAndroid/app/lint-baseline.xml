@@ -2,17 +2,6 @@
 <issues format="6" by="lint 9.3.0" type="baseline" client="gradle" dependencies="false" name="AGP (9.3.0)" variant="all" version="9.3.0">
 
     <issue
-        id="MissingPermission"
-        message="Call requires permission which may be rejected by user: code should explicitly check to see if permission is available (with `checkPermission`) or explicitly handle a potential `SecurityException`"
-        errorLine1="                nm.notify(2, notification.build())"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/io/nekohasekai/sagernet/bg/SubscriptionUpdater.kt"
-            line="113"
-            column="17"/>
-    </issue>
-
-    <issue
         id="MissingSuperCall"
         message="Overriding method should call `super.onBackPressed`"
         errorLine1="    override fun onBackPressed() {"
@@ -494,17 +483,6 @@
             file="src/main/java/io/nekohasekai/sagernet/ui/ScannerActivity.kt"
             line="346"
             column="32"/>
-    </issue>
-
-    <issue
-        id="ParcelCreator"
-        message="This class implements `Parcelable` but does not provide a `CREATOR` field"
-        errorLine1="public class MasterDnsVPNBean extends AbstractBean {"
-        errorLine2="             ~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/io/nekohasekai/sagernet/fmt/masterdns/MasterDnsVPNBean.java"
-            line="14"
-            column="14"/>
     </issue>
 
     <issue

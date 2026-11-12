@@ -8,6 +8,7 @@ import (
 	"net"
 	"reflect"
 	"sync"
+	"sync/atomic"
 	"unsafe"
 
 	"github.com/sagernet/sing/common"
@@ -19,12 +20,13 @@ import (
 )
 
 type enhancedVisionConn struct {
+	directClose atomic.Bool
 	net.Conn
 	reader      *bufio.ChunkReader
 	writer      N.VectorisedWriter
 	writeAccess sync.Mutex
 	input       *bytes.Reader
-	rawInput    *bytes.Buffer
+	rawInput    **bytes.Buffer
 	netConn     net.Conn
 	rawConn     net.Conn // raw connection for Vision internal operations (TLS/encryption layer)
 	directConn  net.Conn
@@ -62,7 +64,7 @@ type visionConnInfo struct {
 	netConn  net.Conn
 	rawConn  net.Conn
 	input    *bytes.Reader
-	rawInput *bytes.Buffer
+	rawInput **bytes.Buffer
 }
 
 func newEnhancedVisionConn(conn net.Conn, tlsConn net.Conn, userUUID [16]byte, logger logger.Logger, canSplice bool) (*enhancedVisionConn, error) {
@@ -176,9 +178,9 @@ func extractTLSInfo(tlsConn net.Conn) (*visionConnInfo, error) {
 			info.rawConn = netConn
 
 			inputField, _ := reflectType.FieldByName("input")
-			rawInputField, _ := reflectType.FieldByName("rawInput")
-			info.input = (*bytes.Reader)(unsafe.Pointer(reflectPointer + inputField.Offset))
-			info.rawInput = (*bytes.Buffer)(unsafe.Pointer(reflectPointer + rawInputField.Offset))
+
+			info.input = (*bytes.Reader)(unsafe.Add(reflectPointer, inputField.Offset))
+			info.rawInput = visionRawInput(reflectType, reflectPointer)
 			return info, nil
 		}
 	}
@@ -188,17 +190,17 @@ func extractTLSInfo(tlsConn net.Conn) (*visionConnInfo, error) {
 
 func extractInputFields(encConn net.Conn, info *visionConnInfo) error {
 	reflectType := reflect.TypeOf(encConn).Elem()
-	reflectPointer := uintptr(unsafe.Pointer(reflect.ValueOf(encConn).Pointer()))
+	reflectPointer := reflect.ValueOf(encConn).UnsafePointer()
 
 	inputField, inputOk := reflectType.FieldByName("input")
-	rawInputField, rawInputOk := reflectType.FieldByName("rawInput")
+	_, rawInputOk := reflectType.FieldByName("rawInput")
 
 	if !inputOk || !rawInputOk {
 		return E.New("vision: encryption layer missing input/rawInput fields")
 	}
 
-	info.input = (*bytes.Reader)(unsafe.Pointer(reflectPointer + inputField.Offset))
-	info.rawInput = (*bytes.Buffer)(unsafe.Pointer(reflectPointer + rawInputField.Offset))
+	info.input = (*bytes.Reader)(unsafe.Add(reflectPointer, inputField.Offset))
+	info.rawInput = visionRawInput(reflectType, reflectPointer)
 	return nil
 }
 
@@ -207,9 +209,9 @@ func extractInputFieldsFromTLS(tlsConn net.Conn, info *visionConnInfo) error {
 		loaded, _, reflectType, reflectPointer := tlsCreator(tlsConn)
 		if loaded {
 			inputField, _ := reflectType.FieldByName("input")
-			rawInputField, _ := reflectType.FieldByName("rawInput")
-			info.input = (*bytes.Reader)(unsafe.Pointer(reflectPointer + inputField.Offset))
-			info.rawInput = (*bytes.Buffer)(unsafe.Pointer(reflectPointer + rawInputField.Offset))
+
+			info.input = (*bytes.Reader)(unsafe.Add(reflectPointer, inputField.Offset))
+			info.rawInput = visionRawInput(reflectType, reflectPointer)
 			return nil
 		}
 	}
@@ -442,6 +444,7 @@ func (c *enhancedVisionConn) Read(p []byte) (n int, err error) {
 				}
 				c.withinPaddingBuffers = false
 				c.directRead = true
+				c.directClose.Store(true)
 
 				inputBuffer, err := io.ReadAll(c.input)
 				if err != nil {
@@ -449,7 +452,7 @@ func (c *enhancedVisionConn) Read(p []byte) (n int, err error) {
 				}
 				buffers = append(buffers, buf.As(inputBuffer))
 
-				rawInputBuffer, err := io.ReadAll(c.rawInput)
+				rawInputBuffer, err := readVisionRawInput(c.rawInput)
 				if err != nil {
 					return 0, err
 				}
@@ -530,6 +533,7 @@ func (c *enhancedVisionConn) Write(p []byte) (n int, err error) {
 			n = inputLen
 			if switchToDirectAfterWrite {
 				c.directWrite = true
+				c.directClose.Store(true)
 				c.writer = bufio.NewVectorisedWriter(c.directConn)
 			}
 		}
@@ -732,4 +736,11 @@ func (c *enhancedVisionConn) UpstreamWriter() any {
 		return c.directConn
 	}
 	return nil
+}
+
+func (c *enhancedVisionConn) Close() error {
+	if c.directClose.Load() {
+		return c.rawConn.Close()
+	}
+	return c.Conn.Close()
 }

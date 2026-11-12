@@ -43,6 +43,8 @@ public abstract class StandardV2RayBean extends AbstractBean {
     public String realityPubKey;
 
     public String realityShortId;
+    public String realityKeySharePolicy;
+    public String realityMLDSA65Verify;
 
 
     // --------------------------------------- //
@@ -160,6 +162,8 @@ public abstract class StandardV2RayBean extends AbstractBean {
         }
         if (realityPubKey == null) realityPubKey = "";
         if (realityShortId == null) realityShortId = "";
+        if (realityKeySharePolicy == null) realityKeySharePolicy = "";
+        if (realityMLDSA65Verify == null) realityMLDSA65Verify = "";
 
         if (JavaUtil.isNullOrBlank(sni)) sni = "";
         if (JavaUtil.isNullOrBlank(alpn)) alpn = "";
@@ -235,7 +239,7 @@ public abstract class StandardV2RayBean extends AbstractBean {
 
     @Override
     public void serialize(ByteBufferOutput output) {
-        output.writeInt(18);
+        output.writeInt(19);
         super.serialize(output);
         output.writeString(uuid);
         output.writeString(encryption);
@@ -340,6 +344,8 @@ public abstract class StandardV2RayBean extends AbstractBean {
             output.writeString(utlsFingerprint);
             output.writeString(realityPubKey);
             output.writeString(realityShortId);
+            output.writeString(realityKeySharePolicy);
+            output.writeString(realityMLDSA65Verify);
         }
 
         output.writeBoolean(enableECH);
@@ -495,6 +501,10 @@ public abstract class StandardV2RayBean extends AbstractBean {
             utlsFingerprint = input.readString();
             realityPubKey = input.readString();
             realityShortId = input.readString();
+            if (version >= 19) {
+                realityKeySharePolicy = input.readString();
+                realityMLDSA65Verify = input.readString();
+            }
         }
 
         if (version >= 1) {

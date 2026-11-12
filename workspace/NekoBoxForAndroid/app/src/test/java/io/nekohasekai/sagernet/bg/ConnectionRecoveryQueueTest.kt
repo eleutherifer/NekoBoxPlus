@@ -10,6 +10,32 @@ import java.util.concurrent.atomic.AtomicLong
 
 class ConnectionRecoveryQueueTest {
     @Test
+    fun networkHandoffCoalescesReconnectAndWaitsForAvailableNetwork() {
+        val recovered = LinkedBlockingQueue<Pair<Boolean, Boolean>>()
+        val recovery = ConnectionRecoveryQueue(
+            urlTestRunning = { false },
+            pause = {},
+            recover = { reconnect, reset, _ -> recovered.add(reconnect to reset) },
+            log = {},
+        )
+        try {
+            recovery.ready()
+            recovery.network(false)
+            recovery.request(true, false, ServiceRestartCause.NetworkChange)
+            recovery.urlTestFinished()
+            assertNull(recovered.poll(100, TimeUnit.MILLISECONDS))
+            recovery.network(true)
+            recovery.request(true, false, ServiceRestartCause.NetworkChange)
+            recovery.urlTestFinished()
+            assertEquals(true to false, recovered.poll(2, TimeUnit.SECONDS))
+            recovery.urlTestFinished()
+            assertNull(recovered.poll(100, TimeUnit.MILLISECONDS))
+        } finally {
+            recovery.close()
+        }
+    }
+
+    @Test
     fun disabledCoreSleepKeepsCoreAwakeOnIdleStartupAndPreservesWakeRecovery() {
         val pauses = LinkedBlockingQueue<Boolean>()
         val resets = LinkedBlockingQueue<ServiceRestartCause>()

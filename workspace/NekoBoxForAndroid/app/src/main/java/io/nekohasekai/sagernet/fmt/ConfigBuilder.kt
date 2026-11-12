@@ -153,6 +153,7 @@ fun buildConfig(
     showSubscriptionRoutingUnavailable: Boolean = true,
 ): ConfigBuildResult {
     RawCustomConfigRenderer.render(
+        realityBehavior = DataStore.realityHybridBehavior,
         proxy = proxy,
         forTest = forTest,
         dnsDefaults = UrlTestDnsDefaults(
@@ -409,12 +410,14 @@ fun buildConfig(
                     reverse_mapping = DataStore.dnsReverseMapping.takeIf { it }
                 }
 
-            val directDnsStrategy =
-                dnsStrategyForIpv6Mode(SingBoxOptionsUtil.domainStrategy("dns-direct"), ipv6Mode)
+            val directConnectionDnsStrategy =
+                connectionDnsStrategy(SingBoxOptionsUtil.domainStrategy("dns-direct"))
+            val remoteConnectionDnsStrategy =
+                connectionDnsStrategy(SingBoxOptionsUtil.domainStrategy("dns-remote"))
             val remoteDnsStrategy =
                 dnsStrategyForIpv6Mode(SingBoxOptionsUtil.domainStrategy("dns-remote"), ipv6Mode)
             val serverDnsStrategy =
-                dnsStrategyForIpv6Mode(SingBoxOptionsUtil.domainStrategy("server"), ipv6Mode)
+                connectionDnsStrategy(SingBoxOptionsUtil.domainStrategy("server"))
 
             inbounds = mutableListOf()
 
@@ -1020,7 +1023,7 @@ fun buildConfig(
                                 "domain_resolver",
                                 buildProfileServerDomainResolverConfig(
                                     forTest,
-                                    remoteDnsStrategy.orEmpty(),
+                                    remoteConnectionDnsStrategy,
                                     defaultServerDomainStrategy,
                                 ),
                             )
@@ -1707,7 +1710,7 @@ fun buildConfig(
                         rawAddresses = remoteDns,
                         tagValue = "dns-remote",
                         detourValue = remoteDnsDetourTag(mainProxyTag, outbounds),
-                        domainResolver = buildDomainResolverConfig("dns-direct", directDnsStrategy.orEmpty()),
+                        domainResolver = buildDomainResolverConfig("dns-direct", directConnectionDnsStrategy),
                         queryDeadline = DataStore.remoteDnsDeadline,
                     ),
                 )
@@ -1720,8 +1723,8 @@ fun buildConfig(
                         detour = detourTag,
                         forTest = forTest,
                         queryDeadline = DataStore.remoteDnsDeadline,
-                        remoteStrategy = remoteDnsStrategy.orEmpty(),
-                        directStrategy = directDnsStrategy.orEmpty(),
+                        remoteStrategy = remoteConnectionDnsStrategy,
+                        directStrategy = directConnectionDnsStrategy,
                     ),
                 )
             }
@@ -1880,7 +1883,7 @@ fun buildConfig(
                             rawAddress = resolver,
                             tagValue = serverTag,
                             detourValue = TAG_DIRECT,
-                            domainResolver = buildDomainResolverConfig("dns-direct", directDnsStrategy.orEmpty()),
+                            domainResolver = buildDomainResolverConfig("dns-direct", directConnectionDnsStrategy),
                         ),
                     )
                     dns.rules.add(
@@ -1955,6 +1958,7 @@ fun buildConfig(
                 }
             }
 
+            applyRealityCompatibility(configMap, DataStore.realityHybridBehavior)
             ConfigBuildResult(
                 gson.toJson(configMap),
                 externalIndexMap,
